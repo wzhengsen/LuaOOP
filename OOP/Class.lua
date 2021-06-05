@@ -116,10 +116,6 @@ ObjMeta.__len = function (self)
     return rawlen(self);
 end
 
---[[
-    级联获取某个类及其基类的对应键的值（忽略元方法）。
-]]
-
 ---Cascade to get the value of the corresponding key of a class and its base class
 ---(ignoring metamethods).
 ---
@@ -138,6 +134,41 @@ local function CascadeGet(self,key)
             return ret;
         end
     end
+end
+--[[
+    Cascade calls to __del__.
+    @param self     The object that will be destructured.
+    @param cls      The class to be looked up.
+    @param called   Records which base classes have been called,See below:
+                 X
+                 |
+                 A
+                / \
+               B   C
+                \ /
+                 D
+    When you destruct the D object,
+    to avoid repeated calls to the destructors of X and A that have been inherited multiple times,
+    record the classes that have been called in "called".
+]]
+local function CascadeDelete(self,cls,called)
+    if called[cls] then
+        return;
+    end
+    local cppCls = IsCppClass and IsCppClass(cls);
+    local del = nil;
+    if cppCls then
+        del = cls[__del__];
+    else
+        for _,base in pairs(cls.__bases__) do
+            CascadeDelete(self,base);
+        end
+        del = rawget(cls,__del__);
+    end
+    if del then
+        del(self);
+    end
+    called[cls] = true;
 end
 
 --[[为纯lua类产生的table类型的对象指定一个元表。
@@ -327,12 +358,7 @@ local HandlerMetaTable = {
 };
 
 local DefaultDelete = function(self)
-    local cls = self.is();
-
-    local del = self[__del__];
-    if del then
-        del(self);
-    end
+    CascadeDelete(self,self.is(),{});
     setmetatable(self,nil);
     self[DeathMarker] = true;
 end
@@ -661,16 +687,6 @@ function class.New(...)
         end
     end
 
-    if not cls.__cpp_base__ then
-        -- If the class is a pure lua class,
-        -- provide a delete method to the class by default.
-
-        -- If the class is a c++ class or inherited a c++ class,
-        -- you should provide a delete method with c++.
-        cls[delete] = DefaultDelete;
-    end
-
-
     ---@param baseCls? any  If there is no baseCls parameter,it means the return value is the current type.
     ---@return boolean | table
     local _is = function(baseCls)
@@ -733,13 +749,13 @@ function class.New(...)
                     end
                 );
             ]]
-            local instance = nil;
+            local obj = nil;
             if __create__ then
-                instance = cls.__create__(...);
-                if instance then
+                obj = cls.__create__(...);
+                if obj then
                     local __fCtorIdx__ = rawget(cls,"__fCtorIdx__");
                     if __fCtorIdx__ then
-                        local preCls = instance.__cls__;
+                        local preCls = obj.__cls__;
                         if preCls then
                             -- After inserting the class to which the function constructor belongs into the multi-inheritance table,
                             -- __fCtorIdx__ can no longer be used.
@@ -749,36 +765,43 @@ function class.New(...)
                     end
                 end
             else
-                instance = {};
+                obj = {};
             end
 
-            if nil == instance then
+            if nil == obj then
                 ClassCreateLayer = ClassCreateLayer - 1;
                 return nil;
             end
 
-            local instType = type(instance);
+            local instType = type(obj);
             if ClassCreateLayer == 1 then
                 if "table" == instType then
                     -- Instances of the table type do not require the last cls information
                     -- (which is already included in the metatable and in the upvalue).
-                    instance.__cls__ = nil;
-                    setmetatable(instance,meta);
+                    obj.__cls__ = nil;
+
+                    -- If the object is a table,
+                    -- provide a delete method to the object by default.
+
+                    -- If the object is a userdata,
+                    -- you should provide a delete method with c++.
+                    obj.delete = DefaultDelete;
+                    setmetatable(obj,meta);
                 else
                     -- Instances of the userdata type require the last cls information.
-                    local uv,_ = debug.getuservalue(instance);
+                    local uv,_ = debug.getuservalue(obj);
                     uv.__cls__ = cls;
                     uv.is = _is;
-                    RetrofitMeta(instance);
+                    RetrofitMeta(obj);
                 end
                 for key,func in pairs(handlers) do
                     -- Automatically listens to events.
-                    Handler.On(key:sub(3),instance,func);
+                    Handler.On(key:sub(3),obj,func);
                 end
             else
                 if "table" == instType then
                     -- Returning cls together can indicate the class to which the function constructor belongs.
-                    instance.__cls__ = cls;
+                    obj.__cls__ = cls;
                 end
             end
 
@@ -789,12 +812,12 @@ function class.New(...)
                 -- The final call ends with the value -1.
                 local tempCreateLayer = ClassCreateLayer;
                 ClassCreateLayer = 0;
-                init(instance,...);
+                init(obj,...);
                 ClassCreateLayer = ClassCreateLayer + tempCreateLayer - 1;
             else
                 ClassCreateLayer = ClassCreateLayer - 1;
             end
-            return instance;
+            return obj;
         end;
         if Debug then
             -- In debug mode,the "new" method is public and static.
@@ -855,6 +878,7 @@ function(t)
     end
     return t;
 end;
+class.__DefaultDelete = DefaultDelete;
 
 setmetatable(class,{
     __metatable = "Can't visit the metatable.",
