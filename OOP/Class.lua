@@ -34,6 +34,8 @@ local Version = Config.Version;
 
 local Handlers = Config.Handlers;
 local Properties = Config.Properties;
+local Friendly = Config.Friendly;
+local Singleton = Config.Singleton;
 local PropertyBehavior = Config.PropertyBehavior;
 local On = Config.On;
 local AllowClassName = Config.AllowClassName;
@@ -325,6 +327,8 @@ local HandlerMetaTable = {
 };
 
 local DefaultDelete = function(self)
+    local cls = self.is();
+
     local del = self[__del__];
     if del then
         del(self);
@@ -337,149 +341,149 @@ local BitsMap = {
     [Modifiers.Public] = 1 << 0,
     [Modifiers.Private] = 1 << 1,
     [Modifiers.Protected] = 1 << 2,
-    [Modifiers.Friendly] = 1 << 3,
-    [Modifiers.Static] = 1 << 4,
-    [Modifiers.Const] = 1 << 5,
-    [Modifiers.Singleton] = 1 << 6,
+    [Modifiers.Static] = 1 << 3,
+    [Modifiers.Const] = 1 << 4
 };
-local Modifier = {
-    cls = nil,
-    decor = 0
-};
-function Modifier:Open(cls,key)
-    self.cls = cls;
-    return self:Append(key);
-end
-function Modifier:Append(key,value)
-    local bit = BitsMap[key];
-    local decor = self.decor;
-    if bit then
-        if decor & bit ~= 0 then
-            error(("The %s modifier is not reusable."):format(key));
-            return nil;
-        elseif decor & 0x7 ~= 0 and bit & 0x7 ~= 0 then
-            -- Check Public,Private,Protected,they are 0x7
-            error(("The %s modifier cannot be used in conjunction with other access modifiers."):format(key));
-            return nil;
-        elseif (decor | bit & 0x9) == 0x9 then
-            -- 0x9 = Public | Friendly
-            error(("Cannot use both %s and %s."):format(Modifiers.Public,Modifiers.Friendly));
-            return nil;
-        elseif (decor | bit & 0x28) == 0x28 then
-            -- 0x28 = Static | Singleton
-            error(("Cannot use both %s and %s."):format(Modifiers.Static,Modifiers.Singleton));
-            return nil;
+local Router = nil;
+if Debug then
+    -- It is only under debug that the values need to be routed to the corresponding fields of the types.
+    -- To save performance, all modifiers will be ignored under non-debug.
+    Router = {};
+    function Router:Begin(cls,key)
+        rawset(self,"decor",0);
+        rawset(self,"cls",cls);
+        return self:Pass(key);
+    end
+    function Router:Pass(key)
+        local bit = BitsMap[key];
+        local decor = self.decor;
+        if bit then
+            if decor & bit ~= 0 then
+                error(("The %s modifier is not reusable."):format(key));
+            elseif decor & 0x7 ~= 0 and bit & 0x7 ~= 0 then
+                -- Check Public,Private,Protected,they are 0x7
+                error(("The %s modifier cannot be used in conjunction with other access modifiers."):format(key));
+            end
+            self.decor = decor | bit;
+        else
+            error(("There is no such modifier. - %s"):format(key));
         end
-        self.decor = decor | bit;
-    else
+        return self;
+    end
+    function Router:End(key,value)
+        local bit = BitsMap[key];
+        if bit then
+            error(("The name is unavailable. - %s"):format(key));
+        end
+        local decor = self.decor;
+        if (decor & BitsMap[Modifiers.Static] ~= 0) and
+        (key == __init__ or key == __del__) then
+            error(("%s modifier cannot modify %s functions."):format(Modifiers.Static,key));
+        elseif key == Handlers or key == Properties or key == Singleton or key == Friendly then
+            error(("%s cannot be modified."):format(key));
+        end
+        local cls = self.cls;
+        if decor & BitsMap[Modifiers.Public] ~= 0 then
+            cls.__public__[key] = value;
+        elseif decor & BitsMap[Modifiers.Private] ~= 0 then
+            cls.__private__[key] = value;
+        elseif decor & BitsMap[Modifiers.Protected] ~= 0 then
+            cls.__protected__[key] = value;
+        end
         if decor & BitsMap[Modifiers.Static] ~= 0 then
-            if key == __init__ or key == __del__ then
-                error(("Static decorators cannot decorate %s functions."):format(key));
+            cls.__static__[key] = value;
+        end
+        if decor & BitsMap[Modifiers.Const] ~= 0 then
+            cls.__const__[key] = value;
+        end
+        self.decor = 0;
+        self.cls = nil;
+    end
+    setmetatable(Router,{
+        __index = function (self,key)
+            return self:Pass(key);
+        end,
+        __newindex = function (self,key,val)
+            self:End(key,val);
+        end
+    });
+end
+
+local function DebugClassGet(self,key)
+    if BitsMap[key] then
+        return Router:Begin(self,key);
+    end
+    -- Check the properties first.
+    local property = self.__r__[key];
+    if property then
+        return property(self);
+    else
+        if self.__w__[key] then
+            if PropertyBehavior ~= 2 then
+                if Debug then
+                    if PropertyBehavior == 0 then
+                        if Version > 5.4 then
+                            warn("You can't read a write-only property.");
+                        end
+                    elseif PropertyBehavior == 1 then
+                        error("You can't read a write-only property.");
+                    end
+                end
                 return nil;
             end
-        else
-            if decor & BitsMap[Modifiers.Singleton] ~= 0 then
-                if key ~= __init__ or "functions" == type(value) then
-                    error(("Singleton decorator can only decorate %s functions."):format(__init__));
-                    return nil;
+        end
+    end
+    for _, base in ipairs(self.__bases__) do
+        local ret = CascadeGet(base,key);
+        if nil ~= ret then
+            return ret;
+        end
+    end
+    -- If not found, look for the c++ class.
+    local __cpp_base__ = rawget(self,"__cpp_base__");
+    if __cpp_base__ then
+        return __cpp_base__[key];
+    end
+end
+local function DebugClassSet(self,key,value)
+    if key == Properties then
+        if "function" == type(value) then
+            -- If it is a function?
+            -- Call it automatically.
+            value = value(self);
+        end
+        -- Register properties.
+        for __rw__,rw in pairs({__r__ = "r",__w__ = "w"}) do
+            local subT = value[rw];
+            if subT then
+                for k,v in pairs(subT) do
+                    self[__rw__][k] = v;
                 end
             end
         end
+    else
+        local property = self.__w__[key];
+        if property then
+            property(self,value);
+            return;
+        else
+            if self.__r__[key] then
+                if PropertyBehavior ~= 2 then
+                    if Debug then
+                        if PropertyBehavior == 0 then
+                            if Version > 5.4 then
+                                warn("You can't write a read-only property.");
+                            end
+                        elseif PropertyBehavior == 1 then
+                            error("You can't write a read-only property.");
+                        end
+                    end
+                    return;
+                end
+            end
+        end
+        self.__public__[key] = value;
     end
-    return self;
-end
-function Modifier:Close(key)
-    return self;
-end
-setmetatable(Modifier,
-{
-    __index = function (self,key)
-
-    end,
-    __newindex = function (self,key,val)
-
-    end
-});
-
-local function DebugClassGet(self,key)
-    -- if BitsMap[key] then
-    --     return Modifier:Open(self,key);
-    -- end
-    -- -- Check the properties first.
-    -- local property = self.__r__[key];
-    -- if property then
-    --     return property(self);
-    -- else
-    --     if self.__w__[key] then
-    --         if PropertyBehavior ~= 2 then
-    --             if Debug then
-    --                 if PropertyBehavior == 0 then
-    --                     if Version > 5.4 then
-    --                         warn("You can't read a write-only property.");
-    --                     end
-    --                 elseif PropertyBehavior == 1 then
-    --                     error("You can't read a write-only property.");
-    --                 end
-    --             end
-    --             return nil;
-    --         end
-    --     end
-    -- end
-    -- for _, base in ipairs(self.__bases__) do
-    --     local ret = CascadeGet(base,key);
-    --     if nil ~= ret then
-    --         if Cache then
-    --
-
-    --         end
-    --         return ret;
-    --     end
-    -- end
-    -- -- If not found, look for the c++ class.
-    -- local __cpp_base__ = rawget(self,"__cpp_base__");
-    -- if __cpp_base__ then
-    --     return __cpp_base__[key];
-    -- end
-end
-local function DebugClassSet(self,key,value)
-    -- if key == Properties then
-    --     if "function" == type(value) then
-    --         -- If it is a function?
-    --         -- Call it automatically.
-    --         value = value(cls);
-    --     end
-    --     -- Register properties.
-    --     for __rw__,rw in pairs({__r__ = "r",__w__ = "w"}) do
-    --         local subT = value[rw];
-    --         if subT then
-    --             for k,v in pairs(subT) do
-    --                 cls[__rw__][k] = v;
-    --             end
-    --         end
-    --     end
-    -- else
-    --     local property = cls.__w__[key];
-    --     if property then
-    --         property(sender,value);
-    --         return;
-    --     else
-    --         if cls.__r__[key] then
-    --             if PropertyBehavior ~= 2 then
-    --                 if Debug then
-    --                     if PropertyBehavior == 0 then
-    --                         if Version > 5.4 then
-    --                             warn("You can't write a read-only property.");
-    --                         end
-    --                     elseif PropertyBehavior == 1 then
-    --                         error("You can't write a read-only property.");
-    --                     end
-    --                 end
-    --                 return;
-    --             end
-    --         end
-    --     end
-    --     rawset(sender,key,value);
-    -- end
 end
 
 ---In non-debug mode, no access modifiers are considered.
@@ -490,7 +494,7 @@ end
 ---
 local function ClassGet(self,key)
     if BitsMap[key] then
-        return Modifier:Open(self,key);
+        return self;
     end
     -- Check the properties first.
     local property = self.__r__[key];
@@ -548,6 +552,8 @@ function class.New(...)
         __public__ = Debug and {} or nil,
         __private__ = Debug and {} or nil,
         __protected__ = Debug and {} or nil,
+        __const__ = Debug and {} or nil,
+        __static__ = Debug and {} or nil,
 
         -- Represents the c++ base class of the class (and also the only c++ base class).
         __cpp_base__ = nil,
@@ -667,7 +673,7 @@ function class.New(...)
 
     ---@param baseCls? any  If there is no baseCls parameter,it means the return value is the current type.
     ---@return boolean | table
-    local isFunc = function(baseCls)
+    local _is = function(baseCls)
         if nil == baseCls then
             return cls;
         end
@@ -687,14 +693,18 @@ function class.New(...)
         end
         return false;
     end;
-    cls[is] = isFunc;
+    if Debug then
+        cls.__public__[is] = _is;
+    else
+        cls[is] = _is;
+    end
 
     local meta = Debug and DebugMakeLuaObjMetaTable(cls) or MakeLuaObjMetaTable(cls);
     local __create__ = cls.__create__;
     if not cls.__cpp_base__ or __create__ then
         -- If a c++ class does not have a registered constructor,
         -- then the class cannot be instantiated.
-        cls[new] = function(...)
+        local _new = function(...)
             ClassCreateLayer = ClassCreateLayer + 1;
             --[[
                 Here, the case of multiple function constructions needs to be considered, e.g.
@@ -758,7 +768,7 @@ function class.New(...)
                     -- Instances of the userdata type require the last cls information.
                     local uv,_ = debug.getuservalue(instance);
                     uv.__cls__ = cls;
-                    uv.is = isFunc;
+                    uv.is = _is;
                     RetrofitMeta(instance);
                 end
                 for key,func in pairs(handlers) do
@@ -786,6 +796,13 @@ function class.New(...)
             end
             return instance;
         end;
+        if Debug then
+            -- In debug mode,the "new" method is public and static.
+            cls.__public__[new] = new;
+            cls.__static__[new] = new;
+        else
+            cls[new] = _new;
+        end
     end
 
     setmetatable(cls,{

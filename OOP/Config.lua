@@ -26,16 +26,12 @@ return {
     -- If you need to rename some of the LuaOOP names to suit specific needs,
     -- please modify the following mapping.
 
-    -- Class name.
     class = "class",
 
-    -- Handler name.
     Handlers = "Handlers",
 
-    -- Properties name.
     Properties = "Properties",
 
-    -- Friendly name.
     Friendly = "Friendly",
 
     -- Constructor and destructor names.
@@ -88,26 +84,22 @@ return {
         Private = "Private",
         Protected = "Protected",
 
-        -- Static name.
         Static = "Static",
-        -- Const name.
-        Const = "Const",
-
-        -- Singleton name.
-        -- If _singleton_ is used to modify the constructor,
-        -- then the class can only access the singleton using the Instance property
-        -- and new will be automatically modified to the protected.
-        Singleton = "Singleton"
+        Const = "Const"
     },
 
-    -- If Singleton is used to modify the constructor,
+    -- If Singleton is defined,
+    -- then the class can only access the singleton using the Instance property
+    -- and "new" will be automatically modified to the private.
+    Singleton = "Singleton",
+
+    -- If Singleton is defined,
     -- this property will be generated automatically.
     Instance = "Instance",
 
     -- The prefix of event handers.
     On = "On",
 
-    -- Death marker.
     -- If a table has this key,means that the table is dead.
     DeathMarker = {},
 
@@ -124,6 +116,8 @@ return {
     -- What is the behavior when you use properties incorrectly?
     -- For example, writing a read-only property,
     -- or reading a write-only property.
+    -- It works with Debug mode only.
+    -- All incorrect operations will be ignored in non-debug mode.
     -------------------------------------
     -- 0 -> warning(for lua5.4 and after)
     -- 1 -> error
