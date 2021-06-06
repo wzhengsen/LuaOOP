@@ -18,9 +18,12 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 
-local version = tonumber(_VERSION:sub(5)) or 5.4;
+local Version = tonumber(_VERSION:sub(5)) or 5.1;
+if Version >= 5.4 then
+    warn("@on");
+end
 return {
-    Version = version,
+    Version = Version,
 
     --****************Rename fields start****************
     -- If you need to rename some of the LuaOOP names to suit specific needs,
@@ -32,7 +35,7 @@ return {
 
     Properties = "Properties",
 
-    Friendly = "Friendly",
+    Friends = "Friends",
 
     -- Constructor and destructor names.
     __init__ = "__init__",
@@ -54,12 +57,12 @@ return {
         __mod = "__mod__",
         __pow = "__pow__",
         __div = "__div__",
-        __idiv = version > 5.2 and "__idiv__" or nil,
-        __band = version > 5.1 and "__band__" or nil,
-        __bor = version > 5.1 and "__bor__" or nil,
-        __bxor = version > 5.1 and "__bxor__" or nil,
-        __shl = version > 5.1 and "__shl__" or nil,
-        __shr = version > 5.1 and "__shr__" or nil,
+        __idiv = Version > 5.2 and "__idiv__" or nil,
+        __band = Version > 5.2 and "__band__" or nil,
+        __bor = Version > 5.2 and "__bor__" or nil,
+        __bxor = Version > 5.2 and "__bxor__" or nil,
+        __shl = Version > 5.2 and "__shl__" or nil,
+        __shr = Version > 5.2 and "__shr__" or nil,
         __unm = "__unm__",
         __bnot = "__bnot__",
         __lt = "__lt__",
@@ -75,7 +78,7 @@ return {
         __eq = "__eq__",
         __pairs = "__pairs__",
         __len = "__len__",
-        __close = version > 5.3 and "__close__" or nil
+        __close = Version > 5.3 and "__close__" or nil
     },
 
     -- Modifiers names.
@@ -152,7 +155,17 @@ return {
     },
 
     -- Whether to cache the elements to speed up the next access.
-    Cache = true
+    Cache = true,
 
     --****************Functional fields end****************
+
+
+    --****************Other fields start****************
+    -- In general, the following areas you do not need to modify.
+    __r__ = "_👓_",
+    __w__ = "_🖊_",
+    __bases__ = "_⚾_",
+    __all__ = "_🌐_",
+    __pm__ = "_🔑_"
+    --****************Other fields end****************
 };

@@ -17,5 +17,4 @@
 -- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
-
-return require("OOP.Config").Debug and require("OOP.Variant.DebugClass") or require("OOP.Variant.ReleaseClass");
+return require("OOP.Config").Version > 5.2 and require("OOP.Compat.RouterHigherThan52") or require("OOP.Compat.RouterLowerThan53");
