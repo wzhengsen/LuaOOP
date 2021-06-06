@@ -18,4 +18,5 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 
+
 return require("OOP.Config").Debug and require("OOP.Variant.DebugClass") or require("OOP.Variant.ReleaseClass");

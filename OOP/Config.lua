@@ -163,10 +163,12 @@ return {
 
     --****************Other fields start****************
     -- In general, the following areas you do not need to modify.
+
     __r__ = "_👓_",
     __w__ = "_🖊_",
     __bases__ = "_⚾_",
     __all__ = "_🌐_",
     __pm__ = "_🔑_"
+
     --****************Other fields end****************
 };
