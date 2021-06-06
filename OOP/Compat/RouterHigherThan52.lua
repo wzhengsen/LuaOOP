@@ -19,7 +19,6 @@
 -- THE SOFTWARE.
 local Config = require("OOP.Config");
 local bit32 = require("OOP.Compat.LowerThan53").bit32;
-
 local Debug = Config.Debug;
 
 local Public = Config.Modifiers.Public;
@@ -29,11 +28,11 @@ local Static = Config.Modifiers.Static;
 local Const = Config.Modifiers.Const;
 
 local BitsMap = {
-    [Public] = 1,
-    [Private] = 2,
-    [Protected] = 4,
-    [Static] = 8,
-    [Const] = 16
+    [Public] = 1 << 0,
+    [Private] = 1 << 1,
+    [Protected] = 1 << 2,
+    [Static] = 1 << 3,
+    [Const] = 1 << 4
 };
 local Router = nil;
 
@@ -60,13 +59,13 @@ if Debug then
         local bit = BitsMap[key];
         local decor = self.decor;
         if bit then
-            if bit32.band(decor,bit) ~= 0 then
+            if decor & bit ~= 0 then
                 error(("The %s modifier is not reusable."):format(key));
-            elseif bit32.band(decor,0x7)~= 0 and bit32.band(bit,0x7) ~= 0 then
+            elseif decor & 0x7 ~= 0 and bit & 0x7 ~= 0 then
                 -- Check Public,Private,Protected,they are 0x7
                 error(("The %s modifier cannot be used in conjunction with other access modifiers."):format(key));
             end
-            self.decor = bit32.bor(decor,bit);
+            self.decor = decor | bit;
         else
             error(("There is no such modifier. - %s"):format(key));
         end
@@ -78,7 +77,7 @@ if Debug then
             error(("The name is unavailable. - %s"):format(key));
         end
         local decor = self.decor;
-        if (bit32.band(decor,BitsMap[Static]) ~= 0) and
+        if (decor & BitsMap[Static] ~= 0) and
         (key == __init__ or key == __del__) then
             error(("%s modifier cannot modify %s functions."):format(Static,key));
         elseif key == Handlers or key == Properties or key == Singleton or key == Friends then
