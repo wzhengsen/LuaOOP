@@ -150,6 +150,7 @@ return {
         IsCppClass = nil,
 
         ---Function to determine if a c++ class inherits from another c++ class.
+        ---A class can be judged as inheriting itself.
         ---@type fun(cls:table,base:table):boolean
         IsInherite = nil,
     },

@@ -27,8 +27,6 @@ local type = type;
 
 local Config = require("OOP.Config");
 local Handler = require("OOP.Handler");
-local Version = Config.Version;
-local Alarm = Version >= 5.4 and warn or print;
 
 local __r__ = Config.__r__;
 local __w__ = Config.__w__;
@@ -95,9 +93,6 @@ function class.New(...)
         local name = table.remove(args,1);
         if nil == AllClasses[name] then
             AllClasses[name] = cls;
-        else
-            -- Duplicative class name.
-            Alarm(("You cannot use this name \"%s\", which is already used by other class.").format(name));
         end
     end
 
@@ -146,21 +141,6 @@ function class.New(...)
         end
     end
 
-    setmetatable(cls,{
-        __index = ClassGet,
-        __newindex = ClassSet
-    });
-
-    local __cpp_base__
-    if rawget(cls,"__cpp_base__") then
-        -- If the object is a table,
-        -- provide a delete method to the object by default.
-
-        -- If the object is a userdata,
-        -- you should provide a delete method with c++.
-        cls[delete] = DefaultDelete;
-    end
-
     ---@param baseCls? any  If there is no baseCls parameter,it means the return value is the current type.
     ---@return boolean | table
     local _is = function(baseCls)
@@ -171,14 +151,13 @@ function class.New(...)
             return true;
         end
         for _,base in ipairs(bases) do
-            if base[is](baseCls) then
+            local _is = base[is];
+            if _is then
+                if _is(baseCls) then
+                    return true;
+                end
+            elseif IsInherite and IsInherite(base,baseCls) then
                 return true;
-            end
-        end
-        if IsInherite then
-            local cppBase = cls.__cpp_base__;
-            if cppBase then
-                return IsInherite(cppBase,baseCls);
             end
         end
         return false;
@@ -250,6 +229,18 @@ function class.New(...)
                     -- (which is already included in the metatable and in the upvalue).
                     obj.__cls__ = nil;
                     setmetatable(obj,meta);
+
+                    -- If the object is a table,
+                    -- provide a delete method to the object by default.
+
+                    -- If the object is a userdata,
+                    -- you should provide a delete method with c++.
+
+                    -- Since you cannot explicitly determine the return type of the function constructor,
+                    -- register the delete function when you know explicitly that it is not returning userdata after constructing it once.
+                    if nil == rawget(cls,delete) then
+                        rawset(cls,delete,DefaultDelete);
+                    end
                 else
                     -- Instances of the userdata type require the last cls information.
                     -- Because multiple different lua classes can inherit from the same c++ class.
@@ -285,7 +276,11 @@ function class.New(...)
         end;
         cls[new] = _new;
     end
-    return cls;
+
+    return setmetatable(cls,{
+        __index = ClassGet,
+        __newindex = ClassSet
+    });
 end
 
 return class;
