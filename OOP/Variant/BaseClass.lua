@@ -23,6 +23,7 @@ local rawset = rawset;
 local pairs = pairs;
 local ipairs = ipairs;
 local type = type;
+local select = select;
 
 local Config = require("OOP.Config");
 local Debug = Config.Debug;
@@ -44,6 +45,7 @@ local __eq__ = MetaDefault.__eq;
 
 local Null = Config.CppClass.Null;
 local IsCppClass = Config.CppClass.IsCppClass;
+local IsInherite = Config.CppClass.IsInherite;
 
 local class = {};
 
@@ -96,29 +98,6 @@ ObjMeta.__len = function (self)
         return __len(self);
     end
     return rawlen(self);
-end
-
----Cascade to get the value of the corresponding key of a class and its base class
----(ignoring metamethods).
----
----@param self table
----@param key any
----@return any
----
-local function CascadeGet(self,key)
-    local ret = rawget(self,key);
-    if nil ~= ret then
-        return ret;
-    end
-    local bases = rawget(self,__bases__);
-    if bases then
-        for _,base in ipairs(bases) do
-            ret = CascadeGet(base,key);
-            if nil ~= ret then
-                return ret;
-            end
-        end
-    end
 end
 
 --[[
@@ -198,6 +177,33 @@ local function DestorySingleton(self,val)
     end
 end
 
+---If there is no parameter,it means the return value is the current type.
+---@return table
+local function ClassIs(cls,bases,...)
+    local len = select("#",...);
+    if 0 == len then
+        return cls;
+    end
+    local baseCls = select(1,...);
+    if baseCls == nil then
+        return false;
+    end
+    if baseCls == cls then
+        return true;
+    end
+    for _,base in ipairs(bases) do
+        local _is = base[is];
+        if _is then
+            if _is(baseCls) then
+                return true;
+            end
+        elseif IsInherite and IsInherite(base,baseCls) then
+            return true;
+        end
+    end
+    return false;
+end
+
 class.IsNull = Null and function(t)
     local tt = type(t);
     if tt == "table" then
@@ -226,9 +232,9 @@ return {
     class = class,
     ObjMeta = ObjMeta,
     DefaultDelete = DefaultDelete,
-    CascadeGet = CascadeGet,
     GetSingleton = GetSingleton,
     DestorySingleton = DestorySingleton,
+    ClassIs = ClassIs,
     AllClasses = {},
-    AccessList = {}
+    AccessStack = Debug and {} or nil
 };

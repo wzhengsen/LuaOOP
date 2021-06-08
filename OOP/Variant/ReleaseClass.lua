@@ -48,6 +48,7 @@ local BaseClass = require("OOP.Variant.BaseClass");
 local class = BaseClass.class
 local DefaultDelete = BaseClass.DefaultDelete;
 local AllClasses = BaseClass.AllClasses;
+local ClassIs = BaseClass.ClassIs;
 
 local ReleaseFunctions = require("OOP.Variant.ReleaseFunctions");
 local MakeLuaObjMetaTable = ReleaseFunctions.MakeLuaObjMetaTable;
@@ -141,26 +142,8 @@ function class.New(...)
         end
     end
 
-    ---@param baseCls? any  If there is no baseCls parameter,it means the return value is the current type.
-    ---@return boolean | table
-    local _is = function(baseCls)
-        if nil == baseCls then
-            return cls;
-        end
-        if baseCls == cls then
-            return true;
-        end
-        for _,base in ipairs(bases) do
-            local _is = base[is];
-            if _is then
-                if _is(baseCls) then
-                    return true;
-                end
-            elseif IsInherite and IsInherite(base,baseCls) then
-                return true;
-            end
-        end
-        return false;
+    local _is = function (...)
+        return ClassIs(cls,bases,...);
     end;
     cls[is] = _is;
 

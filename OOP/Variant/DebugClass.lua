@@ -31,8 +31,6 @@ local Handler = require("OOP.Handler");
 local Version = Config.Version;
 
 local R = require("OOP.Router")
-local Router = R.Router;
-local BitsMap = R.BitsMap;
 local Permission = R.Permission;
 
 local __r__ = Config.__r__;
@@ -42,46 +40,29 @@ local __all__ = Config.__all__;
 local __pm__ = Config.__pm__;
 
 local Handlers = Config.Handlers;
-local Properties = Config.Properties;
-local Friends = Config.Friends;
-local Singleton = Config.Singleton;
-local PropertyBehavior = Config.PropertyBehavior;
 local On = Config.On;
 local AllowClassName = Config.AllowClassName;
 local AllowInheriteTable = Config.AllowInheriteTable;
-local Modifiers = Config.Modifiers;
 
 local new = Config.new;
 local delete = Config.delete;
 local is = Config.is;
 local __init__ = Config.__init__;
 local __del__ = Config.__del__;
-local DeathMarker = Config.DeathMarker;
 
-local Null = Config.CppClass.Null;
 local IsCppClass = Config.CppClass.IsCppClass;
-local IsInherite = Config.CppClass.IsInherite;
 
 local BaseClass = require("OOP.Variant.BaseClass");
 local class = BaseClass.class;
 local DefaultDelete = BaseClass.DefaultDelete;
 local AllClasses = BaseClass.AllClasses;
+local ClassIs = BaseClass.ClassIs;
 
 local DebugFunctions = require("OOP.Variant.DebugFunctions");
 local MakeLuaObjMetaTable = DebugFunctions.MakeLuaObjMetaTable;
 local RetrofitMeta = DebugFunctions.RetrofitMeta;
 local ClassGet = DebugFunctions.ClassGet;
 local ClassSet = DebugFunctions.ClassSet;
-
-local Meta = Config.Meta;
-local MetaDefault = Config.MetaDefault;
-local __pairs__ = MetaDefault.__pairs;
-local __len__ = MetaDefault.__len;
-local __eq__ = MetaDefault.__eq;
-
-local Cache = Config.Cache;
-
-local ClassAccessTable = {};
 
 local HandlerMetaTable = {
     __newindex = function(t,key,value)
@@ -200,26 +181,8 @@ function class.New(...)
         end
     end
 
-    ---@param baseCls? any  If there is no baseCls parameter,it means the return value is the current type.
-    ---@return boolean | table
-    local _is = function(baseCls)
-        if nil == baseCls then
-            return cls;
-        end
-        if baseCls == cls then
-            return true;
-        end
-        for _,base in ipairs(bases) do
-            local _is = base[is];
-            if _is then
-                if _is(baseCls) then
-                    return true;
-                end
-            elseif IsInherite and IsInherite(base,baseCls) then
-                return true;
-            end
-        end
-        return false;
+    local _is = function (...)
+        return ClassIs(cls,bases,...);
     end;
     cls[__all__][is] = _is;
 

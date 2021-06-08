@@ -39,6 +39,7 @@ local BitsMap = {
 local Permission = {
     Public = BitsMap[Public],
     Private = BitsMap[Private],
+    Protected = BitsMap[Protected],
     Static = BitsMap[Static],
     Const = BitsMap[Const]
 }
@@ -57,8 +58,7 @@ if Debug then
     local __all__ = Config.__all__;
     local __pm__ = Config.__pm__;
 
-    local Version = Config.Version;
-    local bits = (Version < 5.3 and require("OOP.Compat.LowerThan53") or require("OOP.Compat.HigherThan52")).bits;
+    local bits = require("OOP.Version.Compat").bits;
     -- It is only under debug that the values need to be routed to the corresponding fields of the types.
     -- To save performance, all modifiers will be ignored under non-debug.
 
@@ -96,6 +96,12 @@ if Debug then
         if bit then
             error(("The name is unavailable. - %s"):format(key));
         end
+        local cls = self.cls;
+        if nil == value then
+            cls[__all__][key] = nil;
+            cls[__pm__][key] = nil;
+            return;
+        end
         local decor = self.decor;
         local isFunction = "function" == type(value);
         if (bits.band(decor,Permission.Const) ~= 0 and isFunction) then
@@ -113,7 +119,6 @@ if Debug then
             -- Without the Public modifier, Public is added by default.
             decor = bits.bor(decor,0x1);
         end
-        local cls = self.cls;
         cls[__all__][key] = value;
         cls[__pm__][key] = decor;
         if key == __init__ and bits.band(decor,0x1) ~= 1 then

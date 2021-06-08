@@ -129,6 +129,9 @@ return {
     -------------------------------------
     PropertyBehavior = 0,
 
+    -- Same as PropertyBehavior.
+    ConstBehavior = 0,
+
     -- Allows the class to have a name.
     -- If true,You can pass the name as the first parameter to the class,
     -- and it is possible to use names to inherit a class.
