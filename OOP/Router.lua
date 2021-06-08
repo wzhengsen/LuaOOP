@@ -17,4 +17,97 @@
 -- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
-return require("OOP.Config").Version > 5.2 and require("OOP.Compat.RouterHigherThan52") or require("OOP.Compat.RouterLowerThan53");
+local Config = require("OOP.Config");
+local Debug = Config.Debug;
+
+local Public = Config.Modifiers.Public;
+local Private = Config.Modifiers.Private;
+local Protected = Config.Modifiers.Protected;
+local Static = Config.Modifiers.Static;
+local Const = Config.Modifiers.Const;
+
+local BitsMap = {
+    [Public] = 1,
+    [Private] = 2,
+    [Protected] = 4,
+    [Static] = 8,
+    [Const] = 16
+};
+local Router = nil;
+
+if Debug then
+    Router = {};
+    local Handlers = Config.Handlers;
+    local Properties = Config.Properties;
+    local Friends = Config.Friends;
+    local Singleton = Config.Singleton;
+
+    local __init__ = Config.__init__;
+    local __del__ = Config.__del__;
+
+    local __all__ = Config.__all__;
+    local __pm__ = Config.__pm__;
+
+    local Version = Config.Version;
+    local bits = (Version < 5.3 and require("OOP.Compat.LowerThan53") or require("OOP.Compat.HigherThan52")).bits;
+    -- It is only under debug that the values need to be routed to the corresponding fields of the types.
+    -- To save performance, all modifiers will be ignored under non-debug.
+    function Router:Begin(cls,key)
+        rawset(self,"decor",0);
+        rawset(self,"cls",cls);
+        return self:Pass(key);
+    end
+    function Router:Pass(key)
+        local bit = BitsMap[key];
+        local decor = self.decor;
+        if bit then
+            if bits.band(decor,bit) ~= 0 then
+                error(("The %s modifier is not reusable."):format(key));
+            elseif bits.band(decor,0x7)~= 0 and bits.band(bit,0x7) ~= 0 then
+                -- Check Public,Private,Protected,they are 0x7
+                error(("The %s modifier cannot be used in conjunction with other access modifiers."):format(key));
+            end
+            self.decor = bits.bor(decor,bit);
+        else
+            error(("There is no such modifier. - %s"):format(key));
+        end
+        return self;
+    end
+    function Router:End(key,value)
+        local bit = BitsMap[key];
+        if bit then
+            error(("The name is unavailable. - %s"):format(key));
+        end
+        local decor = self.decor;
+        if (bits.band(decor,BitsMap[Static]) ~= 0) and
+        (key == __init__ or key == __del__) then
+            error(("%s modifier cannot modify %s functions."):format(Static,key));
+        elseif key == Handlers or key == Properties or key == Singleton or key == Friends then
+            error(("%s cannot be modified."):format(key));
+        end
+        local cls = self.cls;
+        cls[__all__][key] = value;
+        cls[__pm__][key] = decor;
+        self.decor = 0;
+        self.cls = nil;
+    end
+    setmetatable(Router,{
+        __index = function (self,key)
+            return self:Pass(key);
+        end,
+        __newindex = function (self,key,val)
+            self:End(key,val);
+        end
+    });
+end
+
+return {
+    Router = Router,
+    BitsMap = BitsMap,
+    Permission = {
+        Public = BitsMap[Public],
+        Private = BitsMap[Private],
+        Static = BitsMap[Static],
+        Const = BitsMap[Const]
+    }
+};

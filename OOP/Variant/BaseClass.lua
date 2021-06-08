@@ -25,8 +25,9 @@ local ipairs = ipairs;
 local type = type;
 
 local Config = require("OOP.Config");
+local Debug = Config.Debug;
 local Version = Config.Version;
-local Alarm = Version >= 5.4 and warn or print;
+local Alarm = Debug and error or (Version >= 5.4 and warn or print);
 
 local __bases__ = Config.__bases__;
 local is = Config.is;
@@ -189,5 +190,6 @@ return {
     class = class,
     ObjMeta = ObjMeta,
     DefaultDelete = DefaultDelete,
-    CascadeGet = CascadeGet
+    CascadeGet = CascadeGet,
+    AllClasses = {}
 };

@@ -19,7 +19,7 @@
 -- THE SOFTWARE.
 
 local Config = require("OOP.Config");
-local bit32 = Config.Version == 5.2 and bit32 or {
+local bits = Config.Version == 5.2 and bit32 or {
     band = function (a,b)
         local _,floatA = math.modf(a);
         local _,floatB = math.modf(b);
@@ -59,5 +59,5 @@ local bit32 = Config.Version == 5.2 and bit32 or {
 };
 
 return {
-    bit32 = bit32;
+    bits = bits
 };

@@ -120,7 +120,7 @@ return {
     -- For example, writing a read-only property,
     -- or reading a write-only property.
     -- It works with Debug mode only.
-    -- All incorrect operations will be ignored in non-debug mode.
+    -- All incorrect operations will be allowed in non-debug mode.
     -------------------------------------
     -- 0 -> warning(for lua5.4 and after)
     -- 1 -> error
@@ -168,7 +168,8 @@ return {
     __w__ = "_🖊_",
     __bases__ = "_⚾_",
     __all__ = "_🌐_",
-    __pm__ = "_🔑_"
+    __pm__ = "_🔑_",
+    __singleton__ = "_1️⃣_"
 
     --****************Other fields end****************
 };
