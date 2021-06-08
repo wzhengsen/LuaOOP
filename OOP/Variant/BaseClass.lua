@@ -30,10 +30,11 @@ local Version = Config.Version;
 local Alarm = Debug and error or (Version >= 5.4 and warn or print);
 
 local __bases__ = Config.__bases__;
-local is = Config.is;
 local __del__ = Config.__del__;
-local DeathMarker = Config.DeathMarker;
+local __singleton__ = Config.__singleton__;
 
+local is = Config.is;
+local DeathMarker = Config.DeathMarker;
 
 local Meta = Config.Meta;
 local MetaDefault = Config.MetaDefault;
@@ -162,6 +163,41 @@ local DefaultDelete = function(self)
     self[DeathMarker] = true;
 end
 
+---Get the single instance, where it is automatically judged empty
+---and does not require the user to care.
+---
+---@param self any
+---@param call function
+---
+local function GetSingleton(self,call)
+    local s = self[__singleton__];
+    if class.IsNull(s) then
+        s = call();
+        self[__singleton__] = s;
+    end
+    return s;
+end
+
+---Destroy the single instance.
+---It is mapped to Instance property.
+---
+---@param self table
+---@param val nil   This parameter must be a nil value.
+---
+local function DestorySingleton(self,val)
+    assert(
+        not Debug or nil == val,
+        "The nil value needs to be passed in to destory the object."
+    );
+    if nil == val then
+        local s = self[__singleton__];
+        if not class.IsNull(s) then
+            s:delete();
+            self[__singleton__] = nil;
+        end
+    end
+end
+
 class.IsNull = Null and function(t)
     local tt = type(t);
     if tt == "table" then
@@ -191,5 +227,8 @@ return {
     ObjMeta = ObjMeta,
     DefaultDelete = DefaultDelete,
     CascadeGet = CascadeGet,
-    AllClasses = {}
+    GetSingleton = GetSingleton,
+    DestorySingleton = DestorySingleton,
+    AllClasses = {},
+    AccessList = {}
 };

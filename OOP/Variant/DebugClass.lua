@@ -67,11 +67,11 @@ local class = BaseClass.class;
 local DefaultDelete = BaseClass.DefaultDelete;
 local AllClasses = BaseClass.AllClasses;
 
-local ReleaseFunctions = require("OOP.Variant.ReleaseFunctions");
-local MakeLuaObjMetaTable = ReleaseFunctions.MakeLuaObjMetaTable;
-local RetrofitMeta = ReleaseFunctions.RetrofitMeta;
-local ClassGet = ReleaseFunctions.ClassGet;
-local ClassSet = ReleaseFunctions.ClassSet;
+local DebugFunctions = require("OOP.Variant.DebugFunctions");
+local MakeLuaObjMetaTable = DebugFunctions.MakeLuaObjMetaTable;
+local RetrofitMeta = DebugFunctions.RetrofitMeta;
+local ClassGet = DebugFunctions.ClassGet;
+local ClassSet = DebugFunctions.ClassSet;
 
 local Meta = Config.Meta;
 local MetaDefault = Config.MetaDefault;
@@ -299,6 +299,7 @@ function class.New(...)
                     -- register the delete function when you know explicitly that it is not returning userdata after constructing it once.
                     if nil == rawget(cls,delete) then
                         cls[__all__][delete] = DefaultDelete;
+                        cls[__pm__][delete] = cls[__pm__][__del__];
                     end
                 else
                     -- Instances of the userdata type require the last cls information.

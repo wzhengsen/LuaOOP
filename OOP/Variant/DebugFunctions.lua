@@ -26,29 +26,37 @@ local ipairs = ipairs;
 local Config = require("OOP.Config");
 local Version = Config.Version;
 
+local bits = (Version < 5.3 and require("OOP.Compat.LowerThan53") or require("OOP.Compat.HigherThan52")).bits;
+
 local R = require("OOP.Router");
 local Router = R.Router;
 local BitsMap = R.BitsMap;
+local Permission = R.Permission;
 
 local __r__ = Config.__r__;
 local __w__ = Config.__w__;
 local __bases__ = Config.__bases__;
 local __all__ = Config.__all__;
+local __pm__ = Config.__pm__;
+local __friends__ = Config.__friends__;
 
 local Public = Config.Modifiers.Public;
 local Protected = Config.Modifiers.Protected;
 local Private = Config.Modifiers.Private;
-local Const = Config.Modifiers.Config;
+local Const = Config.Modifiers.Const;
 local Static = Config.Modifiers.Static;
 local Handlers = Config.Handlers;
 local Friends = Config.Friends;
 local Singleton = Config.Singleton;
 local Properties = Config.Properties;
+local Instance = Config.Instance;
 
 local PropertyBehavior = Config.PropertyBehavior;
 
 local BaseClass = require("OOP.Variant.BaseClass");
 local CascadeGet = BaseClass.CascadeGet;
+local GetSingleton = BaseClass.GetSingleton;
+local DestorySingleton = BaseClass.DestorySingleton;
 
 local ReservedWord = {
     Public = Public,
@@ -218,8 +226,17 @@ local function ClassSet(self,key,value)
         end
         return;
     elseif key == Singleton then
+        assert("function" == type(value),("%s reserved word must be assigned to a function."):format(Singleton));
         -- Register "Instance" automatically.
-
+        self[__r__][Instance] = function (cls)
+            return GetSingleton(cls,value);
+        end;
+        self[__w__][Instance] = DestorySingleton;
+        return;
+    elseif key == Friends then
+        assert("function" == type(value),("%s reserved word must be assigned to a function."):format(Friends));
+        self[__friends__] = {value()};
+        return;
     else
         local property = self[__w__][key];
         if property then
@@ -239,7 +256,12 @@ local function ClassSet(self,key,value)
                 end
             end
         end
+        local pm = self[__pm__][key];
+        if pm and bits.band(pm,Permission.Const) then
+            error(("You cannot modify the Const value. - %s"):format(key));
+        end
         self[__all__][key] = value;
+        -- No modifier is assigned here; no modifier means Public.
     end
 end
 
