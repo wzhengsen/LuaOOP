@@ -211,13 +211,13 @@ class.IsNull = Null and function(t)
     elseif tt == "userdata" then
         return Null(t);
     end
-    return t;
+    return not t;
 end or
 function(t)
     if type(t) == "table" then
         return rawget(t,DeathMarker);
     end
-    return t;
+    return not t;
 end;
 class.__DefaultDelete = DefaultDelete;
 
@@ -235,6 +235,7 @@ return {
     GetSingleton = GetSingleton,
     DestorySingleton = DestorySingleton,
     ClassIs = ClassIs,
+    IsNull = class.IsNull,
     AllClasses = {},
     AccessStack = Debug and {} or nil
 };

@@ -373,7 +373,7 @@ local function ClassSet(self,key,value)
             value = FunctionWrapper(AccessStack,self,value);
         else
             -- Non-function types are static by default.
-            pm = pm + Permission.Static;
+            pm = bits.bor(pm,Permission.Static);
         end
         self[__all__][key] = value;
         self[__pm__][key] = pm;

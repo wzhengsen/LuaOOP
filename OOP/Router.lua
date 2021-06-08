@@ -58,7 +58,10 @@ if Debug then
     local __all__ = Config.__all__;
     local __pm__ = Config.__pm__;
 
-    local bits = require("OOP.Version.Compat").bits;
+    local Compat = require("OOP.Version.Compat");
+    local bits = Compat.bits;
+    local FunctionWrapper = Compat.FunctionWrapper;
+    local AccessStack = require("OOP.Variant.BaseClass").AccessStack;
     -- It is only under debug that the values need to be routed to the corresponding fields of the types.
     -- To save performance, all modifiers will be ignored under non-debug.
 
@@ -118,6 +121,11 @@ if Debug then
         if bits.band(decor,0x7) == 0 then
             -- Without the Public modifier, Public is added by default.
             decor = bits.bor(decor,0x1);
+        end
+        if isFunction then
+            value = FunctionWrapper(AccessStack,cls,value);
+        else
+            decor = bits.bor(decor,Permission.Static);
         end
         cls[__all__][key] = value;
         cls[__pm__][key] = decor;
