@@ -18,7 +18,6 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 
-local getmetatable = getmetatable;
 local setmetatable = setmetatable;
 local rawset = rawset;
 local pairs = pairs;
@@ -28,8 +27,6 @@ local type = type;
 
 local Config = require("OOP.Config");
 local Handler = require("OOP.Handler");
-local Version = Config.Version;
-
 local R = require("OOP.Router")
 local Permission = R.Permission;
 
@@ -43,6 +40,7 @@ local Handlers = Config.Handlers;
 local On = Config.On;
 local AllowClassName = Config.AllowClassName;
 local AllowInheriteTable = Config.AllowInheriteTable;
+local Instance = Config.Instance;
 
 local new = Config.new;
 local delete = Config.delete;
@@ -54,7 +52,6 @@ local IsCppClass = Config.CppClass.IsCppClass;
 
 local BaseClass = require("OOP.Variant.BaseClass");
 local class = BaseClass.class;
-local DefaultDelete = BaseClass.DefaultDelete;
 local AllClasses = BaseClass.AllClasses;
 local ClassIs = BaseClass.ClassIs;
 
@@ -63,6 +60,8 @@ local MakeLuaObjMetaTable = DebugFunctions.MakeLuaObjMetaTable;
 local RetrofitMeta = DebugFunctions.RetrofitMeta;
 local ClassGet = DebugFunctions.ClassGet;
 local ClassSet = DebugFunctions.ClassSet;
+local DefaultDelete = DebugFunctions.DefaultDelete;
+class.__DefaultDelete = DefaultDelete;
 
 local HandlerMetaTable = {
     __newindex = function(t,key,value)
@@ -184,7 +183,7 @@ function class.New(...)
     local _is = function (...)
         return ClassIs(cls,bases,...);
     end;
-    cls[__all__][is] = _is;
+    cls[is] = _is;
 
     local meta = MakeLuaObjMetaTable(cls);
     local __create__ = cls.__create__;
@@ -260,9 +259,12 @@ function class.New(...)
 
                     -- Since you cannot explicitly determine the return type of the function constructor,
                     -- register the delete function when you know explicitly that it is not returning userdata after constructing it once.
-                    if nil == rawget(cls,delete) then
+                    if nil == rawget(cls[__all__],delete) then
                         cls[__all__][delete] = DefaultDelete;
                         cls[__pm__][delete] = cls[__pm__][__del__];
+                        if cls[__r__][Instance] then
+                            cls[__pm__][delete] = Permission.Protected;
+                        end
                     end
                 else
                     -- Instances of the userdata type require the last cls information.
@@ -284,6 +286,7 @@ function class.New(...)
             end
 
             local init = cls[__init__];
+            -- Do not get __init__ from __all__ and make it search automatically.
             if init then
                 -- Avoid recursively polluting the classCreateLayer variable when create a new object in the ctor.
                 -- Cache it, after the call, set it to classCreateLayer+tempCreateLayer

@@ -73,7 +73,7 @@ for meta,name in pairs(MetaDefault) do
     end
 end
 ObjMeta.__eq = function (...)
-    for _,sender in {...} do
+    for _,sender in ipairs({...}) do
         local __eq = sender[__eq__];
         if __eq then
             return __eq(...);
@@ -100,48 +100,6 @@ ObjMeta.__len = function (self)
     return rawlen(self);
 end
 
---[[
-    Cascade calls to __del__.
-    @param self     The object that will be destructured.
-    @param cls      The class to be looked up.
-    @param called   Records which base classes have been called,See below:
-                 X
-                 |
-                 A
-                / \
-               B   C
-                \ /
-                 D
-    When you destruct the D object,
-    to avoid repeated calls to the destructors of X and A that have been inherited multiple times,
-    record the classes that have been called in "called".
-]]
-local function CascadeDelete(self,cls,called)
-    if called[cls] then
-        return;
-    end
-    local cppCls = IsCppClass and IsCppClass(cls);
-    local del = nil;
-    if cppCls then
-        del = cls[__del__];
-    else
-        for _,base in ipairs(cls[__bases__]) do
-            CascadeDelete(self,base);
-        end
-        del = rawget(cls,__del__);
-    end
-    if del then
-        del(self);
-    end
-    called[cls] = true;
-end
-
-local DefaultDelete = function(self)
-    CascadeDelete(self,self[is](),{});
-    setmetatable(self,nil);
-    self[DeathMarker] = true;
-end
-
 ---Get the single instance, where it is automatically judged empty
 ---and does not require the user to care.
 ---
@@ -149,10 +107,10 @@ end
 ---@param call function
 ---
 local function GetSingleton(self,call)
-    local s = self[__singleton__];
+    local s = rawget(self,__singleton__);
     if class.IsNull(s) then
         s = call();
-        self[__singleton__] = s;
+        rawset(self,__singleton__,s);
     end
     return s;
 end
@@ -169,10 +127,10 @@ local function DestorySingleton(self,val)
         "The nil value needs to be passed in to destory the object."
     );
     if nil == val then
-        local s = self[__singleton__];
+        local s = rawget(self,__singleton__);
         if not class.IsNull(s) then
             s:delete();
-            self[__singleton__] = nil;
+            rawset(self,__singleton__,nil);
         end
     end
 end
@@ -192,7 +150,7 @@ local function ClassIs(cls,bases,...)
         return true;
     end
     for _,base in ipairs(bases) do
-        local _is = base[is];
+        local _is = rawget(base,is);
         if _is then
             if _is(baseCls) then
                 return true;
@@ -219,7 +177,6 @@ function(t)
     end
     return not t;
 end;
-class.__DefaultDelete = DefaultDelete;
 
 setmetatable(class,{
     __call = function(c,...)
@@ -231,7 +188,6 @@ rawset(_G,Config.class,class);
 return {
     class = class,
     ObjMeta = ObjMeta,
-    DefaultDelete = DefaultDelete,
     GetSingleton = GetSingleton,
     DestorySingleton = DestorySingleton,
     ClassIs = ClassIs,

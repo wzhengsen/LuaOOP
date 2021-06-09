@@ -35,12 +35,17 @@ local Router = R.Router;
 local BitsMap = R.BitsMap;
 local Permission = R.Permission;
 
+local new = Config.new;
+local delete = Config.delete;
+local is = Config.is;
 local __r__ = Config.__r__;
 local __w__ = Config.__w__;
 local __bases__ = Config.__bases__;
 local __all__ = Config.__all__;
 local __pm__ = Config.__pm__;
 local __friends__ = Config.__friends__;
+local __init__ = Config.__init__;
+local __del__ = Config.__del__;
 
 local Public = Config.Modifiers.Public;
 local Protected = Config.Modifiers.Protected;
@@ -51,6 +56,9 @@ local Friends = Config.Friends;
 local Singleton = Config.Singleton;
 local Properties = Config.Properties;
 local Instance = Config.Instance;
+
+local IsCppClass = Config.CppClass.IsCppClass;
+local DeathMarker = Config.DeathMarker;
 
 local PropertyBehavior = Config.PropertyBehavior;
 local ConstBehavior = Config.ConstBehavior;
@@ -88,6 +96,60 @@ local function CheckClassAccessPermission(self,pm,key,byObj)
             end
         end
     end
+end
+
+
+--[[
+    Cascade calls to __del__.
+    @param self     The object that will be destructured.
+    @param cls      The class to be looked up.
+    @param called   Records which base classes have been called,See below:
+                 X
+                 |
+                 A
+                / \
+               B   C
+                \ /
+                 D
+    When you destruct the D object,
+    to avoid repeated calls to the destructors of X and A that have been inherited multiple times,
+    record the classes that have been called in "called".
+]]
+local function CascadeDelete(self,cls,called)
+    if called[cls] then
+        return;
+    end
+    local cppCls = IsCppClass and IsCppClass(cls);
+    local del = nil;
+    if cppCls then
+        del = cls[__del__];
+    else
+        for _,base in ipairs(cls[__bases__]) do
+            CascadeDelete(self,base);
+        end
+
+        local pm = cls[__pm__][__del__] or 0x1;
+        local friends = rawget(cls,__friends__);
+        local aCls = AccessStack[#AccessStack];
+        if (not friends or not friends[aCls]) and
+        (bits.band(pm,Permission.Public) == 0) and
+        (aCls ~= cls) and
+        (bits.band(pm,Permission.Private) ~= 0)then
+            error(("Attempt to access private members outside the permission. - %s"):format(__del__));
+        end
+
+        del = cls[__all__][__del__];
+    end
+    if del then
+        del(self);
+    end
+    called[cls] = true;
+end
+
+local DefaultDelete = function(self)
+    CascadeDelete(self,self[is](),{});
+    setmetatable(self,nil);
+    self[DeathMarker] = true;
 end
 
 ---Cascade to get the value of the corresponding key of a class and its base class
@@ -297,11 +359,6 @@ local function ClassSet(self,key,value)
     if ReservedWord[key] then
         error(("%s is a reserved word and you can't use it."):format(key));
     end
-    if nil == value then
-        self[__all__][key] = nil;
-        self[__pm__][key] = nil;
-        return;
-    end
     local isFunction = "function" == type(value);
     if key == Properties then
         value = value(self);
@@ -318,15 +375,21 @@ local function ClassSet(self,key,value)
     elseif key == Singleton then
         assert(isFunction,("%s reserved word must be assigned to a function."):format(Singleton));
         -- Register "Instance" automatically.
-        self[__r__][Instance] = function (cls)
-            return GetSingleton(cls,value);
-        end;
-        self[__w__][Instance] = DestorySingleton;
+        self[__r__][Instance] = FunctionWrapper(AccessStack,self,function()
+            return GetSingleton(self,value);
+        end);
+        self[__w__][Instance] = FunctionWrapper(AccessStack,self,function(_,val)
+            DestorySingleton(self,val)
+        end);
+        -- Once register "Singleton" for a class,set permission of "new","delete" method to protected.
+        self[__pm__][new] = Permission.Static + Permission.Protected;
+        self[__pm__][delete] = Permission.Protected;
         return;
     elseif key == Friends then
         assert(isFunction,("%s reserved word must be assigned to a function."):format(Friends));
         local friends = {};
         self[__friends__] = friends;
+        value = FunctionWrapper(AccessStack,self,value);
         for _, friend in ipairs({value()}) do
             friends[friend] = true;
         end
@@ -349,6 +412,11 @@ local function ClassSet(self,key,value)
                     return;
                 end
             end
+        end
+        if nil == value then
+            self[__all__][key] = nil;
+            self[__pm__][key] = nil;
+            return;
         end
         local pm = self[__pm__][key];
         if pm then
@@ -384,5 +452,6 @@ return {
     MakeLuaObjMetaTable = MakeLuaObjMetaTable,
     RetrofitMeta = RetrofitMeta,
     ClassSet = ClassSet,
-    ClassGet = ClassGet
+    ClassGet = ClassGet,
+    DefaultDelete = DefaultDelete
 };

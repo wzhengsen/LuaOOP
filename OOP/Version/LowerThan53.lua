@@ -25,12 +25,17 @@ local bits = Config.Version == 5.2 and bit32 or {
         local _,floatB = math.modf(b);
         assert(floatA == 0 and floatB == 0 and a >= 0 and b >= 0 and a ~= math.huge and b ~= math.huge,"Illegal operand.");
         local ret = 0;
-        for _ = 1,32 do
+        for i = 1,32 do
             if a == 0 or b == 0 then
                 break;
             end
             if a % 2 == 1 and b % 2 == 1 then
-                ret = ret == 0 and 1 or ret;
+                if ret == 0 then
+                    ret = 2 ^ (i - 1);
+                else
+                    ret = ret * 2 + 1;
+                end
+            else
                 ret = ret * 2;
             end
             a = math.floor(a / 2);
@@ -43,12 +48,17 @@ local bits = Config.Version == 5.2 and bit32 or {
         local _,floatB = math.modf(b);
         assert(floatA == 0 and floatB == 0 and a >= 0 and b >= 0 and a ~= math.huge and b ~= math.huge,"Illegal operand.");
         local ret = 0;
-        for _ = 1,32 do
+        for i = 1,32 do
             if a == 0 and b == 0 then
                 break;
             end
             if a % 2 == 1 or b % 2 == 1 then
-                ret = ret == 0 and 1 or ret;
+                if ret == 0 then
+                    ret = 2 ^ (i - 1);
+                else
+                    ret = ret * 2 + 1;
+                end
+            else
                 ret = ret * 2;
             end
             a = math.floor(a / 2);

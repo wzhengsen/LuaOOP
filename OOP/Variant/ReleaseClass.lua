@@ -46,7 +46,6 @@ local IsInherite = Config.CppClass.IsInherite;
 
 local BaseClass = require("OOP.Variant.BaseClass");
 local class = BaseClass.class
-local DefaultDelete = BaseClass.DefaultDelete;
 local AllClasses = BaseClass.AllClasses;
 local ClassIs = BaseClass.ClassIs;
 
@@ -55,6 +54,8 @@ local MakeLuaObjMetaTable = ReleaseFunctions.MakeLuaObjMetaTable;
 local RetrofitMeta = ReleaseFunctions.RetrofitMeta;
 local ClassGet = ReleaseFunctions.ClassGet;
 local ClassSet = ReleaseFunctions.ClassSet;
+local DefaultDelete = ReleaseFunctions.DefaultDelete;
+class.__DefaultDelete = DefaultDelete;
 
 local ClassCreateLayer = 0;
 function class.New(...)

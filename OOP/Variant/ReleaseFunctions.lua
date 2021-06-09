@@ -28,9 +28,16 @@ local Config = require("OOP.Config");
 local R = require("OOP.Router");
 local BitsMap = R.BitsMap;
 
+local is = Config.is;
+
 local __r__ = Config.__r__;
 local __w__ = Config.__w__;
 local __bases__ = Config.__bases__;
+local __del__ = Config.__del__;
+
+local IsCppClass = Config.CppClass.IsCppClass;
+
+local DeathMarker = Config.DeathMarker;
 
 local Properties = Config.Properties;
 local Singleton = Config.Singleton;
@@ -43,6 +50,48 @@ local BaseClass = require("OOP.Variant.BaseClass");
 local ObjMeta = BaseClass.ObjMeta;
 local GetSingleton = BaseClass.GetSingleton;
 local DestorySingleton = BaseClass.DestorySingleton;
+
+--[[
+    Cascade calls to __del__.
+    @param self     The object that will be destructured.
+    @param cls      The class to be looked up.
+    @param called   Records which base classes have been called,See below:
+                 X
+                 |
+                 A
+                / \
+               B   C
+                \ /
+                 D
+    When you destruct the D object,
+    to avoid repeated calls to the destructors of X and A that have been inherited multiple times,
+    record the classes that have been called in "called".
+]]
+local function CascadeDelete(self,cls,called)
+    if called[cls] then
+        return;
+    end
+    local cppCls = IsCppClass and IsCppClass(cls);
+    local del = nil;
+    if cppCls then
+        del = cls[__del__];
+    else
+        for _,base in ipairs(cls[__bases__]) do
+            CascadeDelete(self,base);
+        end
+        del = rawget(cls,__del__);
+    end
+    if del then
+        del(self);
+    end
+    called[cls] = true;
+end
+
+local DefaultDelete = function(self)
+    CascadeDelete(self,self[is](),{});
+    setmetatable(self,nil);
+    self[DeathMarker] = true;
+end
 
 ---Cascade to get the value of the corresponding key of a class and its base class
 ---(ignoring metamethods).
@@ -216,10 +265,12 @@ local function ClassSet(self,key,value)
         end
     elseif key == Singleton then
         -- Register "Instance" automatically.
-        self[__r__][Instance] = function (cls)
-            return GetSingleton(cls,value);
+        self[__r__][Instance] = function ()
+            return GetSingleton(self,value);
         end;
-        self[__w__][Instance] = DestorySingleton;
+        self[__w__][Instance] = function (_,val)
+            DestorySingleton(self,val)
+        end;
         return;
     elseif key == Friends then
         return;
@@ -233,5 +284,6 @@ return {
     MakeLuaObjMetaTable = MakeLuaObjMetaTable,
     RetrofitMeta = RetrofitMeta,
     ClassSet = ClassSet,
-    ClassGet = ClassGet
+    ClassGet = ClassGet,
+    DefaultDelete = DefaultDelete
 };
