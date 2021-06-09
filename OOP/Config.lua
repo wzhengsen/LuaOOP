@@ -31,6 +31,8 @@ return {
 
     class = "class",
 
+    Event = "Event",
+
     Handlers = "Handlers",
 
     Properties = "Properties",
@@ -160,6 +162,10 @@ return {
 
     -- Whether to cache the elements to speed up the next access.
     Cache = true,
+
+    -- When the number of holes in the event response objects reaches a certain number,
+    -- the list of objects is rearranged to optimise speed.
+    HoleLimit = 15,
 
     --****************Functional fields end****************
 

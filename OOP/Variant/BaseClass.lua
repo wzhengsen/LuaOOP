@@ -30,8 +30,6 @@ local Debug = Config.Debug;
 local Version = Config.Version;
 local Alarm = Debug and error or (Version >= 5.4 and warn or print);
 
-local __bases__ = Config.__bases__;
-local __del__ = Config.__del__;
 local __singleton__ = Config.__singleton__;
 
 local is = Config.is;
@@ -44,7 +42,6 @@ local __len__ = MetaDefault.__len;
 local __eq__ = MetaDefault.__eq;
 
 local Null = Config.CppClass.Null;
-local IsCppClass = Config.CppClass.IsCppClass;
 local IsInherite = Config.CppClass.IsInherite;
 
 local class = {};

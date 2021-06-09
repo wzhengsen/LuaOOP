@@ -382,7 +382,10 @@ local function ClassSet(self,key,value)
             DestorySingleton(self,val)
         end);
         -- Once register "Singleton" for a class,set permission of "new","delete" method to protected.
-        self[__pm__][new] = Permission.Static + Permission.Protected;
+        local pm = self[__pm__][new];
+        if bits.band(pm,Permission.Private) == 0 then
+            self[__pm__][new] = Permission.Static + Permission.Protected;
+        end
         self[__pm__][delete] = Permission.Protected;
         return;
     elseif key == Friends then
@@ -413,11 +416,6 @@ local function ClassSet(self,key,value)
                 end
             end
         end
-        if nil == value then
-            self[__all__][key] = nil;
-            self[__pm__][key] = nil;
-            return;
-        end
         local pm = self[__pm__][key];
         if pm then
             if bits.band(pm,Permission.Const) ~= 0 then
@@ -434,6 +432,11 @@ local function ClassSet(self,key,value)
                 end
             end
             CheckClassAccessPermission(self,pm,key);
+        end
+        if nil == value then
+            self[__all__][key] = nil;
+            self[__pm__][key] = nil;
+            return;
         end
         pm = Permission.Public;
         if isFunction then

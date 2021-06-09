@@ -26,9 +26,10 @@ local assert = assert;
 local type = type;
 
 local Config = require("OOP.Config");
-local Handler = require("OOP.Handler");
+local E_Handlers = require("OOP.Event").Handlers;
 local R = require("OOP.Router")
 local Permission = R.Permission;
+local bits = require("OOP.Version.Compat").bits;
 
 local __r__ = Config.__r__;
 local __w__ = Config.__w__;
@@ -261,9 +262,11 @@ function class.New(...)
                     -- register the delete function when you know explicitly that it is not returning userdata after constructing it once.
                     if nil == rawget(cls[__all__],delete) then
                         cls[__all__][delete] = DefaultDelete;
-                        cls[__pm__][delete] = cls[__pm__][__del__];
-                        if cls[__r__][Instance] then
+                        local pm = cls[__pm__][__del__];
+                        if cls[__r__][Instance] and bits.band(pm,Permission.Private) == 0 then
                             cls[__pm__][delete] = Permission.Protected;
+                        else
+                            cls[__pm__][delete] = pm;
                         end
                     end
                 else
@@ -276,7 +279,7 @@ function class.New(...)
                 end
                 for key,func in pairs(handlers) do
                     -- Automatically listens to events.
-                    Handler.On(key:sub(3),obj,func);
+                    E_Handlers.On(key:sub(3),obj,func);
                 end
             else
                 if "table" == instType then
