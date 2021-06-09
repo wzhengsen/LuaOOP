@@ -26,7 +26,7 @@ local ipairs = ipairs;
 local type = type;
 
 local Config = require("OOP.Config");
-local Handler = require("OOP.Handler");
+local E_Handlers = require("OOP.Event").Handlers;
 
 local __r__ = Config.__r__;
 local __w__ = Config.__w__;
@@ -235,7 +235,7 @@ function class.New(...)
                 end
                 for key,func in pairs(handlers) do
                     -- Automatically listens to events.
-                    Handler.On(key:sub(3),obj,func);
+                    E_Handlers.On(key:sub(3),obj,func);
                 end
             else
                 if "table" == instType then

@@ -44,6 +44,8 @@ local __eq__ = MetaDefault.__eq;
 local Null = Config.CppClass.Null;
 local IsInherite = Config.CppClass.IsInherite;
 
+local IsNull = Config.IsNull;
+
 local class = {};
 
 -- Object's meta-table implementation.
@@ -97,41 +99,6 @@ ObjMeta.__len = function (self)
     return rawlen(self);
 end
 
----Get the single instance, where it is automatically judged empty
----and does not require the user to care.
----
----@param self any
----@param call function
----
-local function GetSingleton(self,call)
-    local s = rawget(self,__singleton__);
-    if class.IsNull(s) then
-        s = call();
-        rawset(self,__singleton__,s);
-    end
-    return s;
-end
-
----Destroy the single instance.
----It is mapped to Instance property.
----
----@param self table
----@param val nil   This parameter must be a nil value.
----
-local function DestorySingleton(self,val)
-    assert(
-        not Debug or nil == val,
-        "The nil value needs to be passed in to destory the object."
-    );
-    if nil == val then
-        local s = rawget(self,__singleton__);
-        if not class.IsNull(s) then
-            s:delete();
-            rawset(self,__singleton__,nil);
-        end
-    end
-end
-
 ---If there is no parameter,it means the return value is the current type.
 ---@return table
 local function ClassIs(cls,bases,...)
@@ -159,7 +126,7 @@ local function ClassIs(cls,bases,...)
     return false;
 end
 
-class.IsNull = Null and function(t)
+local _IsNull = Null and function(t)
     local tt = type(t);
     if tt == "table" then
         return rawget(t,DeathMarker);
@@ -174,6 +141,42 @@ function(t)
     end
     return not t;
 end;
+class[IsNull] = _IsNull;
+
+---Get the single instance, where it is automatically judged empty
+---and does not require the user to care.
+---
+---@param self any
+---@param call function
+---
+local function GetSingleton(self,call)
+    local s = rawget(self,__singleton__);
+    if _IsNull(s) then
+        s = call();
+        rawset(self,__singleton__,s);
+    end
+    return s;
+end
+
+---Destroy the single instance.
+---It is mapped to Instance property.
+---
+---@param self table
+---@param val nil   This parameter must be a nil value.
+---
+local function DestorySingleton(self,val)
+    assert(
+        not Debug or nil == val,
+        "The nil value needs to be passed in to destory the object."
+    );
+    if nil == val then
+        local s = rawget(self,__singleton__);
+        if not _IsNull(s) then
+            s:delete();
+            rawset(self,__singleton__,nil);
+        end
+    end
+end
 
 setmetatable(class,{
     __call = function(c,...)
@@ -188,7 +191,7 @@ return {
     GetSingleton = GetSingleton,
     DestorySingleton = DestorySingleton,
     ClassIs = ClassIs,
-    IsNull = class.IsNull,
+    IsNull = _IsNull,
     AllClasses = {},
     AccessStack = Debug and {} or nil
 };

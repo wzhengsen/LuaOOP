@@ -44,7 +44,6 @@ local __bases__ = Config.__bases__;
 local __all__ = Config.__all__;
 local __pm__ = Config.__pm__;
 local __friends__ = Config.__friends__;
-local __init__ = Config.__init__;
 local __del__ = Config.__del__;
 
 local Public = Config.Modifiers.Public;
@@ -68,6 +67,7 @@ local GetSingleton = BaseClass.GetSingleton;
 local DestorySingleton = BaseClass.DestorySingleton;
 local ObjMeta = BaseClass.ObjMeta;
 local AccessStack = BaseClass.AccessStack;
+local AllClasses = BaseClass.AllClasses;
 
 local ReservedWord = {
     Public = Public,
@@ -84,7 +84,7 @@ local function CheckClassAccessPermission(self,pm,key,byObj)
     local friends = rawget(self,__friends__);
     local cls = AccessStack[#AccessStack];
     --Check if it is a friendly class.
-    if not friends or not friends[cls] then
+    if not friends or (not friends[cls] and not friends[AllClasses[cls]]) then
         if bits.band(pm,Permission.Public) == 0 then
             -- Check Public,Private,Protected.
             if cls ~= self then
@@ -131,7 +131,7 @@ local function CascadeDelete(self,cls,called)
         local pm = cls[__pm__][__del__] or 0x1;
         local friends = rawget(cls,__friends__);
         local aCls = AccessStack[#AccessStack];
-        if (not friends or not friends[aCls]) and
+        if (not friends or not friends[aCls] or not friends[AllClasses[cls]]) and
         (bits.band(pm,Permission.Public) == 0) and
         (aCls ~= cls) and
         (bits.band(pm,Permission.Private) ~= 0)then
@@ -172,7 +172,7 @@ local function CascadeGet(self,key,byObj)
     local bases = rawget(self,__bases__);
     if bases then
         for _,base in ipairs(bases) do
-            ret = CascadeGet(base,key);
+            ret = CascadeGet(base,key,byObj);
             if nil ~= ret then
                 return ret;
             end
@@ -391,7 +391,7 @@ local function ClassSet(self,key,value)
     elseif key == Friends then
         assert(isFunction,("%s reserved word must be assigned to a function."):format(Friends));
         local friends = {};
-        self[__friends__] = friends;
+        rawset(self,__friends__,friends);
         value = FunctionWrapper(AccessStack,self,value);
         for _, friend in ipairs({value()}) do
             friends[friend] = true;

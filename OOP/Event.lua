@@ -18,7 +18,6 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 
-
 --[[
     A message distributor designed to be as simple as possible,
     which does not need to actively create message types or register message types,
@@ -46,7 +45,7 @@ local remove = table.remove;
 local pcall = pcall;
 
 local function RemakeObjList(pool,lvl,hole)
- -- Rearrange the list of objects
+    -- Rearrange the list of objects
     -- if the number of holes reaches the limit.
     if lvl == 1 and hole > HoleLimit then
         local newObjHandlers = {};
@@ -130,25 +129,6 @@ local Event = setmetatable({},{
 
 
 local Handlers = {};
-
---[[
-    Desc:       令一个实例对象响应某事件名。
-                其中，handler的第一个参数，一定会被置为该obj。
-
-                另一个通常的监听响应的方式为：
-                -- 即监听SocketRecv事件名。
-                function someclass.Handler:OnSocketRecv(msg,data)
-                    print(msg .. "&" .. data); -- abc&123
-                end
-
-                -- 事件通知调用：
-                Event.SocketRecv("abc",123)
-
-    Param:      string      事件名。
-                obj         对象。
-                handler     响应函数。
-]]
-
 ---Register an object to respond an event which named "eventName".
 ---The first parameter of "handler" will be set with the current object.
 ---

@@ -39,6 +39,8 @@ return {
 
     Friends = "Friends",
 
+    IsNull = "IsNull",
+
     -- Constructor and destructor names.
     __init__ = "__init__",
     __del__ = "__del__",
@@ -129,15 +131,15 @@ return {
     -- 2 -> allow
     -- other -> ignore
     -------------------------------------
-    PropertyBehavior = 0,
+    PropertyBehavior = 1,
 
     -- Same as PropertyBehavior.
-    ConstBehavior = 0,
+    ConstBehavior = 1,
 
     -- Allows the class to have a name.
     -- If true,You can pass the name as the first parameter to the class,
     -- and it is possible to use names to inherit a class.
-    AllowClassName = false,
+    AllowClassName = true,
 
     -- Allows the class inherite a table.
     -- Like this: local Inherite = class({A = 1,B = 2});

@@ -29,7 +29,9 @@ local Config = require("OOP.Config");
 local E_Handlers = require("OOP.Event").Handlers;
 local R = require("OOP.Router")
 local Permission = R.Permission;
-local bits = require("OOP.Version.Compat").bits;
+local Compat = require("OOP.Version.Compat");
+local bits = Compat.bits;
+local FunctionWrapper = Compat.FunctionWrapper;
 
 local __r__ = Config.__r__;
 local __w__ = Config.__w__;
@@ -55,6 +57,7 @@ local BaseClass = require("OOP.Variant.BaseClass");
 local class = BaseClass.class;
 local AllClasses = BaseClass.AllClasses;
 local ClassIs = BaseClass.ClassIs;
+local AccessStack = BaseClass.AccessStack;
 
 local DebugFunctions = require("OOP.Variant.DebugFunctions");
 local MakeLuaObjMetaTable = DebugFunctions.MakeLuaObjMetaTable;
@@ -116,6 +119,7 @@ function class.New(...)
         local name = table.remove(args,1);
         if nil == AllClasses[name] then
             AllClasses[name] = cls;
+            AllClasses[cls] = name;
         else
             -- Duplicative class name.
             error(("You cannot use this name \"%s\", which is already used by other class.").format(name));
@@ -261,8 +265,8 @@ function class.New(...)
                     -- Since you cannot explicitly determine the return type of the function constructor,
                     -- register the delete function when you know explicitly that it is not returning userdata after constructing it once.
                     if nil == rawget(cls[__all__],delete) then
-                        cls[__all__][delete] = DefaultDelete;
-                        local pm = cls[__pm__][__del__];
+                        cls[__all__][delete] = FunctionWrapper(AccessStack,cls,DefaultDelete);
+                        local pm = cls[__pm__][__del__] or Permission.Public;
                         if cls[__r__][Instance] and bits.band(pm,Permission.Private) == 0 then
                             cls[__pm__][delete] = Permission.Protected;
                         else
@@ -304,7 +308,7 @@ function class.New(...)
             return obj;
         end;
         -- In debug mode,the "new" method is public and static.
-        cls[__all__][new] = _new;
+        cls[__all__][new] = FunctionWrapper(AccessStack,cls,_new);
         -- Use + instead of | to try to keep lua 5.3 or lower compatible.
         cls[__pm__][new] = Permission.Public + Permission.Static;
     end
