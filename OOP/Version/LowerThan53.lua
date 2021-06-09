@@ -30,13 +30,7 @@ local bits = Config.Version == 5.2 and bit32 or {
                 break;
             end
             if a % 2 == 1 and b % 2 == 1 then
-                if ret == 0 then
-                    ret = 2 ^ (i - 1);
-                else
-                    ret = ret * 2 + 1;
-                end
-            else
-                ret = ret * 2;
+                ret = ret + 2 ^ (i - 1);
             end
             a = math.floor(a / 2);
             b = math.floor(b / 2);
@@ -53,13 +47,7 @@ local bits = Config.Version == 5.2 and bit32 or {
                 break;
             end
             if a % 2 == 1 or b % 2 == 1 then
-                if ret == 0 then
-                    ret = 2 ^ (i - 1);
-                else
-                    ret = ret * 2 + 1;
-                end
-            else
-                ret = ret * 2;
+                ret = ret + 2 ^ (i - 1);
             end
             a = math.floor(a / 2);
             b = math.floor(b / 2);
