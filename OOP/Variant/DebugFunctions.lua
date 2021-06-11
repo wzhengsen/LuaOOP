@@ -45,6 +45,7 @@ local __all__ = Config.__all__;
 local __pm__ = Config.__pm__;
 local __friends__ = Config.__friends__;
 local __del__ = Config.__del__;
+local __cls__ = Config.__cls__;
 
 local Public = Config.Modifiers.Public;
 local Protected = Config.Modifiers.Protected;
@@ -276,7 +277,7 @@ local function RetrofitMeta(ud)
     local newIndex = rawget(meta,"__newindex");
     rawset(meta,"__index",function(sender,key)
         local uv = (debug.getuservalue(ud));
-        local ret = GetFromClass(uv.__cls__,key,sender);
+        local ret = GetFromClass(uv[__cls__],key,sender);
         if nil ~= ret then
             return ret;
         end
@@ -285,7 +286,7 @@ local function RetrofitMeta(ud)
     end);
     rawset(meta,"__newindex",function (sender,key,value)
         local uv = (debug.getuservalue(sender));
-        local cls = uv.__cls__;
+        local cls = uv[__cls__];
         local property = cls[__w__][key];
         if property then
             property(sender,value);

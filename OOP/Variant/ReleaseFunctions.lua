@@ -34,6 +34,7 @@ local __r__ = Config.__r__;
 local __w__ = Config.__w__;
 local __bases__ = Config.__bases__;
 local __del__ = Config.__del__;
+local __cls__ = Config.__cls__;
 
 local IsCppClass = Config.CppClass.IsCppClass;
 
@@ -176,7 +177,7 @@ local function RetrofitMeta(ud)
     local newIndex = rawget(meta,"__newindex");
     rawset(meta,"__index",function (sender,key)
         local uv = (debug.getuservalue(ud));
-        local cls = uv.__cls__;
+        local cls = uv[__cls__];
         -- Check cls methods and members.
         local ret = rawget(cls,key);
         if nil ~= ret then
@@ -202,7 +203,7 @@ local function RetrofitMeta(ud)
     end);
     rawset(meta,"__newindex",function (sender,key,val)
         local uv = (debug.getuservalue(sender));
-        local cls = uv.__cls__;
+        local cls = uv[__cls__];
         local property = cls[__w__][key];
         if property then
             property(sender,val);

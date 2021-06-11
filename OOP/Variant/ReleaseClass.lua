@@ -31,6 +31,7 @@ local E_Handlers = require("OOP.Event").Handlers;
 local __r__ = Config.__r__;
 local __w__ = Config.__w__;
 local __bases__ = Config.__bases__;
+local __cls__ = Config.__cls__;
 
 local Handlers = Config.Handlers;
 local AllowClassName = Config.AllowClassName;
@@ -42,7 +43,6 @@ local is = Config.is;
 local __init__ = Config.__init__;
 
 local IsCppClass = Config.CppClass.IsCppClass;
-local IsInherite = Config.CppClass.IsInherite;
 
 local BaseClass = require("OOP.Variant.BaseClass");
 local class = BaseClass.class
@@ -211,7 +211,7 @@ function class.New(...)
                 if "table" == instType then
                     -- Instances of the table type do not require the last cls information
                     -- (which is already included in the metatable and in the upvalue).
-                    obj.__cls__ = nil;
+                    obj[__cls__] = nil;
                     setmetatable(obj,meta);
 
                     -- If the object is a table,
@@ -229,7 +229,11 @@ function class.New(...)
                     -- Instances of the userdata type require the last cls information.
                     -- Because multiple different lua classes can inherit from the same c++ class.
                     local uv,_ = debug.getuservalue(obj);
-                    uv.__cls__ = cls;
+                    if not uv then
+                        uv = {};
+                        debug.setuservalue(obj,uv);
+                    end
+                    uv[__cls__] = cls;
                     uv[is] = _is;
                     RetrofitMeta(obj);
                 end
@@ -240,7 +244,7 @@ function class.New(...)
             else
                 if "table" == instType then
                     -- Returning cls together can indicate the class to which the function constructor belongs.
-                    obj.__cls__ = cls;
+                    obj[__cls__] = cls;
                 end
             end
 
