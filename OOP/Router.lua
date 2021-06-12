@@ -22,6 +22,7 @@ local rawset = rawset;
 local error = error;
 local type = type;
 local Config = require("OOP.Config");
+local Version = Config.Version;
 local Compat = require("OOP.Version.Compat");
 local bits = Compat.bits;
 local Debug = Config.Debug;
@@ -37,12 +38,19 @@ local Static = Config.Modifiers.Static;
 local Const = Config.Modifiers.Const;
 
 local BitsMap = {
-    [Public] = math.tointeger(2 ^ 0),
-    [Private] = math.tointeger(2 ^ 1),
-    [Protected] = math.tointeger(2 ^ 2),
-    [Static] = math.tointeger(2 ^ 3),
-    [Const] = math.tointeger(2 ^ 4)
+    [Public] = 2 ^ 0,
+    [Private] = 2 ^ 1,
+    [Protected] = 2 ^ 2,
+    [Static] = 2 ^ 3,
+    [Const] = 2 ^ 4
 };
+if Version > 5.2 then
+    BitsMap.Public = math.tointeger(BitsMap.Public);
+    BitsMap.Private = math.tointeger(BitsMap.Private);
+    BitsMap.Protected = math.tointeger(BitsMap.Protected);
+    BitsMap.Static = math.tointeger(BitsMap.Static);
+    BitsMap.Const = math.tointeger(BitsMap.Const);
+end
 local Permission = {
     Public = BitsMap[Public],
     Private = BitsMap[Private],

@@ -117,6 +117,9 @@ local function CheckPermission(self,key,byObj,set)
     if not pm then
         return true;
     end
+    if byObj and bits.band(pm,Permission.Static) ~= 0 then
+        error(("Objects cannot access static members of a class. - %s"):format(key));
+    end
     if set then
         if bits.band(pm,Permission.Const) ~= 0 then
             -- Check Const.
@@ -311,7 +314,7 @@ local function MakeLuaObjMetaTable(cls)
                     end
                 end
             end
-            if not CheckPermission(cls,key,true) then
+            if not CheckPermission(cls,key,true,true) then
                 return;
             end
             rawset(sender[__all__],key,value);
@@ -367,7 +370,7 @@ local function RetrofitMeta(ud)
                 end
             end
         end
-        if not CheckPermission(cls,key,true) then
+        if not CheckPermission(cls,key,true,true) then
             return;
         end
         -- Finally, write by the original method.
