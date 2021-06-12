@@ -22,10 +22,12 @@ local getmetatable = getmetatable;
 local rawset = rawset;
 local pairs = pairs;
 local ipairs = ipairs;
+local type = type;
 
 local Config = require("OOP.Config");
 
 local R = require("OOP.Router");
+local Router = R.Router;
 local BitsMap = R.BitsMap;
 
 local is = Config.is;
@@ -35,6 +37,7 @@ local __w__ = Config.__w__;
 local __bases__ = Config.__bases__;
 local __del__ = Config.__del__;
 local __cls__ = Config.__cls__;
+local __members__ = Config.__members__;
 
 local IsCppClass = Config.CppClass.IsCppClass;
 
@@ -225,7 +228,7 @@ local rwTable = {[__r__] = "r",[__w__] = "w"};
 ---
 local function ClassGet(self,key)
     if BitsMap[key] then
-        return self;
+        return Router:Begin(self,key);
     end
     -- Check the properties first.
     local property = self[__r__][key];
@@ -277,7 +280,13 @@ local function ClassSet(self,key,value)
         return;
     else
         local property = self[__w__][key];
-        return property and property(self,value) or rawset(self,key,value);
+        if property then
+            return property(self,value);
+        end
+        if "function" ~= type(value) then
+            self[__members__][key] = value;
+        end
+        rawset(self,key,value);
     end
 end
 

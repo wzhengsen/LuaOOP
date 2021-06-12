@@ -39,6 +39,7 @@ local __bases__ = Config.__bases__;
 local __all__ = Config.__all__;
 local __pm__ = Config.__pm__;
 local __cls__ = Config.__cls__;
+local __members__ = Config.__members__;
 
 local Handlers = Config.Handlers;
 local On = Config.On;
@@ -59,6 +60,7 @@ local class = BaseClass.class;
 local AllClasses = BaseClass.AllClasses;
 local ClassIs = BaseClass.ClassIs;
 local AccessStack = BaseClass.AccessStack;
+local Copy = BaseClass.Copy;
 
 local DebugFunctions = require("OOP.Variant.DebugFunctions");
 local MakeLuaObjMetaTable = DebugFunctions.MakeLuaObjMetaTable;
@@ -85,9 +87,10 @@ function class.New(...)
         -- All event handlers.
         [Handlers] = setmetatable({},HandlerMetaTable),
         [__bases__] = {},
+        [__members__] = {},
 
-        [__all__] = {} or nil,
-        [__pm__] = {} or nil,
+        [__all__] = {},
+        [__pm__] = {},
 
         -- Represents the c++ base class of the class (and also the only c++ base class).
         __cpp_base__ = nil,
@@ -98,13 +101,14 @@ function class.New(...)
     };
 
     local bases = cls[__bases__];
+    local members = cls[__members__];
     local handlers = cls[Handlers];
 
     -- register meta-table of properties for class.
     for _,rw in pairs({__r__,__w__}) do
         cls[rw] = setmetatable({},{
             __index = function (_,key)
-                for __,base in ipairs(bases) do
+                for _,base in ipairs(bases) do
                     local ret = base[rw][key];
                     if nil ~= ret then
                         return ret;
@@ -178,8 +182,12 @@ function class.New(...)
                 end
 
                 for hdr,func in pairs(base[Handlers]) do
-                    -- Inherite handlers from bases.
+                    -- Inherite handlers from base.
                     handlers[hdr] = func;
+                end
+                for key,mem in pairs(base[__members__]) do
+                    -- Inherite members from base.
+                    members[key] = mem;
                 end
                 table.insert(bases,base);
             end
@@ -241,7 +249,7 @@ function class.New(...)
                     end
                 end
             else
-                obj = {};
+                obj = {[__all__] = {}};
             end
 
             if nil == obj then
@@ -251,6 +259,13 @@ function class.New(...)
 
             local instType = type(obj);
             if ClassCreateLayer == 1 then
+                local all = "table" == instType and obj[__all__] or obj;
+                for key,mem in pairs(members) do
+                    -- Automatically set member of object.
+                    -- Before the instance can change the meta-table, its members must be set.
+                    all[key] = Copy(mem);
+                end
+
                 if "table" == instType then
                     -- Instances of the table type do not require the last cls information
                     -- (which is already included in the metatable and in the upvalue).
@@ -269,8 +284,10 @@ function class.New(...)
                         cls[__all__][delete] = FunctionWrapper(AccessStack,cls,DefaultDelete);
                         local pm = cls[__pm__][__del__] or Permission.Public;
                         if cls[__r__][Instance] and bits.band(pm,Permission.Private) == 0 then
+                            -- If there is a singleton, at least the protected permission for delete will be guaranteed.
                             cls[__pm__][delete] = Permission.Protected;
                         else
+                            -- Otherwise delete has the same access premission as __del__.
                             cls[__pm__][delete] = pm;
                         end
                     end

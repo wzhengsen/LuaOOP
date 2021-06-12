@@ -18,8 +18,15 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 
+local rawset = rawset;
+local error = error;
+local type = type;
 local Config = require("OOP.Config");
+local Compat = require("OOP.Version.Compat");
+local bits = Compat.bits;
 local Debug = Config.Debug;
+
+local __members__ = Config.__members__;
 
 local new = Config.new;
 
@@ -30,11 +37,11 @@ local Static = Config.Modifiers.Static;
 local Const = Config.Modifiers.Const;
 
 local BitsMap = {
-    [Public] = 1,
-    [Private] = 2,
-    [Protected] = 4,
-    [Static] = 8,
-    [Const] = 16
+    [Public] = math.tointeger(2 ^ 0),
+    [Private] = math.tointeger(2 ^ 1),
+    [Protected] = math.tointeger(2 ^ 2),
+    [Static] = math.tointeger(2 ^ 3),
+    [Const] = math.tointeger(2 ^ 4)
 };
 local Permission = {
     Public = BitsMap[Public],
@@ -43,10 +50,15 @@ local Permission = {
     Static = BitsMap[Static],
     Const = BitsMap[Const]
 }
-local Router = nil;
+local Router = {};
+
+function Router:Begin(cls,key)
+    rawset(self,"decor",0);
+    rawset(self,"cls",cls);
+    return self:Pass(key);
+end
 
 if Debug then
-    Router = {};
     local Handlers = Config.Handlers;
     local Properties = Config.Properties;
     local Friends = Config.Friends;
@@ -58,8 +70,8 @@ if Debug then
     local __all__ = Config.__all__;
     local __pm__ = Config.__pm__;
 
-    local Compat = require("OOP.Version.Compat");
-    local bits = Compat.bits;
+
+
     local FunctionWrapper = Compat.FunctionWrapper;
     local AccessStack = require("OOP.Variant.BaseClass").AccessStack;
     -- It is only under debug that the values need to be routed to the corresponding fields of the types.
@@ -69,15 +81,9 @@ if Debug then
     -- 1 - There can be no duplicate modifiers;
     -- 2 - Public/Private/Protected cannot be used together;
     -- 3 - Const can only modify non-function types;
-    -- 4 - Static can only modify functions(because the class members are static by default);
-    -- 5 - Static cannot modify constructors and destructors;
-    -- 6 - Can't use modifiers that don't exist;
-    -- 7 - Reserved words cannot be modified (Singleton/Friends/Handlers/Properties and so on).
-    function Router:Begin(cls,key)
-        rawset(self,"decor",0);
-        rawset(self,"cls",cls);
-        return self:Pass(key);
-    end
+    -- 4 - Static cannot modify constructors and destructors;
+    -- 5 - Can't use modifiers that don't exist;
+    -- 6 - Reserved words cannot be modified (Singleton/Friends/Handlers/Properties and so on).
     function Router:Pass(key)
         local bit = BitsMap[key];
         local decor = self.decor;
@@ -99,12 +105,6 @@ if Debug then
         if bit then
             error(("The name is unavailable. - %s"):format(key));
         end
-        local cls = self.cls;
-        if nil == value then
-            cls[__all__][key] = nil;
-            cls[__pm__][key] = nil;
-            return;
-        end
         local decor = self.decor;
         local isFunction = "function" == type(value);
         if (bits.band(decor,Permission.Const) ~= 0 and isFunction) then
@@ -112,8 +112,6 @@ if Debug then
         elseif bits.band(decor,Permission.Static) ~= 0 then
             if (key == __init__ or key == __del__) then
                 error(("%s modifier cannot modify %s functions."):format(Static,key));
-            elseif not isFunction then
-                error(("%s can only modify functions."):format(Static));
             end
         elseif key == Handlers or key == Properties or key == Singleton or key == Friends then
             error(("%s cannot be modified."):format(key));
@@ -122,29 +120,53 @@ if Debug then
             -- Without the Public modifier, Public is added by default.
             decor = bits.bor(decor,0x1);
         end
+        local cls = self.cls;
         if isFunction then
             value = FunctionWrapper(AccessStack,cls,value);
         else
-            decor = bits.bor(decor,Permission.Static);
+            -- For non-functional, non-static members,
+            -- add to the member table and generate it for each instance.
+            if bits.band(decor,Permission.Static) == 0 then
+                cls[__members__][key] = value;
+            end
         end
         cls[__all__][key] = value;
         cls[__pm__][key] = decor;
-        if key == __init__ and bits.band(decor,0x1) ~= 1 then
+        if key == __init__ then
             -- Reassign permissions to "new", which are the same as __init__ with the Static modifier.
             cls[__pm__][new] = bits.bor(decor,0x8);
         end
         self.decor = 0;
         self.cls = nil;
     end
-    setmetatable(Router,{
-        __index = function (self,key)
-            return self:Pass(key);
-        end,
-        __newindex = function (self,key,val)
-            self:End(key,val);
+else
+    local sc = Permission.Static;
+    -- In non-debug mode, no attention is paid to any modifiers other than Static.
+    function Router:Pass(key)
+        if BitsMap[key] == sc then
+            self.decor = sc;
         end
-    });
+        return self;
+    end
+    function Router:End(key,value)
+        local cls = self.cls;
+        if "function" ~= type(value) and self.decor ~= sc then
+            cls[__members__][key] = value;
+        end
+        rawset(cls,key,value);
+        self.decor = 0;
+        self.cls = nil;
+    end
 end
+
+setmetatable(Router,{
+    __index = function (self,key)
+        return self:Pass(key);
+    end,
+    __newindex = function (self,key,val)
+        self:End(key,val);
+    end
+});
 
 return {
     Router = Router,

@@ -32,6 +32,7 @@ local __r__ = Config.__r__;
 local __w__ = Config.__w__;
 local __bases__ = Config.__bases__;
 local __cls__ = Config.__cls__;
+local __members__ = Config.__members__;
 
 local Handlers = Config.Handlers;
 local AllowClassName = Config.AllowClassName;
@@ -48,6 +49,7 @@ local BaseClass = require("OOP.Variant.BaseClass");
 local class = BaseClass.class
 local AllClasses = BaseClass.AllClasses;
 local ClassIs = BaseClass.ClassIs;
+local Copy = BaseClass.Copy;
 
 local ReleaseFunctions = require("OOP.Variant.ReleaseFunctions");
 local MakeLuaObjMetaTable = ReleaseFunctions.MakeLuaObjMetaTable;
@@ -63,6 +65,7 @@ function class.New(...)
         -- All event handlers.
         [Handlers] = {},
         [__bases__] = {},
+        [__members__] = {},
 
         -- Represents the c++ base class of the class (and also the only c++ base class).
         __cpp_base__ = nil,
@@ -73,6 +76,7 @@ function class.New(...)
     };
 
     local bases = cls[__bases__];
+    local members = cls[__members__];
     local handlers = cls[Handlers];
 
     -- register meta-table of properties for class.
@@ -137,6 +141,10 @@ function class.New(...)
                 for hdr,func in pairs(base[Handlers]) do
                     -- Inherite handlers from bases.
                     handlers[hdr] = func;
+                end
+                for key,mem in pairs(base[__members__]) do
+                    -- Inherite members from base.
+                    members[key] = mem;
                 end
                 table.insert(bases,base);
             end
@@ -208,6 +216,11 @@ function class.New(...)
 
             local instType = type(obj);
             if ClassCreateLayer == 1 then
+                for key,mem in pairs(members) do
+                    -- Automatically set member of object.
+                    -- Before the instance can change the meta-table, its members must be set.
+                    obj[key] = Copy(mem);
+                end
                 if "table" == instType then
                     -- Instances of the table type do not require the last cls information
                     -- (which is already included in the metatable and in the upvalue).

@@ -46,6 +46,7 @@ local __pm__ = Config.__pm__;
 local __friends__ = Config.__friends__;
 local __del__ = Config.__del__;
 local __cls__ = Config.__cls__;
+local __members__ = Config.__members__;
 
 local Public = Config.Modifiers.Public;
 local Protected = Config.Modifiers.Protected;
@@ -78,25 +79,81 @@ local ReservedWord = {
     Static = Static
 };
 
-local function CheckClassAccessPermission(self,pm,key,byObj)
-    if byObj and bits.band(pm,Permission.Static) ~= 0 then
-        error(("Objects cannot access static members of a class. - %s"):format(key));
+---Cascade to get permission values up to the top of the base class.
+---
+---@param self table
+---@param key any
+---@return table,integer
+---
+local function CascadeGetPermission(self,key)
+    local pms = rawget(self,__pm__);
+    local pm = pms and pms[key] or nil;
+    local cls = self;
+    if nil == pm then
+        local bases = rawget(self,__bases__);
+        if bases then
+            for _,base in ipairs(bases) do
+                cls,pm = CascadeGetPermission(base,key);
+                if nil ~= pm then
+                    return cls,pm;
+                end
+            end
+        end
     end
-    local friends = rawget(self,__friends__);
-    local cls = AccessStack[#AccessStack];
+    return cls,pm;
+end
+
+---When a member is accessed directly as a class,
+---the members will be checked cascading.
+---
+---@param self table
+---@param key any
+---@param byObj boolean
+---@param set? boolean
+---@return boolean
+---
+local function CheckPermission(self,key,byObj,set)
+    local cls,pm = CascadeGetPermission(self,key);
+    if not pm then
+        return true;
+    end
+    if set then
+        if bits.band(pm,Permission.Const) ~= 0 then
+            -- Check Const.
+            if ConstBehavior ~= 2 then
+                if ConstBehavior == 0 then
+                    if Version > 5.4 then
+                        warn(("You cannot modify the Const value. - %s"):format(key));
+                    end
+                elseif ConstBehavior == 1 then
+                    error(("You cannot modify the Const value. - %s"):format(key));
+                end
+                return false;
+            end
+        end
+        -- When a class performs a set operation,
+        -- even if the operation is on a private member,
+        -- it is considered to be a redefinition and the operation is not disabled.
+        if not byObj then
+            return true;
+        end
+    end
+    local friends = rawget(cls,__friends__);
+    local stackCls = AccessStack[#AccessStack];
     --Check if it is a friendly class.
-    if not friends or (not friends[cls] and not friends[AllClasses[cls]]) then
+    if not friends or (not friends[stackCls] and not friends[AllClasses[stackCls]]) then
         if bits.band(pm,Permission.Public) == 0 then
             -- Check Public,Private,Protected.
-            if cls ~= self then
+            if stackCls ~= cls then
                 if bits.band(pm,Permission.Private) ~= 0 then
                     error(("Attempt to access private members outside the permission. - %s"):format(key));
-                elseif bits.band(pm,Permission.Protected) ~= 0 and (not cls or not cls.is(self)) then
+                elseif bits.band(pm,Permission.Protected) ~= 0 and (not stackCls or not stackCls.is(cls)) then
                     error(("Attempt to access protected members outside the permission. - %s"):format(key));
                 end
             end
         end
     end
+    return true;
 end
 
 
@@ -129,14 +186,16 @@ local function CascadeDelete(self,cls,called)
             CascadeDelete(self,base);
         end
 
-        local pm = cls[__pm__][__del__] or 0x1;
-        local friends = rawget(cls,__friends__);
-        local aCls = AccessStack[#AccessStack];
-        if (not friends or not friends[aCls] or not friends[AllClasses[cls]]) and
-        (bits.band(pm,Permission.Public) == 0) and
-        (aCls ~= cls) and
-        (bits.band(pm,Permission.Private) ~= 0)then
-            error(("Attempt to access private members outside the permission. - %s"):format(__del__));
+        local pm = cls[__pm__][__del__];
+        if pm then
+            local friends = rawget(cls,__friends__);
+            local aCls = AccessStack[#AccessStack];
+            if (not friends or (not friends[aCls] and not friends[AllClasses[cls]])) and
+            (bits.band(pm,Permission.Public) == 0) and
+            (aCls ~= cls) and
+            (bits.band(pm,Permission.Private) ~= 0)then
+                error(("Attempt to access private members outside the permission. - %s"):format(__del__));
+            end
         end
 
         del = cls[__all__][__del__];
@@ -158,14 +217,9 @@ end
 ---
 ---@param self table
 ---@param key any
----@param byObj? boolean
 ---@return any
 ---
-local function CascadeGet(self,key,byObj)
-    local pm = self[__pm__][key];
-    if pm then
-        CheckClassAccessPermission(self,pm,key,byObj);
-    end
+local function CascadeGet(self,key)
     local ret = self[__all__][key];
     if nil ~= ret then
         return ret;
@@ -173,7 +227,7 @@ local function CascadeGet(self,key,byObj)
     local bases = rawget(self,__bases__);
     if bases then
         for _,base in ipairs(bases) do
-            ret = CascadeGet(base,key,byObj);
+            ret = CascadeGet(base,key);
             if nil ~= ret then
                 return ret;
             end
@@ -181,9 +235,17 @@ local function CascadeGet(self,key,byObj)
     end
 end
 
-local function GetFromClass(cls,key,sender)
-    -- Check the key of current class first.
-    local ret = rawget(cls,key);
+local function GetAndCheck(cls,key,sender)
+    if not CheckPermission(cls,key,true) then
+        return nil;
+    end
+    -- Check self __all__ first.
+    local ret = sender[__all__][key];
+    if nil ~= ret then
+        return ret;
+    end
+    -- Check the key of current class.
+    ret = rawget(cls,key);
     if nil ~= ret then
         return ret;
     end
@@ -206,17 +268,13 @@ local function GetFromClass(cls,key,sender)
         end
     end
     -- Check current class.
-    local pm = cls[__pm__][key];
-    if pm then
-        CheckClassAccessPermission(cls,pm,key,true);
-    end
     ret = cls[__all__][key];
     if nil ~= ret then
         return ret;
     end
     -- Check bases.
     for _, base in ipairs(cls[__bases__]) do
-        ret = CascadeGet(base,key,true);
+        ret = CascadeGet(base,key);
         if nil ~= ret then
             return ret;
         end
@@ -232,7 +290,7 @@ end
 local function MakeLuaObjMetaTable(cls)
     local meta = {
         __index = function (sender,key)
-            return GetFromClass(cls,key,sender);
+            return GetAndCheck(cls,key,sender);
         end,
         __newindex = function (sender,key,value)
             local property = cls[__w__][key];
@@ -253,7 +311,10 @@ local function MakeLuaObjMetaTable(cls)
                     end
                 end
             end
-            rawset(sender,key,value);
+            if not CheckPermission(cls,key,true) then
+                return;
+            end
+            rawset(sender[__all__],key,value);
         end
     };
     for k,v in pairs(ObjMeta) do
@@ -277,7 +338,8 @@ local function RetrofitMeta(ud)
     local newIndex = rawget(meta,"__newindex");
     rawset(meta,"__index",function(sender,key)
         local uv = (debug.getuservalue(ud));
-        local ret = GetFromClass(uv[__cls__],key,sender);
+        local cls = uv[__cls__];
+        local ret = GetAndCheck(cls,key,sender);
         if nil ~= ret then
             return ret;
         end
@@ -304,6 +366,9 @@ local function RetrofitMeta(ud)
                     return;
                 end
             end
+        end
+        if not CheckPermission(cls,key,true) then
+            return;
         end
         -- Finally, write by the original method.
         newIndex(sender,key,value);
@@ -335,9 +400,8 @@ local function ClassGet(self,key)
             end
         end
     end
-    local pm = self[__pm__][key];
-    if pm then
-        CheckClassAccessPermission(self,pm,key);
+    if not CheckPermission(self,key,false) then
+        return;
     end
     local ret = self[__all__][key];
     if nil ~= ret then
@@ -417,38 +481,17 @@ local function ClassSet(self,key,value)
                 end
             end
         end
-        local pm = self[__pm__][key];
-        if pm then
-            if bits.band(pm,Permission.Const) ~= 0 then
-                -- Check Const.
-                if ConstBehavior ~= 2 then
-                    if ConstBehavior == 0 then
-                        if Version > 5.4 then
-                            warn(("You cannot modify the Const value. - %s"):format(key));
-                        end
-                    elseif ConstBehavior == 1 then
-                        error(("You cannot modify the Const value. - %s"):format(key));
-                    end
-                    return;
-                end
-            end
-            CheckClassAccessPermission(self,pm,key);
-        end
-        if nil == value then
-            self[__all__][key] = nil;
-            self[__pm__][key] = nil;
+        if not CheckPermission(self,key,false,true) then
             return;
         end
-        pm = Permission.Public;
         if isFunction then
             -- Wrap this function to include control of access permission.
             value = FunctionWrapper(AccessStack,self,value);
         else
-            -- Non-function types are static by default.
-            pm = bits.bor(pm,Permission.Static);
+            self[__members__][key] = value;
         end
         self[__all__][key] = value;
-        self[__pm__][key] = pm;
+        self[__pm__][key] = Permission.Public;
     end
 end
 

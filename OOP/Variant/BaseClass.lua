@@ -178,6 +178,27 @@ local function DestorySingleton(self,val)
     end
 end
 
+---Copy any value.
+---
+---@param any any
+---@return any
+---
+local function Copy(any,existTab)
+    existTab = existTab or {}
+    if type(any) ~= "table" then
+        return any;
+    elseif nil ~= existTab[any] then
+        return existTab[any];
+    end
+
+    local tempTab = {};
+    existTab[any] = tempTab;
+    for k,v in pairs(any) do
+        tempTab[Copy(k,existTab)] = Copy(v,existTab);
+    end
+    return tempTab;
+end
+
 setmetatable(class,{
     __call = function(c,...)
         return c.New(...)
@@ -193,5 +214,6 @@ return {
     ClassIs = ClassIs,
     IsNull = _IsNull,
     AllClasses = {},
+    Copy = Copy,
     AccessStack = Debug and {} or nil
 };
