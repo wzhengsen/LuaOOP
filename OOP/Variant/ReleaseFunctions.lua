@@ -283,7 +283,8 @@ local function ClassSet(self,key,value)
         if property then
             return property(self,value);
         end
-        if "function" ~= type(value) then
+        local exist = rawget(self,key);
+        if not exist and "function" ~= type(value) then
             self[__members__][key] = value;
         end
         rawset(self,key,value);

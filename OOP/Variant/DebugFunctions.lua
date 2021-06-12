@@ -212,6 +212,7 @@ end
 local DefaultDelete = function(self)
     CascadeDelete(self,self[is](),{});
     setmetatable(self,nil);
+    self[__all__] = nil;
     self[DeathMarker] = true;
 end
 
@@ -487,14 +488,17 @@ local function ClassSet(self,key,value)
         if not CheckPermission(self,key,false,true) then
             return;
         end
-        if isFunction then
-            -- Wrap this function to include control of access permission.
-            value = FunctionWrapper(AccessStack,self,value);
-        else
-            self[__members__][key] = value;
+        local exist = self[__all__][key];
+        if not exist then
+            if isFunction then
+                -- Wrap this function to include control of access permission.
+                value = FunctionWrapper(AccessStack,self,value);
+            else
+                self[__members__][key] = value;
+            end
+            self[__pm__][key] = Permission.Public;
         end
         self[__all__][key] = value;
-        self[__pm__][key] = Permission.Public;
     end
 end
 

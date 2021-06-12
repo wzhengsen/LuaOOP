@@ -88,10 +88,9 @@ if Debug then
     -- Rules:
     -- 1 - There can be no duplicate modifiers;
     -- 2 - Public/Private/Protected cannot be used together;
-    -- 3 - Const can only modify non-function types;
-    -- 4 - Static cannot modify constructors and destructors;
-    -- 5 - Can't use modifiers that don't exist;
-    -- 6 - Reserved words cannot be modified (Singleton/Friends/Handlers/Properties and so on).
+    -- 3 - Static cannot modify constructors and destructors;
+    -- 4 - Can't use modifiers that don't exist;
+    -- 5 - Reserved words cannot be modified (Singleton/Friends/Handlers/Properties and so on).
     function Router:Pass(key)
         local bit = BitsMap[key];
         local decor = self.decor;
@@ -115,9 +114,7 @@ if Debug then
         end
         local decor = self.decor;
         local isFunction = "function" == type(value);
-        if (bits.band(decor,Permission.Const) ~= 0 and isFunction) then
-            error(("%s modifier cannot modify %s functions."):format(Const,key));
-        elseif bits.band(decor,Permission.Static) ~= 0 then
+        if bits.band(decor,Permission.Static) ~= 0 then
             if (key == __init__ or key == __del__) then
                 error(("%s modifier cannot modify %s functions."):format(Static,key));
             end
