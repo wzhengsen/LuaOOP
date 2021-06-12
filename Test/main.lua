@@ -25,11 +25,12 @@ require("OOP.Class");
 
 -- Simple test.
 local Simple = class();
-
-Simple.HelloWorld = "你好世界！";
-
+Simple.Static.Const.Private.HelloWorld = "你好世界！";
+Simple.myName = "simple";
 function Simple:__init__(myName)
-    self.myName = myName;
+    if myName then
+        self.myName = myName;
+    end
 end
 
 function Simple:Say()
@@ -38,14 +39,18 @@ function Simple:Say()
     return self.myName;
 end
 
-local simple = Simple.new("Lua");
-assert(simple:Say() == "Lua");
-simple:delete()
-assert(class.IsNull(simple));
+local simple1 = Simple.new("Lua");
+local simple2 = Simple.new();
+assert(simple1:Say() == "Lua");
+assert(simple2:Say() == "simple");
+simple1:delete()
+assert(class.IsNull(simple1));
+assert(not class.IsNull(simple2));
 
 -- Inherite.
 local Base1 = class();
 Base1.A = "A";
+Base1.Private.pointer = nil;
 function Base1:__init__(prefix)
     self.name = prefix .. Base1.A;
 end
