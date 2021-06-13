@@ -1,3 +1,5 @@
+[**English**](README_EN.md)
+
 # LuaOOP
 Lua实现的面向对象编程模式，支持属性、多继承、运算符重载、析构、访问权限制和一组简单的消息分发结构等。
 
@@ -684,5 +686,144 @@ print(C.is() == C)-- true
 >**注意：无论是使用对象或者类调用is时，都不必使用":"操作符，应当直接使用"."操作符。**
 
 ---
-### 1.10-我可以实现哪些元方法？
+### 1.10-如何使用元方法实现运算符重载或者扩展某些lua功能？
 ---
+>**注意：目前还不支持为userdata类型注册元方法。**
+```lua
+require("OOP.Class");
+local Point = class();
+
+Point.Private.x = 0;
+Point.Private.y = 0;
+
+function Point:__init__(x,y)
+    if x and y then
+        self.x = x;
+        self.y = y;
+    end
+end
+
+function Point:__add__(another)
+    return Point.new(self.x + another.x, self.y + another.y);
+end
+
+function Point:__tostring__()
+    return "x = " .. self.x .. ";y = " .. self.y .. ";";
+end
+
+local p1 = Point.new(1,2);
+local p2 = Point.new(2,3);
+print(p1);-- x = 1;y = 2;
+print(p2);-- x = 2;y = 3;
+local p3 = p1 + p2;
+print(p3);-- x = 3;y = 5;
+```
+
+---
+#### 1.10.1-为什么元方法的命名和Lua标准不同，比如__add被命名为__add__？
+---
+为了避免某些潜在的问题，LuaOOP没有使用和Lua标准相同的元方法命名，而是使用了一个替代名称。一般的，替代名称都是在原名称的基础上，追加两个下划线。
+
+当然，你也可以更改为和Lua标准相同的名称，甚至更改为其它你愿意使用的名字。
+
+修改**Config.Meta**字段的名称映射来改变元方法命名。
+
+---
+#### 1.10.2-我可以实现哪些元方法？
+---
+>Lua版本 < 5.3时可以实现的元方法为：
+
+| 元方法 | 替代名 | 运算符 |
+|  :--:  |  :--:  |  :--:  |
+|__add|\_\_add\_\_|a + b|
+|__sub|\_\_sub\_\_|a - b|
+|__mul|\_\_mul\_\_|a * b|
+|__div|\_\_div\_\_|a / b|
+|__mod|\_\_mod\_\_|a % b|
+|__pow|\_\_pow\_\_|a ^ b|
+|__unm|\_\_unm\_\_|-b|
+|__lt|\_\_lt\_\_|a < b|
+|__le|\_\_le\_\_|a <= b|
+|__concat|\_\_concat\_\_|a .. b|
+|__call|\_\_call\_\_|a(...)|
+|__eq|\_\_eq\_\_|a == b|
+|__len|\_\_len\_\_|#a|
+|__pairs|\_\_pairs\_\_|pairs(a)|
+|__tostring|\_\_tostring\_\_|tostring(a)|
+|__gc|\_\_gc\_\_||
+
+>Lua版本 = 5.3时可以额外实现的元方法为：
+
+| 元方法 | 替代名 | 运算符 |
+|  :--:  |  :--:  |  :--:  |
+|__idiv|\_\_idiv\_\_|a // b|
+|__band|\_\_band\_\_|a & b|
+|__bor|\_\_bor\_\_|a \| b|
+|__bxor|\_\_bxor\_\_|a ~ b|
+|__shl|\_\_shl\_\_|a << b|
+|__shr|\_\_shr\_\_|a >> b|
+|__bnot|\_\_bnot\_\_|~a|
+
+>Lua版本 > 5.3时可以额外实现的元方法为：
+
+| 元方法 | 替代名 | 运算符 |
+|  :--:  |  :--:  |  :--:  |
+|__close|\_\_close\_\_|a\<close\>|
+
+以下元方法暂时不能实现：
+* __index
+* __newindex
+* __metatable
+* __mode
+
+---
+### 1.11-如何改善LuaOOP的运行时效率？
+---
+在默认情况下，**Config.Debug**字段被赋值为**true**，这表示当前运行时需要判断访问权限和其它一些操作的合法性，因此会牺牲比较多的运行时效率。
+
+当该字段被赋值为**false**时，绝大多数运行时检查将会跳过（比如允许对Const赋值，允许访问Private成员等），以期获得更快的运行时效率。
+
+如果当前应用在Debug模式下已经进行了充分测试，可以更改Config.Debug为false来获取效率提升。
+
+---
+### 1.12-如何使用事件而不是回调函数在对象间传递消息？
+---
+```lua
+require("OOP.Class");
+local Listener = class();
+Listener.Private.name = "";
+function Listener:__init__(name)
+    self.name = name;
+end
+
+-- 使用.Handlers.On + 事件名来接收Email事件。
+function Listener.Handlers:OnEmail(name,content)
+    if name == self.name then
+        -- 收到指定的邮件。
+        print(content);
+        -- 返回true以阻止事件再传递。
+        return true;
+    end
+end
+
+-- 接收事件的参数长度没有限制，比如接收有任意长度参数的名为Any的事件。
+function Listener.Handlers:OnAny(...)
+    print(...);
+end
+
+
+local l1 = Listener.new("a");
+local l2 = Listener.new("b");
+local l3 = Listener.new("c");
+
+-- 向b发送一封内容为123的邮件。
+Event.Email("b","123");
+
+-- 发送名为Any的事件。
+Event.Any(1,2,3);
+Event.Any(nil);
+Event.Any("any",true,-2,function()end,{});
+Event.Any();
+
+-- 如果Event/Handlers/On+事件名的命名方式不是你所需要的，请在Config文件中修改对应的命名映射。
+```
