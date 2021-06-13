@@ -2,6 +2,7 @@
 Lua实现的面向对象编程模式，支持属性、多继承、运算符重载、析构、访问权限制和一组简单的消息分发结构等。
 
 ## 1-开始
+
 ---
 ### 1.1-LuaOOP提供了哪些功能？
 ---
@@ -10,13 +11,14 @@ Lua实现的面向对象编程模式，支持属性、多继承、运算符重�
 * 继承返回userdata的类；
 * 访问权控制（Public/Protected/Private/Static/Const/Friends）；
 * 全部保留字可配置项；
+* 属性；
 * 单例（Singleton）；
 * 运行时类型判断（is）;
-* 属性；
-* 运算符重载；
+* 元方法与运算符重载；
 * Debug和Release运行模式；
 * 一组简单的消息传递模式；
 * lua5.1-lua5.4兼容。
+
 ---
 ### 1.2-如何开始第一步？
 ---
@@ -57,11 +59,14 @@ p1:delete();
 p2:delete();
 print(p1.x);-- nil
 print(p2.x);-- nil
+if not class.IsNull(p1) then
+    -- 可以通过class.IsNull来判断一个对象是否已经被销毁。
+    p1:PrintXY();
+end
 -- 引发错误。
-p1:PrintXY();
--- 引发错误。
-p1:PrintXY();
+p2:PrintXY();
 ```
+
 ---
 ### 1.3-我如何继承一个或多个类？
 ---
@@ -137,6 +142,7 @@ vertex:PrintXY();
 vertex:PrintXYZ();
 vertex:PrintRGB();
 ```
+
 ---
 #### 1.3.1-我如何通过类名来继承类？
 ---
@@ -155,6 +161,7 @@ local Color = class();
 local C4 = class("Vertex","Point3D",Color);
 -- ...
 ```
+
 ---
 #### 1.3.2-我如何通过函数来继承类？
 ---
@@ -168,6 +175,7 @@ local Vertex = class(function(...)
     return Color.new(...);
 end,Point3D);
 ```
+
 ---
 ### 1.4-我如何继承一个将创建userdata的类？
 ---
@@ -210,6 +218,7 @@ end
 local img = LuaImageView.new("myPic.png",{width = 100,height = 100});
 img:Show();
 ```
+
 ---
 #### 1.4.1-当我继承userdata类时，有哪些限制？
 ---
@@ -237,9 +246,11 @@ end
 local img = LuaImageView.new("myPic.png");
 img:Show();
 ```
+
 ---
 ### 1.5-如何使用访问权限控制？
 ---
+
 ---
 #### 1.5.1-公有修饰
 ---
@@ -268,6 +279,7 @@ local test = Test.new();
 test:PrintMe();-- "123"
 print(test.data);-- "123"
 ```
+
 ---
 #### 1.5.2-保护修饰
 ---
@@ -293,6 +305,7 @@ test:PrintMe();-- "123"
 -- 引发错误，不能在此处访问受保护的成员。
 print(test.data);
 ```
+
 ---
 #### 1.5.3-私有修饰
 ---
@@ -319,6 +332,7 @@ local test1 = Test1.new();
 -- 引发错误，不能在此处访问私有成员。
 test1:PrintTestData();
 ```
+
 ---
 #### 1.5.4-静态修饰
 ---
@@ -361,10 +375,10 @@ p2.ShowCount();
 -- 引发错误，对象不能访问静态成员。
 print(p2.Count);
 ```
+
 ---
 #### 1.5.5-常量修饰
 ---
-特别地，构造函数和析构函数不能使用Const修饰。
 ```lua
 require("OOP.Class");
 local Test = class();
@@ -378,6 +392,7 @@ test.data = "321";
 -- 引发错误，常量不可修改。
 Test.data = "321";
 ```
+
 ---
 #### 1.5.6-友元类
 ---
@@ -395,7 +410,7 @@ Secret.Private.data = "123";
 function Secret.Protected:ShowData()
     print("data = " .. self.data);
 end
-function Secret.Friends()
+function Secret:Friends()
     -- 可以同时使用类变量和类名来指明友元类。
     -- 友元不可继承，即使Base已是Secret的友元类，
     -- C2作为另一个友元类时也应当明确指示。
@@ -410,3 +425,264 @@ local c2 = C2.new();
 base:ShowSecret(secret);-- 123     data = 123
 c2:ShowSecret(secret);-- 123     data = 123
 ```
+
+---
+#### 1.5.7-是否还有一些其它的注意事项？
+---
+>对__init__和__del__的修饰将直接影响到new和delete方法，且无论如何，new必然是Static修饰的，如：
+```lua
+require("OOP.Class");
+local Test = class();
+function Test.Static.CreateInstance(...)
+    return Test.new(...);
+end
+function Test.Static.DestroyInstance(inst)
+    inst:delete();
+end
+function Test.Static.CopyFromInstance(inst)
+    -- 引发错误，对象不能访问Static成员。
+    return inst.new(table.unpack(inst.args));
+end
+function Test.Private:__init__(...)
+    self.args = {...};
+end
+function Test.Private:__del__()
+end
+
+local test1 = Test.CreateInstance(1,2,3,4);
+Test.DestroyInstance(test1);
+
+-- 引发错误，new已是Private成员。
+local test2 = Test.new();
+
+local test3 = Test.CreateInstance(1,2);
+local copyTest = Test.CopyFromInstance(test3);
+
+local test4 = Test.CreateInstance();
+-- 引发错误，delete已是Private成员。
+test4:delete();
+```
+>一些特殊的修饰规则：
+>* 构造函数和析构函数不能使用Static或Const修饰；
+>* Public/Protected/Private不能同时出现一种以上；
+>* 同一修饰符不能使用多次，比如```function SomeClass.Public.Public:Func()```是非法修饰；
+>* 不能使用不存在的修饰符。
+
+---
+### 1.6-我不喜欢默认提供的保留字和函数名（如class,Private,new等）或这些保留字和函数名和已有命名相冲突，应该怎么办？
+---
+在执行```require("OOP.Class");```语句之前，请修改[Config.lua](OOP/Config.lua)文件中的命名映射字段，以下列出了部分默认字段：
+```lua
+class = "class"
+new = "new"
+delete = "delete"
+__init__ = "__init__"
+Public = "Public"
+Private = "Private"
+Protected = "Protected"
+Static = "Static"
+Const = "Const"
+Friends = "Friends"
+```
+比如，现在将：
+
+* **class** 重命名为 **struct**；
+* **new** 重命名为 **create**；
+* **delete** 重命名为 **dispose**；
+* **\_\_init\_\_** 重命名为 **ctor**；
+* 其它保留字命名为它们的小写。
+
+以下代码便可正常运行：
+```lua
+local Config = require("OOP.Config");
+Config.class = "struct";
+Config.new = "create";
+Config.delete = "dispose";
+Config.__init__ = "ctor";
+Config.Modifiers.Public = "public";
+Config.Modifiers.Private = "private";
+Config.Modifiers.Protected = "protected";
+require("OOP.Class");
+local Test = struct();
+Test.protected.data = "123";
+function Test:ctor()
+    self.data = self.data:rep(2);
+end
+function Test.private:Func1()
+end
+function Test.public:PrintData()
+    self:Func1();
+    print("data = " .. self.data);
+end
+local test = Test.create();
+test:PrintData();-- data = "123123"
+test:dispose();
+```
+
+关于其它更多的可重命名字段，参见[Config.lua](OOP/Config.lua)文件。
+
+---
+### 1.7-是否支持使用属性来简化某些Get和Set的操作？
+---
+```lua
+require("OOP.Class");
+local Point = class();
+
+Point.Private.x = 0;
+Point.Private.y = 0;
+
+function Point:__init__(x,y)
+    if x and y then
+        self.x = x;
+        self.y = y;
+    end
+end
+
+function Point:GetXY()
+    return {x = self.x,y = self.y};
+end
+
+function Point:SetX(x)
+    self.x = x;
+end
+
+-- 使用Properties方法来获取属性。
+function Point:Properties()
+    return {
+        -- 其中r子表表示只读属性，w子表表示只写属性。
+        r = {
+            -- 将XY属性和Point.GetXY方法关联。
+            XY = self.GetXY
+        },
+        w = {
+            -- 将X属性和Point.SetX方法关联。
+            X = self.SetX,
+            -- 也可以指定一个函数来关联属性。
+            -- 这个函数将成为成员函数，可以访问该类的成员变量。
+            Y = function(obj,y)
+                obj.y = y;
+            end
+        }
+    };
+end
+
+local Point3D = class(Point);
+Point3D.Private.z = 0;
+
+function Point3D:__init__(x,y,z)
+    Point.__init__(self,x,y);
+    if z then
+        self.z = z;
+    end
+end
+
+local p = Point.new(3,5);
+local xy = p.XY;
+print("X = " .. xy.x);-- X = 3
+print("Y = " .. xy.y);-- Y = 5
+p.X = 999;
+p.Y = 888;
+-- 使用GetXY和使用XY属性是等价的。
+xy = p:GetXY();
+print("X = " .. xy.x);-- X = 999
+print("Y = " .. xy.y);-- Y = 888
+
+
+local p3d = Point3D.new(0,-1,0.5);
+p3d.X = 100;
+p3d.Y = 99;
+-- 属性可以被继承，可以访问基类的属性。
+xy = p3d.XY;
+print("X = " .. xy.x);-- X = 100
+print("Y = " .. xy.y);-- Y = 99
+
+-- 引发错误，只读属性不能被写入。
+-- 相应的，只写属性也不能被读取。
+-- 如果需要改变此行为，请修改Config.PropertyBehavior值。
+p3d.XY = {x = 200,y = 300};
+```
+
+---
+### 1.8-预置的Singleton单例模式如何使用？必须使用Singleton来实现单例吗？
+---
+不一定非要使用预置的Singleton来获取单例，也可以自己实现适合自己的任意使用单例的方式。
+
+如果要使用预置的单例模式实现，请定义Singleton方法：
+```lua
+require("OOP.Class");
+local Device = class();
+Device.Private.ip = "";
+Device.Private.battery = 0;
+function Device:__init__()
+    self.ip = "127.0.0.1";
+    self.battery = 100;
+end
+function Device:GetIp()
+    return self.ip;
+end
+function Device:GetBattery()
+    return self.battery;
+end
+function Device:__del__()
+    print("单例已析构。");
+end
+-- 定义Singleton来获取单例。
+function Device:Singleton()
+    return Device.new();
+end
+
+-- 单例方法定义后，自动生成Instance属性。
+-- 每次获取Instance属性时将自动获取单例。
+local inst1 = Device.Instance;
+print(inst1:GetIp());-- 127.0.0.1
+print(inst1:GetBattery());-- 100
+
+-- 将nil赋值给Instance，可以清除单例，并且你不能给Instance赋值为nil之外的其它值。
+Device.Instance = nil;-- "单例已析构。"
+
+-- 获取新的单例。
+local inst2 = Device.Instance;
+assert(inst1 ~= inst2);
+
+-- 引发错误，定义Singleton后，new将被默认为Protected修饰（除非已预先指明构造函数为Private修饰）。
+local device = Device.new();
+```
+
+---
+### 1.9-我如何在运行时判断一个对象是否是某个类或是否继承某个类？
+---
+```lua
+require("OOP.Class");
+local A = class();
+local B = class(A);
+local C = class();
+local D = class(B,C);
+
+local a = A.new();
+local b = B.new();
+local c = C.new();
+local d = D.new();
+
+-- 当传递一个参数时，is将判断对象是否属于或继承某类。
+print(a.is(A));-- true
+print(a.is(B));-- false
+print(b.is(A));-- true
+print(c.is(A));-- false
+print(d.is(A));-- true
+print(d.is(B));-- true
+print(d.is(C));-- true
+
+-- 或者，当不传递参数时，is将返回当前类。
+print(c.is() == C)-- true
+print(d.is() == A)-- false
+
+-- 也可以使用类，而不是对象调用is
+print(B.is(A));-- true
+print(C.is(B));-- false
+print(C.is() == C)-- true
+```
+>**注意：无论是使用对象或者类调用is时，都不必使用":"操作符，应当直接使用"."操作符。**
+
+---
+### 1.10-我可以实现哪些元方法？
+---
