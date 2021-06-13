@@ -22,7 +22,7 @@ local Version = tonumber(_VERSION:sub(5)) or 5.1;
 if Version >= 5.4 then
     warn("@on");
 end
-return {
+local Config = {
     Version = Version,
 
     --****************Rename fields start****************
@@ -61,27 +61,26 @@ return {
         __mod = "__mod__",
         __pow = "__pow__",
         __div = "__div__",
+        __unm = "__unm__",
+
+        __lt = "__lt__",
+        __le = "__le__",
+        __concat = "__concat__",
+        __call = "__call__",
+        __gc = "__gc__",
+        __eq = "__eq__",
+        __pairs = "__pairs__",
+        __len = "__len__",
+        __tostring = "__tostring__",
+
         __idiv = Version > 5.2 and "__idiv__" or nil,
         __band = Version > 5.2 and "__band__" or nil,
         __bor = Version > 5.2 and "__bor__" or nil,
         __bxor = Version > 5.2 and "__bxor__" or nil,
         __shl = Version > 5.2 and "__shl__" or nil,
         __shr = Version > 5.2 and "__shr__" or nil,
-        __unm = "__unm__",
-        __bnot = "__bnot__",
-        __lt = "__lt__",
-        __le = "__le__",
-        __concat = "__concat__",
-        __call = "__call__"
-    },
+        __bnot = Version > 5.2 and "__bnot__" or nil,
 
-    -- MetaDefault function names.
-    -- You may not implement these meta-functions and use a default implementation.
-    MetaDefault = {
-        __gc = "__gc__",
-        __eq = "__eq__",
-        __pairs = "__pairs__",
-        __len = "__len__",
         __close = Version > 5.3 and "__close__" or nil
     },
 
@@ -183,7 +182,17 @@ return {
     __singleton__ = "_1️⃣_",
     __friends__ = "_👥_",
     __cls__ = "_🧬_",
-    __members__ = "_📝_"
+    __members__ = "_📝_",
+    __meta__ = "_Ⓜ_"
 
     --****************Other fields end****************
 };
+
+-- Reverse mapping to meta method names.
+local MetaMapName = {};
+Config.MetaMapName = MetaMapName;
+for meta,name in pairs(Config.Meta) do
+    MetaMapName[name] = meta;
+end
+
+return Config;

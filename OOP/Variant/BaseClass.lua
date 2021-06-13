@@ -27,19 +27,11 @@ local select = select;
 
 local Config = require("OOP.Config");
 local Debug = Config.Debug;
-local Version = Config.Version;
-local Alarm = Debug and error or (Version >= 5.4 and warn or print);
 
 local __singleton__ = Config.__singleton__;
 
 local is = Config.is;
 local DeathMarker = Config.DeathMarker;
-
-local Meta = Config.Meta;
-local MetaDefault = Config.MetaDefault;
-local __pairs__ = MetaDefault.__pairs;
-local __len__ = MetaDefault.__len;
-local __eq__ = MetaDefault.__eq;
 
 local Null = Config.CppClass.Null;
 local IsInherite = Config.CppClass.IsInherite;
@@ -47,57 +39,6 @@ local IsInherite = Config.CppClass.IsInherite;
 local IsNull = Config.IsNull;
 
 local class = {};
-
--- Object's meta-table implementation.
-local ObjMeta = {};
-for meta, name in pairs(Meta)do
-    ObjMeta[meta] = function (self,...)
-        local f = self[name];
-        if f then
-            return meta(self,...);
-        end
-        -- If you use an operation that is not implemented, an warn will be raised.
-        Alarm(("You must implement the %s meta-method."):format(name));
-    end
-end
--- The following meta-methods use a default implementation.
-for meta,name in pairs(MetaDefault) do
-    if meta == "__gc" or meta == "__close" then
-        ObjMeta[meta] = function (self)
-            local f = self[name];
-            if f then
-                f(self);
-            end
-        end
-    end
-end
-ObjMeta.__eq = function (...)
-    for _,sender in ipairs({...}) do
-        local __eq = sender[__eq__];
-        if __eq then
-            return __eq(...);
-        end
-    end
-    return false;
-end
-ObjMeta.__pairs = function (self)
-    local __pairs = self[__pairs__];
-    if __pairs then
-        return __pairs(self);
-    end
-    return function(t,key)
-        local value = nil;
-        key,value = next(t,key);
-        return key,value;
-    end,self,nil;
-end
-ObjMeta.__len = function (self)
-    local __len = self[__len__];
-    if __len then
-        return __len(self);
-    end
-    return rawlen(self);
-end
 
 ---If there is no parameter,it means the return value is the current type.
 ---@return table
@@ -208,7 +149,6 @@ rawset(_G,Config.class,class);
 
 return {
     class = class,
-    ObjMeta = ObjMeta,
     GetSingleton = GetSingleton,
     DestorySingleton = DestorySingleton,
     ClassIs = ClassIs,

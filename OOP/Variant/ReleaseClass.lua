@@ -33,6 +33,7 @@ local __w__ = Config.__w__;
 local __bases__ = Config.__bases__;
 local __cls__ = Config.__cls__;
 local __members__ = Config.__members__;
+local __meta__ = Config.__meta__;
 
 local Handlers = Config.Handlers;
 local AllowClassName = Config.AllowClassName;
@@ -66,6 +67,7 @@ function class.New(...)
         [Handlers] = {},
         [__bases__] = {},
         [__members__] = {},
+        [__meta__] = {},
 
         -- Represents the c++ base class of the class (and also the only c++ base class).
         __cpp_base__ = nil,
@@ -77,6 +79,7 @@ function class.New(...)
 
     local bases = cls[__bases__];
     local members = cls[__members__];
+    local metas = cls[__meta__];
     local handlers = cls[Handlers];
 
     -- register meta-table of properties for class.
@@ -146,6 +149,10 @@ function class.New(...)
                     -- Inherite members from base.
                     members[key] = mem;
                 end
+                for key,meta in pairs(base[__meta__]) do
+                    -- Inherite metas from base.
+                    metas[key] = meta;
+                end
                 table.insert(bases,base);
             end
         end
@@ -156,7 +163,6 @@ function class.New(...)
     end;
     cls[is] = _is;
 
-    local meta = MakeLuaObjMetaTable(cls);
     local __create__ = cls.__create__;
     if not cls.__cpp_base__ or __create__ then
         -- If a c++ class does not have a registered constructor,
@@ -225,7 +231,7 @@ function class.New(...)
                     -- Instances of the table type do not require the last cls information
                     -- (which is already included in the metatable and in the upvalue).
                     obj[__cls__] = nil;
-                    setmetatable(obj,meta);
+                    setmetatable(obj,MakeLuaObjMetaTable(cls));
 
                     -- If the object is a table,
                     -- provide a delete method to the object by default.

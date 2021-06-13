@@ -28,6 +28,8 @@ local bits = Compat.bits;
 local Debug = Config.Debug;
 
 local __members__ = Config.__members__;
+local __meta__ = Config.__meta__;
+local MetaMapName = Config.MetaMapName;
 
 local new = Config.new;
 
@@ -112,6 +114,10 @@ if Debug then
         if bit then
             error(("The name is unavailable. - %s"):format(key));
         end
+        local meta = MetaMapName[key];
+        if meta then
+            error(("You cannot modify meta-methods. - %s"):format(key));
+        end
         local decor = self.decor;
         local isFunction = "function" == type(value);
         if bits.band(decor,Permission.Static) ~= 0 then
@@ -161,6 +167,12 @@ else
         rawset(cls,key,value);
         self.decor = 0;
         self.cls = nil;
+
+        local meta = MetaMapName[key];
+        if meta then
+            cls[__meta__][key] = value;
+            self[__meta__][__meta__] = nil;
+        end
     end
 end
 

@@ -38,10 +38,13 @@ local __bases__ = Config.__bases__;
 local __del__ = Config.__del__;
 local __cls__ = Config.__cls__;
 local __members__ = Config.__members__;
+local __meta__ = Config.__meta__;
 
 local IsCppClass = Config.CppClass.IsCppClass;
 
 local DeathMarker = Config.DeathMarker;
+
+local MetaMapName = Config.MetaMapName;
 
 local Properties = Config.Properties;
 local Singleton = Config.Singleton;
@@ -127,40 +130,46 @@ end
 ---@return table
 ---
 local function MakeLuaObjMetaTable(cls)
-    local meta = {
-        __index = function (sender,key)
-            -- Check the key of current class first.
-            local ret = rawget(cls,key);
-            if nil ~= ret then
-                return ret;
-            end
-            -- Check the properties of current class.
-            local property = cls[__r__][key];
-            if property then
-                return property(sender);
-            end
-            -- Check base class.
-            for _, base in ipairs(cls[__bases__]) do
-                ret = CascadeGet(base,key);
+    local clsMeta = cls[__meta__];
+    local meta = clsMeta[__meta__];
+    if nil == meta then
+        meta = {
+            __index = function (sender,key)
+                -- Check the key of current class first.
+                local ret = rawget(cls,key);
                 if nil ~= ret then
-                    if Cache then
-                        rawset(sender,key,ret);
-                    end
                     return ret;
                 end
+                -- Check the properties of current class.
+                local property = cls[__r__][key];
+                if property then
+                    return property(sender);
+                end
+                -- Check base class.
+                for _, base in ipairs(cls[__bases__]) do
+                    ret = CascadeGet(base,key);
+                    if nil ~= ret then
+                        if Cache then
+                            rawset(sender,key,ret);
+                        end
+                        return ret;
+                    end
+                end
+            end,
+            __newindex = function (sender,key,value)
+                local property = cls[__w__][key];
+                if property then
+                    property(sender,value);
+                    return;
+                end
+                rawset(sender,key,value);
             end
-        end,
-        __newindex = function (sender,key,value)
-            local property = cls[__w__][key];
-            if property then
-                property(sender,value);
-                return;
+        };
+        for k,v in pairs(clsMeta) do
+            if k ~= __meta__ then
+                meta[k] = v;
             end
-            rawset(sender,key,value);
         end
-    };
-    for k,v in pairs(ObjMeta) do
-        meta[k] = v;
     end
     return meta;
 end
@@ -288,6 +297,11 @@ local function ClassSet(self,key,value)
             self[__members__][key] = value;
         end
         rawset(self,key,value);
+    end
+    local meta = MetaMapName[key];
+    if meta then
+        self[__meta__][meta] = value;
+        self[__meta__][__meta__] = nil;
     end
 end
 

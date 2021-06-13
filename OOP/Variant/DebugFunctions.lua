@@ -47,6 +47,7 @@ local __friends__ = Config.__friends__;
 local __del__ = Config.__del__;
 local __cls__ = Config.__cls__;
 local __members__ = Config.__members__;
+local __meta__ = Config.__meta__;
 
 local Public = Config.Modifiers.Public;
 local Protected = Config.Modifiers.Protected;
@@ -60,6 +61,8 @@ local Instance = Config.Instance;
 
 local IsCppClass = Config.CppClass.IsCppClass;
 local DeathMarker = Config.DeathMarker;
+
+local MetaMapName = Config.MetaMapName;
 
 local PropertyBehavior = Config.PropertyBehavior;
 local ConstBehavior = Config.ConstBehavior;
@@ -292,37 +295,44 @@ end
 ---@return table
 ---
 local function MakeLuaObjMetaTable(cls)
-    local meta = {
-        __index = function (sender,key)
-            return GetAndCheck(cls,key,sender);
-        end,
-        __newindex = function (sender,key,value)
-            local property = cls[__w__][key];
-            if property then
-                property(sender,value);
-                return;
-            else
-                if cls[__r__][key] then
-                    if PropertyBehavior ~= 2 then
-                        if PropertyBehavior == 0 then
-                            if Version > 5.4 then
-                                warn("You can't write a read-only property.");
+    local clsMeta = cls[__meta__];
+    local meta = clsMeta[__meta__];
+    if nil == meta then
+        meta = {
+            __index = function (sender,key)
+                return GetAndCheck(cls,key,sender);
+            end,
+            __newindex = function (sender,key,value)
+                local property = cls[__w__][key];
+                if property then
+                    property(sender,value);
+                    return;
+                else
+                    if cls[__r__][key] then
+                        if PropertyBehavior ~= 2 then
+                            if PropertyBehavior == 0 then
+                                if Version > 5.4 then
+                                    warn("You can't write a read-only property.");
+                                end
+                            elseif PropertyBehavior == 1 then
+                                error("You can't write a read-only property.");
                             end
-                        elseif PropertyBehavior == 1 then
-                            error("You can't write a read-only property.");
+                            return;
                         end
-                        return;
                     end
                 end
+                if not CheckPermission(cls,key,true,true) then
+                    return;
+                end
+                rawset(sender[__all__],key,value);
             end
-            if not CheckPermission(cls,key,true,true) then
-                return;
+        };
+        for k,v in pairs(clsMeta) do
+            if k ~= __meta__ then
+                meta[k] = v;
             end
-            rawset(sender[__all__],key,value);
         end
-    };
-    for k,v in pairs(ObjMeta) do
-        meta[k] = v;
+        clsMeta[__meta__] = meta;
     end
     return meta;
 end
@@ -500,6 +510,11 @@ local function ClassSet(self,key,value)
             value = FunctionWrapper(AccessStack,self,value);
         end
         self[__all__][key] = value;
+    end
+    local meta = MetaMapName[key];
+    if meta then
+        self[__meta__][meta] = value;
+        self[__meta__][__meta__] = nil;
     end
 end
 
