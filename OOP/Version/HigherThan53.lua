@@ -44,6 +44,7 @@ local function FunctionWrapper(aStack,cls,f)
         return f(...);
     end
     AllFunctions[newF] = true;
+    AllFunctions[f] = true;
     return newF;
 end
 

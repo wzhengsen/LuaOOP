@@ -152,7 +152,7 @@ class[IsNull] = _IsNull;
 local function GetSingleton(self,call)
     local s = rawget(self,__singleton__);
     if _IsNull(s) then
-        s = call();
+        s = call(self);
         rawset(self,__singleton__,s);
     end
     return s;

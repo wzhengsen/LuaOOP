@@ -436,7 +436,7 @@ local function ClassSet(self,key,value)
             local subT = value[rw];
             if subT then
                 for k,v in pairs(subT) do
-                    self[__rw__][k] = v;
+                    self[__rw__][k] = FunctionWrapper(AccessStack,self,v);
                 end
             end
         end
@@ -462,7 +462,7 @@ local function ClassSet(self,key,value)
         local friends = {};
         rawset(self,__friends__,friends);
         value = FunctionWrapper(AccessStack,self,value);
-        for _, friend in ipairs({value()}) do
+        for _, friend in ipairs({value(self)}) do
             friends[friend] = true;
         end
         return;
@@ -490,13 +490,14 @@ local function ClassSet(self,key,value)
         end
         local exist = self[__all__][key];
         if not exist then
-            if isFunction then
-                -- Wrap this function to include control of access permission.
-                value = FunctionWrapper(AccessStack,self,value);
-            else
+            if not isFunction then
                 self[__members__][key] = value;
             end
             self[__pm__][key] = Permission.Public;
+        end
+        if isFunction then
+            -- Wrap this function to include control of access permission.
+            value = FunctionWrapper(AccessStack,self,value);
         end
         self[__all__][key] = value;
     end

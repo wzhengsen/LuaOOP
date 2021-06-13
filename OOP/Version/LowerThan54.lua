@@ -48,8 +48,9 @@ local function FunctionWrapper(aStack,cls,f)
             error(ret[2]);
         end
         return unpack(ret,2);
-    end
+    end;
     AllFunctions[newF] = true;
+    AllFunctions[f] = true;
     return newF;
 end
 
