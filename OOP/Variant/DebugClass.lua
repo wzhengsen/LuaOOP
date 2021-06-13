@@ -71,22 +71,11 @@ local ClassSet = DebugFunctions.ClassSet;
 local DefaultDelete = DebugFunctions.DefaultDelete;
 class.__DefaultDelete = DefaultDelete;
 
-local HandlerMetaTable = {
-    __newindex = function(t,key,value)
-        assert(
-            "string" == type(key) and key:find(On) == 1,
-            ("The name of handler function must start with \"%s\"."):format(On)
-        );
-        assert("function" == type(value),"Event handler must be a function.");
-        rawset(t,key,value);
-    end
-};
-
 local ClassCreateLayer = 0;
 function class.New(...)
     local cls = {
         -- All event handlers.
-        [Handlers] = setmetatable({},HandlerMetaTable),
+        [Handlers] = {},
         [__bases__] = {},
         [__members__] = {},
 
@@ -106,6 +95,18 @@ function class.New(...)
     local members = cls[__members__];
     local metas = cls[__meta__];
     local handlers = cls[Handlers];
+
+    setmetatable(handlers,{
+        __newindex = function(t,key,value)
+            assert(
+                "string" == type(key) and key:find(On) == 1,
+                ("The name of handler function must start with \"%s\"."):format(On)
+            );
+            assert("function" == type(value),"Event handler must be a function.");
+            -- Ensure that event response functions have access to member variables.
+            rawset(t,key,FunctionWrapper(AccessStack,cls,value));
+        end
+    });
 
     -- register meta-table of properties for class.
     for _,rw in pairs({__r__,__w__}) do
