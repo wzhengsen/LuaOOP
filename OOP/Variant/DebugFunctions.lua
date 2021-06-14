@@ -70,7 +70,6 @@ local ConstBehavior = Config.ConstBehavior;
 local BaseClass = require("OOP.Variant.BaseClass");
 local GetSingleton = BaseClass.GetSingleton;
 local DestorySingleton = BaseClass.DestorySingleton;
-local ObjMeta = BaseClass.ObjMeta;
 local AccessStack = BaseClass.AccessStack;
 local AllClasses = BaseClass.AllClasses;
 
@@ -120,6 +119,10 @@ local function CheckPermission(self,key,byObj,set)
     if not pm then
         return true;
     end
+    local stackCls = AccessStack[#AccessStack];
+    if stackCls == 0 and bits.band(pm,Permission.Protected) ~= 0 then
+        return true;
+    end
     if byObj and bits.band(pm,Permission.Static) ~= 0 then
         error(("Objects cannot access static members of a class. - %s"):format(key));
     end
@@ -145,7 +148,6 @@ local function CheckPermission(self,key,byObj,set)
         end
     end
     local friends = rawget(cls,__friends__);
-    local stackCls = AccessStack[#AccessStack];
     --Check if it is a friendly class.
     if not friends or (not friends[stackCls] and not friends[AllClasses[stackCls]]) then
         if bits.band(pm,Permission.Public) == 0 then

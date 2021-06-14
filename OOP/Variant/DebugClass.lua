@@ -149,7 +149,9 @@ function class.New(...)
         elseif baseType == "function" then
             -- One __create__ function only.
             assert(cls.__create__ == nil,"Class with more than one creating function.");
-            cls.__create__ = base;
+            -- Wrapper function generator with an indication that the current class is 0.
+            -- 0 represents a special option, meaning that the function generator can access protected members at will.
+            cls.__create__ = FunctionWrapper(AccessStack,0,base);
             -- __fCtorIdx__ indicates where the function constructor is located,
             -- and adds the class to this when first constructed.
             cls.__fCtorIdx__ = idx;
@@ -246,12 +248,24 @@ function class.New(...)
                 if obj then
                     local __fCtorIdx__ = rawget(cls,"__fCtorIdx__");
                     if __fCtorIdx__ then
-                        local preCls = obj[is]();
+                        local preCls = rawget(obj,__cls__);
                         if preCls then
                             -- After inserting the class to which the function constructor belongs into the multi-inheritance table,
                             -- __fCtorIdx__ can no longer be used.
                             rawset(cls,"__fCtorIdx__",nil);
                             table.insert(cls[__bases__],__fCtorIdx__,preCls);
+                            for hdr,func in pairs(preCls) do
+                                -- Inherite handlers from bases.
+                                handlers[hdr] = func;
+                            end
+                            for key,mem in pairs(preCls) do
+                                -- Inherite members from base.
+                                members[key] = mem;
+                            end
+                            for key,meta in pairs(preCls) do
+                                -- Inherite metas from base.
+                                metas[key] = meta;
+                            end
                         end
                     end
                 end
@@ -321,7 +335,9 @@ function class.New(...)
                 end
             end
 
-            local init = cls[__init__];
+            --The constructor is only called if there is no function constructor
+            -- and the number of base classes is less than 2.
+            local init = (#cls[__bases__] < 2 and not __create__) and cls[__init__] or nil;
             -- Do not get __init__ from __all__ and make it search automatically.
             if init then
                 -- Avoid recursively polluting the classCreateLayer variable when create a new object in the ctor.

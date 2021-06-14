@@ -202,12 +202,24 @@ function class.New(...)
                 if obj then
                     local __fCtorIdx__ = rawget(cls,"__fCtorIdx__");
                     if __fCtorIdx__ then
-                        local preCls = obj[is]();
+                        local preCls = rawget(obj,__cls__);
                         if preCls then
                             -- After inserting the class to which the function constructor belongs into the multi-inheritance table,
                             -- __fCtorIdx__ can no longer be used.
                             rawset(cls,"__fCtorIdx__",nil);
                             table.insert(cls[__bases__],__fCtorIdx__,preCls);
+                            for hdr,func in pairs(preCls) do
+                                -- Inherite handlers from bases.
+                                handlers[hdr] = func;
+                            end
+                            for key,mem in pairs(preCls) do
+                                -- Inherite members from base.
+                                members[key] = mem;
+                            end
+                            for key,meta in pairs(preCls) do
+                                -- Inherite metas from base.
+                                metas[key] = meta;
+                            end
                         end
                     end
                 end
@@ -267,7 +279,9 @@ function class.New(...)
                 end
             end
 
-            local init = cls[__init__];
+            --The constructor is only called if there is no function constructor
+            -- and the number of base classes is less than 2.
+            local init = (#cls[__bases__] < 2 and not __create__) and cls[__init__] or nil;
             if init then
                 -- Avoid recursively polluting the classCreateLayer variable when create a new object in the ctor.
                 -- Cache it, after the call, set it to classCreateLayer+tempCreateLayer

@@ -54,7 +54,6 @@ local Friends = Config.Friends;
 local Cache = Config.Cache;
 
 local BaseClass = require("OOP.Variant.BaseClass");
-local ObjMeta = BaseClass.ObjMeta;
 local GetSingleton = BaseClass.GetSingleton;
 local DestorySingleton = BaseClass.DestorySingleton;
 
