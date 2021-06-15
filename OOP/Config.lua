@@ -1,4 +1,5 @@
 -- Copyright (c) 2021 榆柳松
+-- https://github.com/wzhengsen/LuaOOP
 
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
@@ -96,7 +97,7 @@ local Config = {
 
     -- If Singleton is defined,
     -- then the class can only access the singleton using the Instance property
-    -- and "new" will be automatically modified to the private.
+    -- and "new" will be automatically modified to the protected.
     Singleton = "Singleton",
 
     -- If Singleton is defined,
@@ -135,15 +136,6 @@ local Config = {
     -- Same as PropertyBehavior.
     ConstBehavior = 1,
 
-    -- Allows the class to have a name.
-    -- If true,You can pass the name as the first parameter to the class,
-    -- and it is possible to use names to inherit a class.
-    AllowClassName = true,
-
-    -- Allows the class inherite a table.
-    -- Like this: local Inherite = class({A = 1,B = 2});
-    AllowInheriteTable = false,
-
     -- Used to extend inherited c++ classes.
     CppClass = {
         ---Function to determine if userdata is empty.
@@ -160,9 +152,6 @@ local Config = {
         ---@type fun(cls:table,base:table):boolean
         IsInherite = nil,
     },
-
-    -- Whether to cache the elements to speed up the next access.
-    Cache = true,
 
     -- When the number of holes in the event response objects reaches a certain number,
     -- the list of objects is rearranged to optimise speed.

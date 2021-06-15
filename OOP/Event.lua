@@ -1,4 +1,5 @@
 -- Copyright (c) 2021 榆柳松
+-- https://github.com/wzhengsen/LuaOOP
 
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
@@ -32,8 +33,8 @@
     Event.WindowClose(true);
 ]]
 local Config = require("OOP.Config");
-local BaseClass = require("OOP.Variant.BaseClass");
-local IsNull = BaseClass.IsNull;
+local class = require("OOP.BaseClass");
+local IsNull = class.IsNull;
 local HoleLimit = Config.HoleLimit;
 local EventPool = {};
 local EventOrder = {};

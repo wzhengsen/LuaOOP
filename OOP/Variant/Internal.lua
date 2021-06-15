@@ -19,42 +19,27 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 
-local Config = require("OOP.Config");
-local Version = Config.Version;
-local unpack = Version < 5.2 and unpack or table.unpack;
-local setmetatable = setmetatable;
-local table = table;
-local pcall = pcall;
-local error = error;
-
----
----Wrapping the given function so that it handles the push and pop of the access stack correctly anyway,
---to avoid the access stack being corrupted by an error being thrown in one of the callbacks.
----@param aStack table
----@param cls table
----@param f function
----@vararg any
----@return ...
----
-local AllFunctions = setmetatable({},{__mode = "k"});
-local function FunctionWrapper(aStack,cls,f)
-    if AllFunctions[f] then
-        return f;
-    end
-    local newF = function(...)
-        table.insert(aStack,cls);
-        local ret = {pcall(f,...)};
-        table.remove(aStack);
-        if not ret[1] then
-            error(ret[2]);
-        end
-        return unpack(ret,2);
-    end;
-    AllFunctions[newF] = true;
-    AllFunctions[f] = true;
-    return newF;
-end
-
+local Debug = require("OOP.Config").Debug;
+local WeakTable = {__mode = "k"};
 return {
-    FunctionWrapper = FunctionWrapper
+    AllClasses = {},
+    ClassesReadable = setmetatable({},WeakTable),
+    ClassesWritable = setmetatable({},WeakTable),
+    ClassesHandlers = setmetatable({},WeakTable),
+    ClassesBases = setmetatable({},WeakTable),
+    ClassesMembers = setmetatable({},WeakTable),
+    ClassesMetas = setmetatable({},WeakTable),
+    ClassesCreate = setmetatable({},WeakTable),
+    -- Represents the c++ base class of the class (and also the only c++ base class).
+    ClassesCppBase = setmetatable({},WeakTable),
+    -- function constructor in the index of the inheritance list, once the type has been constructed once,
+    -- this field will be invalidated.
+    ClassesCtorIndex = setmetatable({},WeakTable),
+    ClassesSingleton = setmetatable({},WeakTable),
+    ObjectsAll = setmetatable({},WeakTable),
+    ObjectsCls = setmetatable({},WeakTable),
+    ClassesAll = setmetatable({},WeakTable);
+    ClassesPermisssions = Debug and setmetatable({},WeakTable) or nil,
+    ClassesFriends = Debug and setmetatable({},WeakTable) or nil,
+    AccessStack = Debug and {} or nil
 };

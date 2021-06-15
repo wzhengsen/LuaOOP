@@ -1,4 +1,5 @@
 -- Copyright (c) 2021 榆柳松
+-- https://github.com/wzhengsen/LuaOOP
 
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
@@ -23,12 +24,13 @@ local error = error;
 local type = type;
 local Config = require("OOP.Config");
 local Version = Config.Version;
+local Internal = require("OOP.Variant.Internal");
+local ClassesMembers = Internal.ClassesMembers;
+
 local Compat = require("OOP.Version.Compat");
 local bits = Compat.bits;
 local Debug = Config.Debug;
 
-local __members__ = Config.__members__;
-local __meta__ = Config.__meta__;
 local MetaMapName = Config.MetaMapName;
 
 local new = Config.new;
@@ -77,13 +79,12 @@ if Debug then
     local __init__ = Config.__init__;
     local __del__ = Config.__del__;
 
-    local __all__ = Config.__all__;
-    local __pm__ = Config.__pm__;
-
 
 
     local FunctionWrapper = Compat.FunctionWrapper;
-    local AccessStack = require("OOP.Variant.BaseClass").AccessStack;
+    local AccessStack = Internal.AccessStack;
+    local ClassesAll = Internal.ClassesAll;
+    local ClassesPermisssions = Internal.ClassesPermisssions;
     -- It is only under debug that the values need to be routed to the corresponding fields of the types.
     -- To save performance, all modifiers will be ignored under non-debug.
 
@@ -138,19 +139,21 @@ if Debug then
             -- For non-functional, non-static members,
             -- add to the member table and generate it for each instance.
             if bits.band(decor,Permission.Static) == 0 then
-                cls[__members__][key] = value;
+                ClassesMembers[cls][key] = value;
             end
         end
-        cls[__all__][key] = value;
-        cls[__pm__][key] = decor;
+        ClassesAll[cls][key] = value;
+        local pms = ClassesPermisssions[cls];
+        pms[key] = decor;
         if key == __init__ then
             -- Reassign permissions to "new", which are the same as __init__ with the Static modifier.
-            cls[__pm__][new] = bits.bor(decor,0x8);
+            pms[new] = bits.bor(decor,0x8);
         end
         self.decor = 0;
         self.cls = nil;
     end
 else
+    local ClassesMetas = Internal.ClassesMetas;
     local sc = Permission.Static;
     -- In non-debug mode, no attention is paid to any modifiers other than Static.
     function Router:Pass(key)
@@ -162,7 +165,7 @@ else
     function Router:End(key,value)
         local cls = self.cls;
         if "function" ~= type(value) and self.decor ~= sc then
-            cls[__members__][key] = value;
+            ClassesMembers[cls][key] = value;
         end
         rawset(cls,key,value);
         self.decor = 0;
@@ -170,8 +173,8 @@ else
 
         local meta = MetaMapName[key];
         if meta then
-            cls[__meta__][key] = value;
-            self[__meta__][__meta__] = nil;
+            local metas = ClassesMetas[cls];
+            metas[key] = value;
         end
     end
 end
