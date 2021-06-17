@@ -20,7 +20,7 @@
 -- THE SOFTWARE.
 
 local Config = require("OOP.Config");
-local Null = Config.CppClass.Null;
+local Null = Config.ExternalClass.Null;
 local DeathMarker = Config.DeathMarker;
 local IsNull = Config.IsNull;
 

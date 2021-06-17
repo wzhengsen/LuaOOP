@@ -34,6 +34,7 @@ local Debug = Config.Debug;
 local MetaMapName = Config.MetaMapName;
 
 local new = Config.new;
+local delete = Config.delete;
 
 local Public = Config.Modifiers.Public;
 local Private = Config.Modifiers.Private;
@@ -72,12 +73,12 @@ end
 
 if Debug then
     local Handlers = Config.Handlers;
-    local Properties = Config.Properties;
-    local Friends = Config.Friends;
-    local Singleton = Config.Singleton;
+    local __properties__ = Config.__properties__;
+    local __friends__ = Config.__friends__;
+    local __singleton__ = Config.__singleton__;
 
-    local __init__ = Config.__init__;
-    local __del__ = Config.__del__;
+    local ctor = Config.ctor;
+    local dtor = Config.dtor;
 
 
 
@@ -85,6 +86,8 @@ if Debug then
     local AccessStack = Internal.AccessStack;
     local ClassesAll = Internal.ClassesAll;
     local ClassesPermisssions = Internal.ClassesPermisssions;
+
+    local RouterReservedWord = Internal.RouterReservedWord;
     -- It is only under debug that the values need to be routed to the corresponding fields of the types.
     -- To save performance, all modifiers will be ignored under non-debug.
 
@@ -93,7 +96,7 @@ if Debug then
     -- 2 - Public/Private/Protected cannot be used together;
     -- 3 - Static cannot modify constructors and destructors;
     -- 4 - Can't use modifiers that don't exist;
-    -- 5 - Reserved words cannot be modified (Singleton/Friends/Handlers/Properties and so on).
+    -- 5 - Reserved words cannot be modified (__singleton__/__friends__/Handlers/__properties__ and so on).
     function Router:Pass(key)
         local bit = BitsMap[key];
         local decor = self.decor;
@@ -111,7 +114,7 @@ if Debug then
         return self;
     end
     function Router:End(key,value)
-        local bit = BitsMap[key];
+        local bit = BitsMap[key] or RouterReservedWord[key];
         if bit then
             error(("The name is unavailable. - %s"):format(key));
         end
@@ -122,10 +125,10 @@ if Debug then
         local decor = self.decor;
         local isFunction = "function" == type(value);
         if bits.band(decor,Permission.Static) ~= 0 then
-            if (key == __init__ or key == __del__) then
+            if (key == ctor or key == dtor) then
                 error(("%s modifier cannot modify %s functions."):format(Static,key));
             end
-        elseif key == Handlers or key == Properties or key == Singleton or key == Friends then
+        elseif key == Handlers or key == __properties__ or key == __singleton__ or key == __friends__ then
             error(("%s cannot be modified."):format(key));
         end
         if bits.band(decor,0x7) == 0 then
@@ -145,9 +148,11 @@ if Debug then
         ClassesAll[cls][key] = value;
         local pms = ClassesPermisssions[cls];
         pms[key] = decor;
-        if key == __init__ then
-            -- Reassign permissions to "new", which are the same as __init__ with the Static modifier.
+        if key == ctor then
+            -- Reassign permissions to "new", which are the same as ctor with the Static modifier.
             pms[new] = bits.bor(decor,0x8);
+        elseif key == dtor then
+            pms[delete] = decor;
         end
         self.decor = 0;
         self.cls = nil;

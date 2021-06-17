@@ -19,7 +19,8 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 
-local Debug = require("OOP.Config").Debug;
+local Config = require("OOP.Config");
+local Debug = Config.Debug;
 local WeakTable = {__mode = "k"};
 return {
     AllClasses = {},
@@ -29,17 +30,36 @@ return {
     ClassesBases = setmetatable({},WeakTable),
     ClassesMembers = setmetatable({},WeakTable),
     ClassesMetas = setmetatable({},WeakTable),
-    ClassesCreate = setmetatable({},WeakTable),
-    -- Represents the c++ base class of the class (and also the only c++ base class).
-    ClassesCppBase = setmetatable({},WeakTable),
-    -- function constructor in the index of the inheritance list, once the type has been constructed once,
-    -- this field will be invalidated.
-    ClassesCtorIndex = setmetatable({},WeakTable),
+    ClassesNew = setmetatable({},WeakTable),
+    ClassesDelete = setmetatable({},WeakTable),
     ClassesSingleton = setmetatable({},WeakTable),
     ObjectsAll = setmetatable({},WeakTable),
     ObjectsCls = setmetatable({},WeakTable),
     ClassesAll = setmetatable({},WeakTable);
     ClassesPermisssions = Debug and setmetatable({},WeakTable) or nil,
     ClassesFriends = Debug and setmetatable({},WeakTable) or nil,
-    AccessStack = Debug and {} or nil
+    ClassesBanNew = Debug and setmetatable({},WeakTable) or nil,
+    ClassesBanDelete = Debug and setmetatable({},WeakTable) or nil,
+    AccessStack = Debug and {} or nil,
+    ReservedWord = {
+        [Config.Modifiers.Public] = true,
+        [Config.Modifiers.Protected] = true,
+        [Config.Modifiers.Private] = true,
+        [Config.Modifiers.Const] = true,
+        [Config.Modifiers.Static] = true,
+        [Config.new] = true,
+        [Config.delete] = true,
+        [Config.is] = true,
+        [Config.Handlers] = true,
+        [Config.__new__] = true,
+        [Config.__delete__] = true
+    },
+    RouterReservedWord = {
+        [Config.new] = true,
+        [Config.delete] = true,
+        [Config.is] = true,
+        [Config.Handlers] = true,
+        [Config.__new__] = true,
+        [Config.__delete__] = true
+    };
 };

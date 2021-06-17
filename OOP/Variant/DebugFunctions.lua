@@ -40,20 +40,17 @@ local new = Config.new;
 local delete = Config.delete;
 local is = Config.is;
 local On = Config.On;
-local __del__ = Config.__del__;
+local ctor = Config.ctor;
+local dtor = Config.dtor;
+local __new__ = Config.__new__;
+local __delete__ = Config.__delete__;
 
-local Public = Config.Modifiers.Public;
-local Protected = Config.Modifiers.Protected;
-local Private = Config.Modifiers.Private;
-local Const = Config.Modifiers.Const;
-local Static = Config.Modifiers.Static;
-local Friends = Config.Friends;
-local Singleton = Config.Singleton;
-local Properties = Config.Properties;
+local __friends__ = Config.__friends__;
+local __singleton__ = Config.__singleton__;
+local __properties__ = Config.__properties__;
 local Instance = Config.Instance;
 local Handlers = Config.Handlers;
 
-local IsCppClass = Config.CppClass.IsCppClass;
 local DeathMarker = Config.DeathMarker;
 
 local MetaMapName = Config.MetaMapName;
@@ -64,6 +61,7 @@ local ConstBehavior = Config.ConstBehavior;
 local Functions = require("OOP.Variant.BaseFunctions");
 local GetSingleton = Functions.GetSingleton;
 local DestroySingleton = Functions.DestroySingleton;
+local ClassInherite = Functions.ClassInherite;
 local CreateClassObject = Functions.CreateClassObject;
 local AllClasses = Functions.AllClasses;
 local ClassesReadable = Functions.ClassesReadable;
@@ -72,13 +70,13 @@ local ClassesHandlers = Functions.ClassesHandlers;
 local ClassesBases = Functions.ClassesBases;
 local ClassesMembers = Functions.ClassesMembers;
 local ClassesMetas = Functions.ClassesMetas;
-local ClassesCreate = Functions.ClassesCreate;
-local ClassesCppBase = Functions.ClassesCppBase;
-local ClassesCtorIndex = Functions.ClassesCtorIndex;
+local ClassesBanNew = Functions.ClassesBanNew;
+local ClassesBanDelete = Functions.ClassesBanDelete;
+local ClassesNew = Functions.ClassesNew;
+local ClassesDelete = Functions.ClassesDelete;
 local ObjectsAll = Functions.ObjectsAll;
 local ObjectsCls = Functions.ObjectsCls;
 local CheckClassName = Functions.CheckClassName;
-local PushBase = Functions.PushBase;
 local CreateClassTables = Functions.CreateClassTables;
 
 local ClassesAll = Functions.ClassesAll;
@@ -86,13 +84,7 @@ local ClassesPermisssions = Functions.ClassesPermisssions;
 local ClassesFriends = Functions.ClassesFriends;
 local AccessStack = Functions.AccessStack;
 
-local ReservedWord = {
-    Public = Public,
-    Protected = Protected,
-    Private = Private,
-    Const = Const,
-    Static = Static
-};
+local ReservedWord = Functions.ReservedWord;
 
 ---Cascade to get permission values up to the top of the base class.
 ---
@@ -130,10 +122,7 @@ local function CheckPermission(self,key,byObj,set)
     if not pm then
         return true;
     end
-    local stackCls = AccessStack[#AccessStack];
-    if stackCls == 0 and bits.band(pm,Permission.Protected) ~= 0 then
-        return true;
-    end
+
     if byObj and bits.band(pm,Permission.Static) ~= 0 then
         error(("Objects cannot access static members of a class. - %s"):format(key));
     end
@@ -158,6 +147,8 @@ local function CheckPermission(self,key,byObj,set)
             return true;
         end
     end
+
+    local stackCls = AccessStack[#AccessStack];
     local friends = ClassesFriends[cls];
     --Check if it is a friendly class.
     if not friends or (not friends[stackCls] and not friends[AllClasses[stackCls]]) then
@@ -179,12 +170,16 @@ end
 ---Cascade to get the value of the corresponding key of a class and its base class
 ---(ignoring metamethods).
 ---
----@param self table
+---@param cls table
 ---@param key any
+---@param called table
 ---@return any
 ---
-local function CascadeGet(self,key)
-    local all = ClassesAll[self];
+local function CascadeGet(cls,key,called)
+    if called[cls] then
+        return nil;
+    end
+    local all = ClassesAll[cls];
     if nil == all then
         return;
     end
@@ -192,10 +187,10 @@ local function CascadeGet(self,key)
     if nil ~= ret then
         return ret;
     end
-    local bases = ClassesBases[self];
+    local bases = ClassesBases[cls];
     if bases then
         for _,base in ipairs(bases) do
-            ret = CascadeGet(base,key);
+            ret = CascadeGet(base,key,called);
             if nil ~= ret then
                 return ret;
             end
@@ -242,7 +237,7 @@ local function GetAndCheck(cls,key,sender)
     end
     -- Check bases.
     for _, base in ipairs(ClassesBases[cls]) do
-        ret = CascadeGet(base,key);
+        ret = CascadeGet(base,key,{});
         if nil ~= ret then
             return ret;
         end
@@ -361,11 +356,11 @@ local function RetrofitMeta(obj)
 end
 
 local function ClassGet(self,key)
-    if key == Handlers then
-        return ClassesHandlers[self];
-    end
     if BitsMap[key] then
         return Router:Begin(self,key);
+    end
+    if key == Handlers then
+        return ClassesHandlers[self];
     end
     -- Check the properties first.
     local property = ClassesReadable[self][key];
@@ -393,26 +388,21 @@ local function ClassGet(self,key)
         return ret;
     end
     for _, base in ipairs(ClassesBases[self]) do
-        ret = CascadeGet(base,key);
+        ret = CascadeGet(base,key,{});
         if nil ~= ret then
             return ret;
         end
-    end
-    -- If not found, look for the c++ class.
-    local cppBase = ClassesCppBase[self];
-    if nil ~= cppBase then
-        return cppBase[key];
     end
 end
 
 local rwTable = {r = ClassesReadable,w = ClassesWritable};
 local function ClassSet(cls,key,value)
     -- The reserved words cannot be used.
-    if ReservedWord[key] or key == Handlers then
-        error(("%s is a reserved word and you can't use it."):format(key));
+    if ReservedWord[key] then
+        error(("%s is a reserved word and you can't set it."):format(key));
     end
 
-    if key == Properties then
+    if key == __properties__ then
         value = value(cls);
         -- Register properties.
         for rw,t in pairs(rwTable) do
@@ -428,8 +418,8 @@ local function ClassSet(cls,key,value)
     end
 
     local isFunction = "function" == type(value);
-    if key == Singleton then
-        assert(isFunction,("%s reserved word must be assigned to a function."):format(Singleton));
+    if key == __singleton__ then
+        assert(isFunction,("%s reserved word must be assigned to a function."):format(__singleton__));
         -- Register "Instance" automatically.
         ClassesReadable[cls][Instance] = FunctionWrapper(AccessStack,cls,function()
             return GetSingleton(cls,value);
@@ -437,7 +427,7 @@ local function ClassSet(cls,key,value)
         ClassesWritable[cls][Instance] = FunctionWrapper(AccessStack,cls,function(_,val)
             DestroySingleton(cls,val)
         end);
-        -- Once register "Singleton" for a class,set permission of "new","delete" method to protected.
+        -- Once register "__singleton__" for a class,set permission of "new","delete" method to protected.
         local pms = ClassesPermisssions[cls];
         local pm = pms[new];
         if bits.band(pm,Permission.Private) == 0 then
@@ -445,8 +435,16 @@ local function ClassSet(cls,key,value)
         end
         pms[delete] = Permission.Protected;
         return;
-    elseif key == Friends then
-        assert(isFunction,("%s reserved word must be assigned to a function."):format(Friends));
+    elseif key == __new__ then
+        assert(isFunction,("%s reserved word must be assigned to a function."):format(key));
+        ClassesNew[cls] = FunctionWrapper(AccessStack,cls,value);
+        return;
+    elseif key == __delete__ then
+        assert(isFunction,("%s reserved word must be assigned to a function."):format(key));
+        ClassesDelete[cls] = FunctionWrapper(AccessStack,cls,value);
+        return;
+    elseif key == __friends__ then
+        assert(isFunction,("%s reserved word must be assigned to a function."):format(__friends__));
         local friends = {};
         ClassesFriends[cls] = friends;
         value = FunctionWrapper(AccessStack,cls,value);
@@ -540,48 +538,37 @@ function Functions.ClassInherite(cls,args,bases,handlers,members,metas)
         local baseType = type(base);
         assert(
             baseType == "table"
-            or baseType == "function"
             or baseType == "string",
             "Unavailable base class type."
         );
         if "string" == baseType then
             assert(AllClasses[base],("Inherits a class that does not exist.[\"%s\"]").format(base));
-            -- Find the base.
-            base = AllClasses[base];
-        elseif baseType == "function" then
-            -- One "Create" function only.
-            assert(ClassesCreate[cls] == nil,"Class with more than one creating function.");
-            -- Wrapper function generator with an indication that the current class is 0.
-            -- 0 represents a special option, meaning that the function generator can access protected members at will.
-            ClassesCreate[cls] = FunctionWrapper(AccessStack,0,base);
-            -- ClassesCtorIndex[cls] indicates where the function constructor is located,
-            -- and adds the class to this when first constructed.
-            ClassesCtorIndex[cls] = idx;
-        else
-            local constructor = IsCppClass and IsCppClass(base);
-            if constructor then
-                -- It is a c++ class.
-                assert(ClassesCreate[cls] == nil,"Class with more than one creating function or native class.");
-                local bCtor = base[constructor];
-                if bCtor then
-                    ClassesCreate[cls] = bCtor;
-                end
-                ClassesCppBase[cls] = base;
-            else
-                local create = ClassesCreate[base];
-                if create then
-                    assert(ClassesCreate[cls] == nil,"Class with more than one creating function.");
-                    -- When having the mapping value ClassesCtorIndex[base],
-                    -- which indicates that the base class uses the function constructor
-                    -- Assign Create to base.new to be called recursively
-                    -- in order to return the class to which the function constructor produces the object.
-                    ClassesCreate[cls] = ClassesCtorIndex[base] and base[new] or create;
-                end
+        end
+        for i,b in ipairs(args) do
+            if b == base and idx ~= i then
+                error("It is not possible to inherit from the same class repeatedly.");
+            end
+        end
+        local pms = ClassesPermisssions[base];
+        if ClassesBanNew[base] then
+            ClassesBanNew[cls] = true;
+        elseif pms then
+            local pm = pms[ctor];
+            if pm and bits.band(pm,Permission.Private) ~= 0 then
+                ClassesBanNew[cls] = true;
+            end
+        end
 
-                PushBase(bases,base,handlers,members,metas);
+        if ClassesBanDelete[base] then
+            ClassesBanDelete[cls] = true;
+        elseif pms then
+            local pm = pms[dtor];
+            if pm and bits.band(pm,Permission.Private) ~= 0 then
+                ClassesBanDelete[cls] = true;
             end
         end
     end
+    ClassInherite(cls,args,bases,handlers,members,metas);
 end
 
 function Functions.DestroySingleton(cls,val)
@@ -599,7 +586,7 @@ function Functions.CreateClassObject(...)
 end
 
 --[[
-    Cascade calls to __del__.
+    Cascade calls to dtor.
     @param self     The object that will be destructured.
     @param cls      The class to be looked up.
     @param called   Records which base classes have been called,See below:
@@ -618,80 +605,65 @@ local function CascadeDelete(obj,cls,called)
     if called[cls] then
         return;
     end
-    local cppCls = IsCppClass and IsCppClass(cls);
-    local del = nil;
-    if cppCls then
-        del = cls[__del__];
-    else
-        for _,base in ipairs(ClassesBases[cls]) do
-            CascadeDelete(obj,base);
+    local bases = ClassesBases[cls];
+    if bases then
+        for _,base in ipairs(bases) do
+            CascadeDelete(obj,base,called);
         end
-
-        local pm = ClassesPermisssions[cls][__del__];
-        if pm then
-            local aCls = AccessStack[#AccessStack];
-            if not (aCls == 0 and bits.band(pm,Permission.Protected) ~= 0) then
-                local friends = ClassesFriends[cls];
-                if (not friends or (not friends[aCls] and not friends[AllClasses[cls]])) and
-                (bits.band(pm,Permission.Public) == 0) and
-                (aCls ~= cls) and
-                (bits.band(pm,Permission.Private) ~= 0)then
-                    error(("Attempt to access private members outside the permission. - %s"):format(__del__));
-                end
-            end
-        end
-
-        del = ClassesAll[cls][__del__];
     end
+
+    local pm = ClassesPermisssions[cls][dtor];
+    if pm then
+        local aCls = AccessStack[#AccessStack];
+        local friends = ClassesFriends[cls];
+        if (not friends or (not friends[aCls] and not friends[AllClasses[cls]])) and
+        (bits.band(pm,Permission.Public) == 0) and
+        (aCls ~= cls) and
+        (bits.band(pm,Permission.Private) ~= 0)then
+            error(("Attempt to access private members outside the permission. - %s"):format(dtor));
+        end
+    end
+
+    -- Since the meta method is not triggered here,
+    -- it is necessary to determine the permission in advance.
+    local del = ClassesAll[cls][dtor];
     if del then
         del(obj);
     end
     called[cls] = true;
 end
 
-local DefaultDelete = function(self)
+function Functions.CallDel(self)
     CascadeDelete(self,self[is](),{});
-    setmetatable(self,nil);
     ObjectsAll[self] = nil;
-    self[DeathMarker] = true;
 end
 
-function Functions.FinishTableObject(obj,cls)
-    -- Instances of the table type do not require the last cls information
-    -- (which is already included in the metatable and in the upvalue).
-    ObjectsCls[obj] = nil;
-    setmetatable(obj,MakeTableObjectMeta(cls));
-
-    -- If the object is a table,
-    -- provide a delete method to the object by default.
-
-    -- If the object is a userdata,
-    -- you should provide a delete method with c++.
-
-    -- Since you cannot explicitly determine the return type of the function constructor,
-    -- register the delete function when you know explicitly that it is not returning userdata after constructing it once.
-    if nil == ClassesAll[cls][delete] then
-        ClassesAll[cls][delete] = FunctionWrapper(AccessStack,cls,DefaultDelete);
-        local pm = ClassesPermisssions[cls][__del__] or Permission.Public;
-        if ClassesReadable[cls][Instance] and bits.band(pm,Permission.Private) == 0 then
-            -- If there is a singleton, at least the protected permission for delete will be guaranteed.
-            ClassesPermisssions[cls][delete] = Permission.Protected;
+function Functions.CreateClassDelete(cls)
+    return function (self)
+        local d = ClassesDelete[cls];
+        if d then
+            d(self);
         else
-            -- Otherwise delete has the same access premission as __del__.
-            ClassesPermisssions[cls][delete] = pm;
+            CascadeDelete(self,cls,{});
+            setmetatable(self,nil);
+            self[DeathMarker] = true;
         end
+        ObjectsAll[self] = nil;
     end
 end
 
-function Functions.AttachClassFunctions(cls,_is,_new)
-    ClassesAll[cls][is] = _is;
-    ClassesPermisssions[cls][is] = Permission.Public;
-    if nil ~= _new then
-        -- In debug mode,the "new" method is public and static.
-        ClassesAll[cls][new] = FunctionWrapper(AccessStack,cls,_new);
-        -- Use + instead of | to try to keep lua 5.3 or lower compatible.
-        ClassesPermisssions[cls][new] = Permission.Public + Permission.Static;
-    end
+function Functions.AttachClassFunctions(cls,_is,_new,_delete)
+    local all = ClassesAll[cls];
+    local pms = ClassesPermisssions[cls];
+    all[is] = _is;
+    pms[is] = Permission.Public;
+    -- In debug mode,the "new" method is public and static.
+    all[new] = FunctionWrapper(AccessStack,cls,_new);
+    -- Use + instead of | to try to keep lua 5.3 or lower compatible.
+    pms[new] = Permission.Public + Permission.Static;
+
+    all[delete] = FunctionWrapper(AccessStack,cls,_delete);
+    pms[delete] = Permission.Public;
 end
 
 return Functions;

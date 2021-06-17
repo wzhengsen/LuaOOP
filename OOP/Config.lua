@@ -36,15 +36,23 @@ local Config = {
 
     Handlers = "Handlers",
 
-    Properties = "Properties",
-
-    Friends = "Friends",
-
     IsNull = "IsNull",
 
+    __properties__ = "__properties__",
+
+    __friends__ = "__friends__",
+
+    -- If __singleton__ is defined,
+    -- then the class can only access the singleton using the Instance property
+    -- and "new" will be automatically modified to the protected.
+    __singleton__ = "__singleton__",
+
     -- Constructor and destructor names.
-    __init__ = "__init__",
-    __del__ = "__del__",
+    __new__ = "__new__",
+    __delete__ = "__delete__",
+
+    ctor = "ctor",
+    dtor = "dtor",
 
     -- Constructor and destructor method names.
     new = "new",
@@ -95,12 +103,7 @@ local Config = {
         Const = "Const"
     },
 
-    -- If Singleton is defined,
-    -- then the class can only access the singleton using the Instance property
-    -- and "new" will be automatically modified to the protected.
-    Singleton = "Singleton",
-
-    -- If Singleton is defined,
+    -- If __singleton__ is defined,
     -- this property will be generated automatically.
     Instance = "Instance",
 
@@ -136,18 +139,18 @@ local Config = {
     -- Same as PropertyBehavior.
     ConstBehavior = 1,
 
-    -- Used to extend inherited c++ classes.
-    CppClass = {
+    -- Used to extend inherited external classes.
+    ExternalClass = {
         ---Function to determine if userdata is empty.
         ---@type fun(p:userdata):boolean
         Null = nil,
 
-        ---Function to determine if class is a c++ class.
-        ---If the class is a c++ class,returns constructor method name otherwise returns nil.
-        ---@type fun(p:table):string?
-        IsCppClass = nil,
+        ---Function to determine if class is a external class.
+        ---If the class is a external class,returns constructor method otherwise returns nil.
+        ---@type fun(p:table):function?
+        IsExternalClass = nil,
 
-        ---Function to determine if a c++ class inherits from another c++ class.
+        ---Function to determine if a external class inherits from another external class.
         ---A class can be judged as inheriting itself.
         ---@type fun(cls:table,base:table):boolean
         IsInherite = nil,
@@ -158,23 +161,6 @@ local Config = {
     HoleLimit = 15,
 
     --****************Functional fields end****************
-
-
-    --****************Other fields start****************
-    -- In general, the following areas you do not need to modify.
-
-    __r__ = "_👓_",
-    __w__ = "_🖊_",
-    __bases__ = "_⚾_",
-    __all__ = "_🌐_",
-    __pm__ = "_🔑_",
-    __singleton__ = "_1️⃣_",
-    __friends__ = "_👥_",
-    __cls__ = "_🧬_",
-    __members__ = "_📝_",
-    __meta__ = "_Ⓜ_"
-
-    --****************Other fields end****************
 };
 
 -- Reverse mapping to meta method names.

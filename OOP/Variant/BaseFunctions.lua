@@ -38,18 +38,20 @@ local BitsMap = R.BitsMap;
 local On = Config.On;
 local delete = Config.delete;
 local DeathMarker = Config.DeathMarker;
-local __del__ = Config.__del__;
-local IsCppClass = Config.CppClass.IsCppClass;
-local IsInherite = Config.CppClass.IsInherite;
+local dtor = Config.dtor;
+local IsExternalClass = Config.ExternalClass.IsExternalClass;
+local IsInherite = Config.ExternalClass.IsInherite;
 
 local new = Config.new;
 local is = Config.is;
 
-local Properties = Config.Properties;
-local Singleton = Config.Singleton;
+local __properties__ = Config.__properties__;
+local __singleton__ = Config.__singleton__;
 local Instance = Config.Instance;
 local Handlers = Config.Handlers;
-local Friends = Config.Friends;
+local __friends__ = Config.__friends__;
+local __new__ = Config.__new__;
+local __delete__ = Config.__delete__;
 
 local MetaMapName = Config.MetaMapName;
 
@@ -64,9 +66,8 @@ local ClassesHandlers = Functions.ClassesHandlers;
 local ClassesBases = Functions.ClassesBases;
 local ClassesMembers = Functions.ClassesMembers;
 local ClassesMetas = Functions.ClassesMetas;
-local ClassesCreate = Functions.ClassesCreate;
-local ClassesCppBase = Functions.ClassesCppBase;
-local ClassesCtorIndex = Functions.ClassesCtorIndex;
+local ClassesNew = Functions.ClassesNew;
+local ClassesDelete = Functions.ClassesDelete;
 local ClassesSingleton = Functions.ClassesSingleton;
 local ObjectsAll = Functions.ObjectsAll;
 local ObjectsCls = Functions.ObjectsCls;
@@ -174,8 +175,11 @@ local function CheckClassName(cls,args)
     return nil;
 end
 
-local function PushBase(bases,base,handlers,members,metas,idx)
+local function PushBase(cls,bases,base,handlers,members,metas)
     -- Inherite handlers/members/metas from base.
+
+    -- To save runtime performance,
+    -- some values that may be looked up at runtime are recorded in the table at inheritance time.
     local found = ClassesHandlers[base];
     if found then
         for handler,func in pairs(found) do
@@ -194,11 +198,13 @@ local function PushBase(bases,base,handlers,members,metas,idx)
             metas[key] = meta;
         end
     end
-    if idx then
-        table.insert(bases,idx,base);
-    else
-        table.insert(bases,base);
+    local _new = ClassesNew[base];
+    if nil == _new and IsExternalClass then
+        _new = IsExternalClass(base);
+        ClassesNew[base] = _new;
     end
+    ClassesNew[cls] = _new;
+    bases[#bases + 1] = base;
 end
 
 ---If there is no parameter,it means the return value is the current type.
@@ -239,66 +245,22 @@ end
 ---Returns the object created and the table holding the members of that object.
 ---
 ---@param cls table
----@param create function|nil
----@param handlers table
----@param members table
----@param metas table
 ---@return "table?|userdata?"
 ---@return "table?"
-local function CreateClassObject(cls,create,handlers,members,metas,...)
-    --[[
-        Here, the case of multiple function constructions needs to be considered, e.g.
-
-        local C1 = class();
-        local C2 = class(function()return C1.new();end);
-        local C3 = class(C2);
-        local C4 = class(function()return C3.new();end);
-
-        In this inheritance relationship,
-        since the base classes of C4 and C2 are not explicitly specified,
-        you cannot directly query by ClassesBases field,
-        you need to get the returned base class type and add it to ClassesBases.
-
-
-        Since a function constructor is designed to return the same type,
-        do not use the following inheritance.
-
-        local E1 = class();
-        local E2 = class();
-        local E3 = class(function(case)
-            if case == 1 then
-                reutrn E1.new();
-            else
-                return E2.new();
-            end
-        );
-    ]]
+local function CreateClassObject(cls,...)
+    local _new = ClassesNew[cls];
     local obj = nil;
-    local all = nil;
-    if create then
-        obj = create(...);
-        if nil ~= obj then
-            local ctorIdx = ClassesCtorIndex[cls];
-            if ctorIdx then
-                local preCls = ObjectsCls[obj];
-                if preCls then
-                    PushBase(ClassesBases[cls],preCls,handlers,members,metas,ctorIdx);
-                end
-                -- After creating the object of class ,
-                -- ClassesCtorIndex[cls] can no longer be used.
-                ClassesCtorIndex[cls] = nil;
-            end
-        end
+    if _new then
+        obj = _new(...);
     else
         obj = {};
     end
-    if nil ~= obj then
-        if "table" == type(obj) then
-            all = obj;
-        else
-            all = {};
-            ObjectsAll[obj] = all;
-        end
+    local all = nil;
+    if "table" == type(obj) then
+        all = obj;
+    elseif nil ~= obj then
+        all = {};
+        ObjectsAll[obj] = all;
     end
     return obj,all;
 end
@@ -308,9 +270,14 @@ end
 ---
 ---@param cls table
 ---@param key any
+---@param called table
 ---@return any
 ---
-local function CascadeGet(cls,key)
+local function CascadeGet(cls,key,called)
+    if called[cls] then
+        return nil;
+    end
+    called[cls] = true;
     local ret = rawget(cls,key);
     if nil ~= ret then
         return ret;
@@ -318,7 +285,7 @@ local function CascadeGet(cls,key)
     local bases = ClassesBases[cls];
     if bases then
         for _,base in ipairs(bases) do
-            ret = CascadeGet(base,key);
+            ret = CascadeGet(base,key,called);
             if nil ~= ret then
                 return ret;
             end
@@ -347,7 +314,7 @@ local function MakeTableObjectMeta(cls)
             end
             -- Check base class.
             for _, base in ipairs(ClassesBases[cls]) do
-                ret = CascadeGet(base,key);
+                ret = CascadeGet(base,key,{});
                 if nil ~= ret then
                     return ret;
                 end
@@ -418,7 +385,7 @@ local function RetrofiteUserDataObjectMeta(obj)
         end
         -- Check cls bases.
         for _, base in ipairs(ClassesBases[cls]) do
-            ret = CascadeGet(base,key);
+            ret = CascadeGet(base,key,{});
             if nil ~= ret then
                 return ret;
             end
@@ -446,7 +413,7 @@ local function RetrofiteUserDataObjectMeta(obj)
 end
 
 --[[
-    Cascade calls to __del__.
+    Cascade calls to dtor.
     @param self     The object that will be destructured.
     @param cls      The class to be looked up.
     @param called   Records which base classes have been called,See below:
@@ -465,26 +432,34 @@ local function CascadeDelete(self,cls,called)
     if called[cls] then
         return;
     end
-    local cppCls = IsCppClass and IsCppClass(cls);
-    local del = nil;
-    if cppCls then
-        del = cls[__del__];
-    else
-        for _,base in ipairs(ClassesBases[cls]) do
-            CascadeDelete(self,base);
+    local bases = ClassesBases[cls];
+    if bases then
+        for _,base in ipairs(bases) do
+            CascadeDelete(self,base,called);
         end
-        del = rawget(cls,__del__);
+        local del = rawget(cls,dtor);
+        if del then
+            del(self);
+        end
+        called[cls] = true;
     end
-    if del then
-        del(self);
-    end
-    called[cls] = true;
 end
 
-local DefaultDelete = function(self)
+local function CallDel(self)
     CascadeDelete(self,self[is](),{});
-    setmetatable(self,nil);
-    self[DeathMarker] = true;
+end
+
+local function CreateClassDelete(cls)
+    return function (self)
+        local d = ClassesDelete[cls];
+        if d then
+            d(self);
+        else
+            CascadeDelete(self,cls,{});
+            setmetatable(self,nil);
+            self[DeathMarker] = true;
+        end
+    end
 end
 
 local OnLen = #On + 1;
@@ -497,30 +472,6 @@ local function RegisterHandlersAndMembers(obj,all,handlers,members)
         -- Automatically set member of object.
         -- Before the instance can change the meta-table, its members must be set.
         all[key] = Copy(mem);
-    end
-end
-
----Register meta-tables for objects of type table that have been generated.
----
----@param obj table
----@param cls table
----
-local function FinishTableObject(obj,cls)
-    -- Instances of the table type do not require the last cls information
-    -- (which is already included in the metatable and in the upvalue).
-    ObjectsCls[obj] = nil;
-    setmetatable(obj,MakeTableObjectMeta(cls));
-
-    -- If the object is a table,
-    -- provide a delete method to the object by default.
-
-    -- If the object is a userdata,
-    -- you should provide a delete method with c++.
-
-    -- Since you cannot explicitly determine the return type of the function constructor,
-    -- register the delete function when you know explicitly that it is not returning userdata after constructing it once.
-    if nil == rawget(cls,delete) then
-        rawset(cls,delete,DefaultDelete);
     end
 end
 
@@ -560,44 +511,18 @@ local function CreateClassTables()
     return cls,bases,handlers,members,metas;
 end
 
-local function AttachClassFunctions(cls,_is,_new)
+local function AttachClassFunctions(cls,_is,_new,_delete)
     cls[is] = _is;
     cls[new] = _new;
+    cls[delete] = _delete;
 end
 
 local function ClassInherite(cls,args,bases,handlers,members,metas)
-    for idx, base in ipairs(args) do
-        local baseType = type(base);
-        if "string" == baseType then
-            -- Find the base.
+    for _, base in ipairs(args) do
+        if "string" == type(base) then
             base = AllClasses[base];
-        elseif baseType == "function" then
-            ClassesCreate[cls] = base;
-            -- ClassesCtorIndex[cls] indicates where the function constructor is located,
-            -- and adds the class to this when first constructed.
-            ClassesCtorIndex[cls] = idx;
-        else
-            local constructor = IsCppClass and IsCppClass(base);
-            if constructor then
-                -- It is a c++ class.
-                local bCtor = base[constructor];
-                if bCtor then
-                    ClassesCreate[cls] = bCtor;
-                end
-                ClassesCppBase[cls] = base;
-            else
-                local create = ClassesCreate[base];
-                if create then
-                    -- When having the value ClassesCtorIndex[cls],
-                    -- which indicates that the base class uses the function constructor
-                    -- Assign "create" to base.new to be called recursively
-                    -- in order to return the class to which the function constructor produces the object.
-                    ClassesCreate[cls] = ClassesCtorIndex[base] and base[new] or create;
-                end
-
-                PushBase(bases,base,handlers,members,metas);
-            end
         end
+        PushBase(cls,bases,base,handlers,members,metas);
     end
 end
 
@@ -620,21 +545,16 @@ local function ClassGet(cls,key)
         return property(cls);
     end
     for _, base in ipairs(ClassesBases[cls]) do
-        local ret = CascadeGet(base,key);
+        local ret = CascadeGet(base,key,{});
         if nil ~= ret then
             return ret;
         end
-    end
-    -- If not found, look for the c++ class.
-    local cppBase = ClassesCppBase[cls];
-    if nil ~= cppBase then
-        return cppBase[key];
     end
 end
 
 local rwTable = {r = ClassesReadable,w = ClassesWritable};
 local function ClassSet(cls,key,value)
-    if key == Properties then
+    if key == __properties__ then
         -- It must be a function.
         -- Call it automatically.
         value = value(cls);
@@ -649,7 +569,7 @@ local function ClassSet(cls,key,value)
             end
         end
         return;
-    elseif key == Singleton then
+    elseif key == __singleton__ then
         -- Register "Instance" automatically.
         ClassesReadable[cls][Instance] = function ()
             return GetSingleton(cls,value);
@@ -658,9 +578,13 @@ local function ClassSet(cls,key,value)
             DestroySingleton(cls,val)
         end;
         return;
-    elseif key == Handlers then
+    elseif key == __new__ then
+        ClassesNew[cls] = value;
         return;
-    elseif key == Friends then
+    elseif key == __delete__ then
+        ClassesDelete[cls] = value;
+        return;
+    elseif key == __friends__ then
         value(cls);
         return;
     else
@@ -688,10 +612,12 @@ Functions.IsNull = _IsNull;
 Functions.Copy = Copy;
 Functions.CheckClassName = CheckClassName;
 Functions.PushBase = PushBase;
+Functions.MakeTableObjectMeta = MakeTableObjectMeta;
 Functions.CreateClassIs = CreateClassIs;
+Functions.CreateClassDelete = CreateClassDelete;
 Functions.CreateClassObject = CreateClassObject;
+Functions.CallDel = CallDel;
 Functions.RegisterHandlersAndMembers = RegisterHandlersAndMembers;
-Functions.FinishTableObject = FinishTableObject;
 Functions.FinishUserDataObject = FinishUserDataObject;
 Functions.CreateClassTables = CreateClassTables;
 Functions.AttachClassFunctions = AttachClassFunctions;

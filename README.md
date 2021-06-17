@@ -11,10 +11,10 @@ Lua实现的面向对象编程模式，支持属性、多继承、运算符重�
 * 基本的类构造（构造及析构）；
 * 类的单继承、多继承；
 * 继承返回userdata的类；
-* 访问权控制（Public/Protected/Private/Static/Const/Friends）；
+* 访问权控制（Public/Protected/Private/Static/Const/__friends__）；
 * 全部保留字可配置项；
 * 属性；
-* 单例（Singleton）；
+* 单例（__singleton__）；
 * 运行时类型判断（is）;
 * 元方法与运算符重载；
 * Debug和Release运行模式；
@@ -33,7 +33,7 @@ Point.x = 0;
 Point.y = 0;
 
 -- 构造函数（可以不提供）。
-function Point:__init__(x,y)
+function Point:ctor(x,y)
     if x and y then
         self.x = x;
         self.y = y;
@@ -41,7 +41,7 @@ function Point:__init__(x,y)
 end
 
 -- 析构函数（可以不提供）。
-function Point:__del__()
+function Point:dtor()
     print(self,"在此处析构");
 end
 
@@ -81,7 +81,7 @@ local Point = class();
 Point.x = 0;
 Point.y = 0;
 
-function Point:__init__(x,y)
+function Point:ctor(x,y)
     if x and y then
         self.x = x;
         self.y = y;
@@ -99,8 +99,8 @@ local Point3D = class(Point);
 -- 成员z。
 Point3D.z = 0;
 
-function Point3D:__init__(x,y,z)
-    Point.__init__(self,x,y);
+function Point3D:ctor(x,y,z)
+    Point.ctor(self,x,y);
     if z then
         self.z = z;
     end
@@ -115,7 +115,7 @@ local Color = class();
 Color.r = 0;
 Color.g = 0;
 Color.b = 0;
-function Color:__init__(r,g,b)
+function Color:ctor(r,g,b)
     if r and g and b then
         self.r = r;
         self.g = g;
@@ -130,12 +130,12 @@ end
 
 -- 顶点属性继承空间点（Point3D）与颜色（Color）。
 local Vertex = class(Point3D,Color);
-function Vertex:__init__(p,c)
+function Vertex:ctor(p,c)
     if p then
-        Point3D.__init__(self,p.x,p.y,p.z);
+        Point3D.ctor(self,p.x,p.y,p.z);
     end
     if c then
-        Color.__init__(self,c.r,c.g,c.b);
+        Color.ctor(self,c.r,c.g,c.b);
     end
 end
 local vertex = Vertex.new({x = 0,y = 1,z = 2},{r = 99,g = 88, b = 77});
@@ -185,7 +185,7 @@ end,Point3D);
 
 我希望通过某种手段将纯lua类和产生userdata的类联系起来，一般需要在OOP.Config文件中指定几个特殊的函数：
 ```lua
-Config.CppClass = {
+Config.ExternalClass = {
     ---用于判断userdata指向的c++对象是否可用。
     ---@type fun(p:userdata):boolean
     Null = nil,
@@ -194,7 +194,7 @@ Config.CppClass = {
     ---如果是，则返回构造userdata对象的 #函数名字#，
     ---否则返回nil值。
     ---@type fun(p:table):string?
-    IsCppClass = nil,
+    IsExternalClass = nil,
 
     ---用于判断给定的类是否继承于另一个类。
     ---@type fun(cls:table,base:table):boolean
@@ -208,7 +208,7 @@ Config.CppClass = {
 -- 假设ImageView是一个返回userdata的类型，
 -- 且构造函数名为"new"并接受2个参数（string和table）。
 local LuaImageView = class(ImageView);
-function LuaImageView:__init__(png,size)
+function LuaImageView:ctor(png,size)
     -- ...
     self.size = size;
     self.png = png;
@@ -237,7 +237,7 @@ local LuaImageView = class(function(png)
     -- ImageView仍然接受2个参数，但在外部调用时，只希望传递一个。
     return ImageView.new(png,{width = 200,height = 200})
 end);
-function LuaImageView:__init__(png)
+function LuaImageView:ctor(png)
     -- ...
     self.png = png;
     -- ...
@@ -350,7 +350,7 @@ Point.y = 0;
 -- 静态成员，用于统计对象总数。
 Point.Static.Count = 0;
 
-function Point:__init__(x,y)
+function Point:ctor(x,y)
     Point.Count = Point.Count + 1;
     if x and y then
         self.x = x;
@@ -358,7 +358,7 @@ function Point:__init__(x,y)
     end
 end
 
-function Point:__del__()
+function Point:dtor()
     Point.Count = Point.Count - 1;
 end
 
@@ -412,7 +412,7 @@ Secret.Private.data = "123";
 function Secret.Protected:ShowData()
     print("data = " .. self.data);
 end
-function Secret:Friends()
+function Secret:__friends__()
     -- 可以同时使用类变量和类名来指明友元类。
     -- 友元不可继承，即使Base已是Secret的友元类，
     -- C2作为另一个友元类时也应当明确指示。
@@ -445,10 +445,10 @@ function Test.Static.CopyFromInstance(inst)
     -- 引发错误，对象不能访问Static成员。
     return inst.new(table.unpack(inst.args));
 end
-function Test.Private:__init__(...)
+function Test.Private:ctor(...)
     self.args = {...};
 end
-function Test.Private:__del__()
+function Test.Private:dtor()
 end
 
 local test1 = Test.CreateInstance(1,2,3,4);
@@ -478,13 +478,13 @@ test4:delete();
 class = "class"
 new = "new"
 delete = "delete"
-__init__ = "__init__"
+ctor = "ctor"
 Public = "Public"
 Private = "Private"
 Protected = "Protected"
 Static = "Static"
 Const = "Const"
-Friends = "Friends"
+__friends__ = "__friends__"
 ```
 比如，现在将：
 
@@ -500,7 +500,7 @@ local Config = require("OOP.Config");
 Config.class = "struct";
 Config.new = "create";
 Config.delete = "dispose";
-Config.__init__ = "ctor";
+Config.ctor = "ctor";
 Config.Modifiers.Public = "public";
 Config.Modifiers.Private = "private";
 Config.Modifiers.Protected = "protected";
@@ -533,7 +533,7 @@ local Point = class();
 Point.Private.x = 0;
 Point.Private.y = 0;
 
-function Point:__init__(x,y)
+function Point:ctor(x,y)
     if x and y then
         self.x = x;
         self.y = y;
@@ -549,7 +549,7 @@ function Point:SetX(x)
 end
 
 -- 使用Properties方法来获取属性。
-function Point:Properties()
+function Point:__properties__()
     return {
         -- 其中r子表表示只读属性，w子表表示只写属性。
         r = {
@@ -571,8 +571,8 @@ end
 local Point3D = class(Point);
 Point3D.Private.z = 0;
 
-function Point3D:__init__(x,y,z)
-    Point.__init__(self,x,y);
+function Point3D:ctor(x,y,z)
+    Point.ctor(self,x,y);
     if z then
         self.z = z;
     end
@@ -615,7 +615,7 @@ require("OOP.Class");
 local Device = class();
 Device.Private.ip = "";
 Device.Private.battery = 0;
-function Device:__init__()
+function Device:ctor()
     self.ip = "127.0.0.1";
     self.battery = 100;
 end
@@ -625,11 +625,11 @@ end
 function Device:GetBattery()
     return self.battery;
 end
-function Device:__del__()
+function Device:dtor()
     print("单例已析构。");
 end
 -- 定义Singleton来获取单例。
-function Device:Singleton()
+function Device:__singleton__()
     return Device.new();
 end
 
@@ -696,7 +696,7 @@ local Point = class();
 Point.Private.x = 0;
 Point.Private.y = 0;
 
-function Point:__init__(x,y)
+function Point:ctor(x,y)
     if x and y then
         self.x = x;
         self.y = y;
@@ -733,42 +733,42 @@ print(p3);-- x = 3;y = 5;
 ---
 >Lua版本 < 5.3时可以实现的元方法为：
 
-| 元方法 | 替代名 | 运算符 |
-|  :--:  |  :--:  |  :--:  |
-|__add|\_\_add\_\_|a + b|
-|__sub|\_\_sub\_\_|a - b|
-|__mul|\_\_mul\_\_|a * b|
-|__div|\_\_div\_\_|a / b|
-|__mod|\_\_mod\_\_|a % b|
-|__pow|\_\_pow\_\_|a ^ b|
-|__unm|\_\_unm\_\_|-b|
-|__lt|\_\_lt\_\_|a < b|
-|__le|\_\_le\_\_|a <= b|
-|__concat|\_\_concat\_\_|a .. b|
-|__call|\_\_call\_\_|a(...)|
-|__eq|\_\_eq\_\_|a == b|
-|__len|\_\_len\_\_|#a|
-|__pairs|\_\_pairs\_\_|pairs(a)|
-|__tostring|\_\_tostring\_\_|tostring(a)|
-|__gc|\_\_gc\_\_||
+|   元方法   |      替代名      |   运算符    |
+| :--------: | :--------------: | :---------: |
+|   __add    |   \_\_add\_\_    |    a + b    |
+|   __sub    |   \_\_sub\_\_    |    a - b    |
+|   __mul    |   \_\_mul\_\_    |    a * b    |
+|   __div    |   \_\_div\_\_    |    a / b    |
+|   __mod    |   \_\_mod\_\_    |    a % b    |
+|   __pow    |   \_\_pow\_\_    |    a ^ b    |
+|   __unm    |   \_\_unm\_\_    |     -b      |
+|    __lt    |    \_\_lt\_\_    |    a < b    |
+|    __le    |    \_\_le\_\_    |   a <= b    |
+|  __concat  |  \_\_concat\_\_  |   a .. b    |
+|   __call   |   \_\_call\_\_   |   a(...)    |
+|    __eq    |    \_\_eq\_\_    |   a == b    |
+|   __len    |   \_\_len\_\_    |     #a      |
+|  __pairs   |  \_\_pairs\_\_   |  pairs(a)   |
+| __tostring | \_\_tostring\_\_ | tostring(a) |
+|    __gc    |    \_\_gc\_\_    |             |
 
 >Lua版本 = 5.3时可以额外实现的元方法为：
 
-| 元方法 | 替代名 | 运算符 |
-|  :--:  |  :--:  |  :--:  |
-|__idiv|\_\_idiv\_\_|a // b|
-|__band|\_\_band\_\_|a & b|
-|__bor|\_\_bor\_\_|a \| b|
-|__bxor|\_\_bxor\_\_|a ~ b|
-|__shl|\_\_shl\_\_|a << b|
-|__shr|\_\_shr\_\_|a >> b|
-|__bnot|\_\_bnot\_\_|~a|
+| 元方法 |    替代名    | 运算符 |
+| :----: | :----------: | :----: |
+| __idiv | \_\_idiv\_\_ | a // b |
+| __band | \_\_band\_\_ | a & b  |
+| __bor  | \_\_bor\_\_  | a \| b |
+| __bxor | \_\_bxor\_\_ | a ~ b  |
+| __shl  | \_\_shl\_\_  | a << b |
+| __shr  | \_\_shr\_\_  | a >> b |
+| __bnot | \_\_bnot\_\_ |   ~a   |
 
 >Lua版本 > 5.3时可以额外实现的元方法为：
 
-| 元方法 | 替代名 | 运算符 |
-|  :--:  |  :--:  |  :--:  |
-|__close|\_\_close\_\_|a\<close\>|
+| 元方法  |    替代名     |   运算符   |
+| :-----: | :-----------: | :--------: |
+| __close | \_\_close\_\_ | a\<close\> |
 
 以下元方法暂时不能实现：
 * __index
@@ -792,7 +792,7 @@ print(p3);-- x = 3;y = 5;
 require("OOP.Class");
 local Listener = class();
 Listener.Private.name = "";
-function Listener:__init__(name)
+function Listener:ctor(name)
     self.name = name;
 end
 

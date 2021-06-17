@@ -27,8 +27,9 @@ require("OOP.Class");
 -- Simple test.
 local Simple = class();
 Simple.Static.Const.Private.HelloWorld = "你好世界！";
+
 Simple.myName = "simple";
-function Simple:__init__(myName)
+function Simple:ctor(myName)
     if myName then
         self.myName = myName;
     end
@@ -52,12 +53,12 @@ assert(not class.IsNull(simple2));
 local Base1 = class();
 Base1.A = "A";
 Base1.Private.pointer = nil;
-function Base1:__init__(prefix)
+function Base1:ctor(prefix)
     self.name = prefix .. Base1.A;
 end
 
 local Base2 = class();
-function Base2:__init__(num)
+function Base2:ctor(num)
     self.num = num;
 end
 
@@ -67,9 +68,9 @@ function Base3:PrintName()
 end
 
 local C1 = class(Base2,Base3);
-function C1:__init__(obj)
-    Base1.__init__(self,"112233");
-    Base2.__init__(self,1122);
+function C1:ctor(obj)
+    Base1.ctor(self,"112233");
+    Base2.ctor(self,1122);
     if obj then
         obj:PrintExt();
     end
@@ -92,7 +93,7 @@ assert(Debug and not ret or ret);
 local P1 = class();
 P1.Private.InternalInfo = "secret";
 P1.Const.Info = "123456";
-function P1:__init__(ext)
+function P1:ctor(ext)
     self.ext = ext;
 end
 
@@ -110,12 +111,12 @@ function P1.Private:PrintExt()
     print(P1.PrintInternalInfo());
 end
 
-function P1.Friends()
+function P1.__friends__()
     return "P2",C1;
 end
 
 local P2 = class("P2");
-function P2:__init__(obj)
+function P2:ctor(obj)
     self.obj = obj;
 end
 
@@ -124,8 +125,8 @@ function P2:PrintObj()
 end
 
 local P3 = class(P1);
-function P3:__init__()
-    P1.__init__(self,"exttttt");
+function P3:ctor()
+    P1.ctor(self,"exttttt");
 end
 function P3:ShowSelf()
     self:PrintSelf();
@@ -171,9 +172,9 @@ p2:PrintObj();
 
 c1 = C1.new(p1);
 
--- Properties and Singleton.
+-- __properties__ and __singleton__.
 local Point = class();
-function Point:__init__(x,y)
+function Point:ctor(x,y)
     self._x = x;
     self._y = y;
 end
@@ -188,7 +189,7 @@ function Point.Handlers:OnNewEvent(...)
         return true;
     end
 end
-function Point.Properties()
+function Point.__properties__()
     return {
         r = {
             X = function (self)
@@ -207,8 +208,8 @@ function Point.Properties()
     };
 end
 local Point3D = class(Point);
-function Point3D:__init__(x,y,z)
-    Point.__init__(self,x,y);
+function Point3D:ctor(x,y,z)
+    Point.ctor(self,x,y);
     self._z = z;
 end
 function Point3D:Show()
@@ -216,7 +217,7 @@ function Point3D:Show()
     print("z = ",self._z);
 end
 
-function Point3D.Properties()
+function Point3D.__properties__()
     return {
         r = {
             Z = function (self)
@@ -248,13 +249,13 @@ assert(p3d.Y == 5);
 assert(p3d.Z == 0.2);
 
 local Single = class();
-function Single:__init__(name)
+function Single:ctor(name)
     self.name = name;
 end
 function Single:ShowMyName()
     print(self.name);
 end
-function Single.Singleton()
+function Single.__singleton__()
     return Single.new("abc");
 end
 function Single.Handlers:OnNewEvent(...)
