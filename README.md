@@ -18,7 +18,7 @@ LuaOOP是借鉴了C++/C#的部分类设计，并使用Lua实现的面向对象�
 * 运行时类型判断（is）;
 * 元方法与运算符重载；
 * 单例（\_\_singleton\_\_）；
-* 继承或扩展外部类（生成userdata的类）；
+* 扩展或继承外部类（生成userdata的类）；
 * Debug和Release运行模式；
 * 一组简单的消息传递模式；
 * lua5.1-lua5.4兼容。
@@ -91,6 +91,10 @@ function Point:ctor(x,y)
     end
 end
 
+function Point:dtor()
+    print(self,"Point已析构。")
+end
+
 function Point:PrintXY()
     print("x = " .. self.x);
     print("y = " .. self.y);
@@ -109,6 +113,10 @@ function Point3D:ctor(x,y,z)
     end
 end
 
+function Point3D:dtor()
+    print(self,"Point3D已析构。")
+end
+
 function Point3D:PrintXYZ()
     self:PrintXY();
     print("z = " .. self.z);
@@ -125,6 +133,11 @@ function Color:ctor(r,g,b)
         self.b = b;
     end
 end
+
+function Color:dtor()
+    print(self,"Color已析构。")
+end
+
 function Color:PrintRGB()
     print("r = " .. self.r);
     print("g = " .. self.g);
@@ -141,11 +154,24 @@ function Vertex:ctor(p,c)
         Color.ctor(self,c.r,c.g,c.b);
     end
 end
+
+function Vertex:dtor()
+    -- 不要再调用Color/Point/Point3D的析构函数，它们会被自动调用。
+    print(self,"Vertex已析构。")
+end
+
 local vertex = Vertex.new({x = 0,y = 1,z = 2},{r = 99,g = 88, b = 77});
 -- 访问继承的方法等。
 vertex:PrintXY();
 vertex:PrintXYZ();
 vertex:PrintRGB();
+
+-- 析构将自动级联调用。
+-- table: xxxxxxxx Point已析构。
+-- table: xxxxxxxx Point3D已析构。
+-- table: xxxxxxxx Color已析构。
+-- table: xxxxxxxx Vertex已析构。
+vertex:delete();
 ```
 
 >通过类名继承类：
@@ -698,12 +724,14 @@ local device = Device.new();
 ```
 
 ---
-## 9 - 继承或扩展外部类（生成userdata的类）
+## 9 - 扩展或继承外部类
 ---
 
 在某些情况下，使用Lua C API注册了一些可以返回userdata类型的类（如io.open返回的FILE*类型），这些userdata有独立的元表和构造入口。
 
->仅扩展外部类：
+---
+### 9.1 - 仅扩展外部类
+---
 ```lua
 require("OOP.Class");
 local File = class();
@@ -730,25 +758,27 @@ end
 local file = File.new("D:/test","w");
 file:write(file:MakeContent());
 
-
 assert(getmetatable(io.stdout) == getmetatable(file));
 -- 虽然io.stdout和file使用同一元表，但io.stdout并非由File类型扩展而来，
 -- 所以io.stdout不能访问MakeContent方法。
 print(io.stdout:MakeContent());-- 引发错误。
 
--- 因为File仅扩展了返回的FILE*类型，而本身没有继承FILE*类型，
--- 所以通过File类无法访问只有FILE*能访问的域。
-
 file:close();-- FILE*类型可以访问close方法。
 
+-- 因为File仅扩展了返回的FILE*类型，而本身没有继承FILE*类型，
+-- 所以通过File类无法访问只有FILE*能访问的域。
 File.close(file);-- File无法访问close方法，引发错误。
 ```
 
->继承外部类：
+---
+### 9.2 - 继承外部类
+---
 ```lua
 require("OOP.Class");
 -- 不同于直接扩展，现在继承FILE*类型。
-local File = class(getmetatable(io.stdout).__index);
+local File = class(io);
+-- 也可以使用如下方式：
+-- local File = class(getmetatable(io.stdout).__index);
 
 function File.__new__(...)
     return io.open(...);
@@ -760,85 +790,91 @@ file = File.new("D:/test","w");
 File.close(file);--现在，也可以通过File来访问close方法。
 ```
 
-我希望通过某种手段将纯lua类和产生userdata的类联系起来，一般需要在OOP.Config文件中指定几个特殊的函数：
+---
+### 9.3 - 外部对象的生命周期
+---
+>判断外部对象是否仍然可用
 ```lua
-Config.ExternalClass = {
-    ---用于判断userdata指向的c++对象是否可用。
-    ---@type fun(p:userdata):boolean
-    Null = nil,
+local Config = require("OOP.Config");
 
-    ---用于判断某个表是否是可以产生userdata对象的类，
-    ---如果是，则返回构造userdata对象的 #函数名字#，
-    ---否则返回nil值。
-    ---@type fun(p:table):string?
-    IsExternalClass = nil,
+-- 可以实现Config.ExternalClass.Null函数来判断某个userdata类目前是否可用。
+-- 否则class.IsNull始终对userdata类型返回true。
+Config.ExternalClass.Null = function(obj)
+    if getmetatable(obj) == getmetatable(io.stdout) then
+        return (tostring(obj):find("(closed)")) ~= nil;
+    end
+end
 
-    ---用于判断给定的类是否继承于另一个类。
-    ---@type fun(cls:table,base:table):boolean
-    IsInherite = nil,
-};
-```
-其中Null和IsInherite是可选项，IsCppClass是必选项。
-当IsCppClass被指定后，即可以继承由Lua C API创建的类了：
-```lua
--- ...
--- 假设ImageView是一个返回userdata的类型，
--- 且构造函数名为"new"并接受2个参数（string和table）。
-local LuaImageView = class(ImageView);
-function LuaImageView:ctor(png,size)
-    -- ...
-    self.size = size;
-    self.png = png;
-    -- ...
+require("OOP.Class");
+
+local File = class(io);
+function File.__new__(...)
+    return io.open(...);
 end
-function LuaImageView:Show()
-    -- ...
-end
-local img = LuaImageView.new("myPic.png",{width = 100,height = 100});
-img:Show();
+
+local file = File.new("D:/test","w");
+print(class.IsNull(file));-- false
+file:close();
+print(class.IsNull(file));-- true
 ```
 
----
-#### 1.4.1-当我继承userdata类时，有哪些限制？
----
-* 每个类能且仅能继承一个userdata类，否则将在继承时引发错误；
-* 当继承userdata类后，创建的对象不再是table类型，而是一个userdata类型；
-* 由于没有办法控制c/c++的内存回收，所以不再为这个类自动生成delete方法。如果有需要，使用者应当在c/c++中实现delete方法。
+>销毁外部对象的内存
 
----
-#### 1.4.2-当userdata构造函数的参数和我希望使用的参数不同，应当如何处理？
----
+对于Lua FILE*类型，由于其内存由Lua管理，无法手动销毁并回收内存；
+但对于某些自定义实现的类型，可能具有T\*\*结构，Lua内存管理除了回收T\*\*指针外，对其真正指向的内容不会回收。\
+一般地，实现__delete__以销毁C/C++内存：
 ```lua
--- ...
-local LuaImageView = class(function(png)
-    -- ImageView仍然接受2个参数，但在外部调用时，只希望传递一个。
-    return ImageView.new(png,{width = 200,height = 200})
-end);
-function LuaImageView:ctor(png)
-    -- ...
-    self.png = png;
-    -- ...
+local ExtClass = require(...);
+
+local Config = require("OOP.Config");
+Config.ExternalClass.Null = function(obj)
+    if ExtClass.CheckIsExtClass(obj) then
+        return ExtClass.IsNull(obj);
+    end
 end
-function LuaImageView:Show()
-    -- ...
+
+require("OOP.Class");
+local LuaClass = class(ExtClass);
+function LuaClass.__new__(...)
+    return ExtClass.malloc(...);
 end
-local img = LuaImageView.new("myPic.png");
-img:Show();
+function LuaClass:__delete__()
+    ExtClass.free(self);
+end
+function LuaClass:dtor()
+    print("LuaClass在此处析构。")
+end
+
+local obj = LuaClass.new();
+print(class.IsNull(obj));-- false
+-- 析构函数仍然会被调用。
+obj:delete();-- "LuaClass在此处析构。"
+print(class.IsNull(obj));-- true
 ```
 
-
+---
+### 9.4 - 外部类A与外部类B的继承关系
+---
+有时，外部类A与外部类B保持着某种继承关系，如果需要在被继承后，仍然能够使用is来判断这种继承关系，请实现Config.ExternalClass.IsInherite函数：
+```lua
+local Config = require("OOP.Config");
+Config.ExternalClass.IsInherite = function(A,B)
+    return 你的代码，要求返回boolean值；
+end
+```
 
 ---
-### 1.11-如何改善LuaOOP的运行时效率？
+## 10 - Debug和Release运行模式
 ---
+
 在默认情况下，**Config.Debug**字段被赋值为**true**，这表示当前运行时需要判断访问权限和其它一些操作的合法性，因此会牺牲比较多的运行时效率。
 
-当该字段被赋值为**false**时，绝大多数运行时检查将会跳过（比如允许对const赋值，允许访问private成员等），以期获得更快的运行时效率。
+当该字段被赋值为**false**时，绝大多数运行时检查将会跳过（比如允许对const赋值，允许外部访问private成员等），以期获得更快的运行时效率。
 
 如果当前应用在Debug模式下已经进行了充分测试，可以更改Config.Debug为false来获取效率提升。
 
 ---
-### 1.12-如何使用事件而不是回调函数在对象间传递消息？
+## 11 - 一组简单的消息传递模式
 ---
 ```lua
 require("OOP.Class");
@@ -877,5 +913,5 @@ event.Any(nil);
 event.Any("any",true,-2,function()end,{});
 event.Any();
 
--- 如果Event/handlers/On+事件名的命名方式不是你所需要的，请在Config文件中修改对应的命名映射。
+-- 如果event/handlers/On+事件名的命名方式不是你所需要的，请在Config文件中修改对应的命名映射。
 ```

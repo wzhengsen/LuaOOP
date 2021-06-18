@@ -146,11 +146,6 @@ local Config = {
         ---@type fun(p:userdata):boolean
         Null = nil,
 
-        ---Function to determine if class is a external class.
-        ---If the class is a external class,returns constructor method otherwise returns nil.
-        ---@type fun(p:table):function?
-        IsExternalClass = nil,
-
         ---Function to determine if a external class inherits from another external class.
         ---A class can be judged as inheriting itself.
         ---@type fun(cls:table,base:table):boolean

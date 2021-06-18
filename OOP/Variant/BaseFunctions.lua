@@ -39,7 +39,6 @@ local On = Config.On;
 local delete = Config.delete;
 local DeathMarker = Config.DeathMarker;
 local dtor = Config.dtor;
-local IsExternalClass = Config.ExternalClass.IsExternalClass;
 local IsInherite = Config.ExternalClass.IsInherite;
 
 local new = Config.new;
@@ -200,11 +199,9 @@ local function PushBase(cls,bases,base,handlers,members,metas)
         end
     end
     local _new = ClassesNew[base];
-    if nil == _new and IsExternalClass then
-        _new = IsExternalClass(base);
-        ClassesNew[base] = _new;
+    if _new then
+        ClassesNew[cls] = _new;
     end
-    ClassesNew[cls] = _new;
     bases[#bases + 1] = base;
 end
 
@@ -223,13 +220,17 @@ local function ClassIs(cls,bases,...)
         return true;
     end
     for _,base in ipairs(bases) do
-        local _is = base[is];
-        if _is then
-            if _is(baseCls) then
+        if base == baseCls then
+            return true;
+        else
+            local _is = base[is];
+            if _is then
+                if _is(baseCls) then
+                    return true;
+                end
+            elseif IsInherite and IsInherite(base,baseCls) then
                 return true;
             end
-        elseif IsInherite and IsInherite(base,baseCls) then
-            return true;
         end
     end
     return false;
