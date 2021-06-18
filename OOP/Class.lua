@@ -48,9 +48,10 @@ local ClassMeta = {
     __newindex = Functions.ClassSet
 };
 local ClassCreateLayer = 0;
-local function ObjectInit(obj,cls,...)
-    --The constructor is only called if the number of base classes is less than 2.
-    local init = #ClassesBases[cls] < 2 and cls[ctor] or nil;
+local function ObjectInit(obj,cls,all,...)
+    -- When there is no constructor of its own, if there are less than 2 base classes,
+    -- the constructor is automatically found.
+    local init = all[ctor] or (#ClassesBases[cls] == 1 and cls[ctor] or nil);
     -- Do not get ctor from ClassesAll and make it search automatically.
     if init then
         -- Avoid recursively polluting the classCreateLayer variable when create a new object in the ctor.
@@ -68,7 +69,7 @@ local function ObjectInit(obj,cls,...)
     end
 end
 
-local function CreateClassNew(cls,handlers,members)
+local function CreateClassNew(cls,clsAll,handlers,members)
     return function(...)
         if Debug then
             assert(not ClassesBanNew[cls],"The base classes constructor is not accessible.");
@@ -90,20 +91,20 @@ local function CreateClassNew(cls,handlers,members)
             end
         end
 
-        ObjectInit(obj,cls,...);
+        ObjectInit(obj,cls,clsAll,...);
         return obj;
     end;
 end
 
 function class.New(...)
-    local cls,bases,handlers,members,metas = CreateClassTables();
+    local cls,all,bases,handlers,members,metas = CreateClassTables();
 
     local args = {...};
     CheckClassName(cls,args);
     ClassInherite(cls,args,bases,handlers,members,metas);
 
     local _is = CreateClassIs(cls,bases);
-    local _new = CreateClassNew(cls,handlers,members);
+    local _new = CreateClassNew(cls,all,handlers,members);
     local _delete = CreateClassDelete(cls);
 
     AttachClassFunctions(cls,_is,_new,_delete);

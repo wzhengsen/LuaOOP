@@ -26,11 +26,11 @@
 
     **********
     Sends an event named SocketRecv, carrying 3 parameters.
-    Event.SocketRecv(msg,data,otherInfo);
+    event.SocketRecv(msg,data,otherInfo);
 
     **********
     Sends an event named WindowClose, carrying 1 parameter.
-    Event.WindowClose(true);
+    event.WindowClose(true);
 ]]
 local Config = require("OOP.Config");
 local class = require("OOP.BaseClass");
@@ -61,7 +61,7 @@ local function RemakeObjList(pool,lvl,hole)
     end
 end
 
-local Event = setmetatable({},{
+local event = setmetatable({},{
     __index = function(t,k)
         local pool = {
             enabled = true,
@@ -129,25 +129,25 @@ local Event = setmetatable({},{
 })
 
 
-local Handlers = {};
+local handlers = {};
 ---Register an object to respond an event which named "eventName".
 ---The first parameter of "handler" will be set with the current object.
 ---
 ---Another common way of listening for responses is:
----function someclass.Handlers:OnSocketRecv(msg,data)
+---function someclass.handlers:OnSocketRecv(msg,data)
 ---    print(msg .. "&" .. data); -- abc&123
 ---end
 ---
----Event call:
----Event.SocketRecv("abc",123);
+---event call:
+---event.SocketRecv("abc",123);
 ---
 ---@param eventName string
 ---@param obj any
 ---@param handler fun(obj:any,...)
 ---
-function Handlers.On(eventName,obj,handler)
+function handlers.On(eventName,obj,handler)
     -- Check or define the event name.
-    local _ = Event[eventName];
+    local _ = event[eventName];
     table.insert(EventPool[eventName].objHandlers,{
         obj = obj,
         enabled = true,
@@ -160,13 +160,13 @@ end
 ---@param eventName string
 ---@param obj any
 ---
-function Handlers.Remove(eventName,obj)
+function handlers.Remove(eventName,obj)
     -- Check or define the event name.
-    local _ = Event[eventName];
+    local _ = event[eventName];
     local objHandlers = EventPool[eventName].objHandlers;
     for _,info in ipairs(objHandlers) do
         if info.obj == obj then
-            -- Don't remove at here,remove it on Event loop.
+            -- Don't remove at here,remove it on event loop.
             info.obj = false;
             break;
         end
@@ -179,17 +179,17 @@ end
 ---@param obj any
 ---@param index integer
 ---
-function Handlers.Order(eventName,obj,index)
+function handlers.Order(eventName,obj,index)
     -- Check or define the event name.
-    local _ = Event[eventName];
+    local _ = event[eventName];
     table.insert(EventOrder[eventName],{
         obj = obj,
         index = index
     });
 end
 
-rawset(_G,Config.Handlers,Handlers);
-rawset(_G,Config.Event,Event);
+rawset(_G,Config.handlers,handlers);
+rawset(_G,Config.event,event);
 return {
-    Handlers = Handlers;
+    handlers = handlers;
 };

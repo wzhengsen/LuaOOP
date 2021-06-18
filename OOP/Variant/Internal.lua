@@ -42,24 +42,26 @@ return {
     ClassesBanDelete = Debug and setmetatable({},WeakTable) or nil,
     AccessStack = Debug and {} or nil,
     ReservedWord = {
-        [Config.Modifiers.Public] = true,
-        [Config.Modifiers.Protected] = true,
-        [Config.Modifiers.Private] = true,
-        [Config.Modifiers.Const] = true,
-        [Config.Modifiers.Static] = true,
+        [Config.Modifiers.public] = true,
+        [Config.Modifiers.protected] = true,
+        [Config.Modifiers.private] = true,
+        [Config.Modifiers.const] = true,
+        [Config.Modifiers.static] = true,
         [Config.new] = true,
         [Config.delete] = true,
         [Config.is] = true,
-        [Config.Handlers] = true,
-        [Config.__new__] = true,
-        [Config.__delete__] = true
+        [Config.handlers] = true,
+        [Config.set] = true,
+        [Config.get] = true
     },
     RouterReservedWord = {
         [Config.new] = true,
         [Config.delete] = true,
         [Config.is] = true,
-        [Config.Handlers] = true,
+        [Config.handlers] = true,
         [Config.__new__] = true,
-        [Config.__delete__] = true
+        [Config.__delete__] = true,
+        [Config.set] = true,
+        [Config.get] = true
     };
 };

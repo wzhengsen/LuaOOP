@@ -30,7 +30,7 @@ local Config = require("OOP.Config");
 local Internal = require("OOP.Variant.Internal");
 local class = require("OOP.BaseClass");
 
-local E_Handlers = require("OOP.Event").Handlers;
+local E_Handlers = require("OOP.event").handlers;
 local R = require("OOP.Router");
 local Router = R.Router;
 local BitsMap = R.BitsMap;
@@ -45,11 +45,12 @@ local IsInherite = Config.ExternalClass.IsInherite;
 local new = Config.new;
 local is = Config.is;
 
-local __properties__ = Config.__properties__;
 local __singleton__ = Config.__singleton__;
 local Instance = Config.Instance;
-local Handlers = Config.Handlers;
-local __friends__ = Config.__friends__;
+local handlers = Config.handlers;
+local get = Config.get;
+local set = Config.set;
+local friends = Config.friends;
 local __new__ = Config.__new__;
 local __delete__ = Config.__delete__;
 
@@ -364,48 +365,64 @@ local function RetrofiteUserDataObjectMeta(obj)
     end
 
     local index = rawget(meta,"__index");
+    local indexFunc = "function" == type(index);
     rawset(meta,"__index",function (sender,key)
         -- Check self all.
         local all = ObjectsAll[sender];
-        local ret = all[key];
+        local ret = all and all[key] or nil;
         if nil ~= ret then
             return ret;
         end
 
-        -- Check cls methods and members.
-        ret = rawget(cls,key);
-        if nil ~= ret then
-            return ret;
-        end
-
-        -- Check cls properties.
-        local property = ClassesReadable[cls][key];
-        if property then
-            return property(sender);
-        end
-        -- Check cls bases.
-        for _, base in ipairs(ClassesBases[cls]) do
-            ret = CascadeGet(base,key,{});
+        local cls = ObjectsCls[sender];
+        if cls then
+            -- Check cls methods and members.
+            ret = rawget(cls,key);
             if nil ~= ret then
                 return ret;
             end
+
+            -- Check cls properties.
+            local property = ClassesReadable[cls][key];
+            if property then
+                return property(sender);
+            end
+            -- Check cls bases.
+            for _, base in ipairs(ClassesBases[cls]) do
+                ret = CascadeGet(base,key,{});
+                if nil ~= ret then
+                    return ret;
+                end
+            end
         end
-        -- Finally, check the original method.
-        return index and index(sender,key) or nil;
+        -- Finally, check the original method or table.
+        if index then
+            return indexFunc and index(sender,key) or index[key];
+        end
     end);
     local newIndex = rawget(meta,"__newindex");
+    local newIndexFunc =  "function" == type(newIndex);
     rawset(meta,"__newindex",function (sender,key,value)
-        local property = ClassesWritable[cls][key];
-        if property then
-            property(sender,value);
-            return;
+        local cls = ObjectsCls[sender];
+        if cls then
+            local property = ClassesWritable[cls][key];
+            if property then
+                property(sender,value);
+                return;
+            end
+            local all = ObjectsAll[sender];
+            all[key] = value;
         end
-        local all = ObjectsAll[sender];
-        all[key] = value;
 
-        if newIndex then
-            -- Finally, write by the original method.
-            newIndex(sender,key,value);
+        -- Finally, write by the original method.
+        if not cls or newIndex then
+            if newIndexFunc then
+                newIndex(sender,key,value);
+            elseif newIndex then
+                newIndex[key] = value;
+            else
+                error(("attempt to index a %s value."):format(meta.__name or ""));
+            end
         end
     end);
 
@@ -485,10 +502,13 @@ end
 ---Create a class table with base info.
 ---
 ---@return table cls
+---@return table all
 ---@return table bases
 ---@return table handlers
 ---@return table members
 ---@return table metas
+---@return table r
+---@return table w
 ---
 local function CreateClassTables()
     local cls = {};
@@ -508,7 +528,7 @@ local function CreateClassTables()
     ClassesMembers[cls] = members;
     ClassesMetas[cls] = metas;
 
-    return cls,bases,handlers,members,metas;
+    return cls,cls,bases,handlers,members,metas,r,w;
 end
 
 local function AttachClassFunctions(cls,_is,_new,_delete)
@@ -536,8 +556,12 @@ local function ClassGet(cls,key)
     if BitsMap[key] then
         return Router:Begin(cls,key);
     end
-    if key == Handlers then
+    if key == handlers then
         return ClassesHandlers[cls];
+    elseif key == get then
+        return ClassesReadable[cls];
+    elseif key == set then
+        return ClassesWritable[cls];
     end
     -- Check the properties first.
     local property = ClassesReadable[cls][key];
@@ -552,24 +576,8 @@ local function ClassGet(cls,key)
     end
 end
 
-local rwTable = {r = ClassesReadable,w = ClassesWritable};
 local function ClassSet(cls,key,value)
-    if key == __properties__ then
-        -- It must be a function.
-        -- Call it automatically.
-        value = value(cls);
-        -- Register properties.
-        for rw,t in pairs(rwTable) do
-            local sub = value[rw];
-            if sub then
-                local dst = t[cls];
-                for k,v in pairs(sub) do
-                    dst[k] = v;
-                end
-            end
-        end
-        return;
-    elseif key == __singleton__ then
+    if key == __singleton__ then
         -- Register "Instance" automatically.
         ClassesReadable[cls][Instance] = function ()
             return GetSingleton(cls,value);
@@ -584,8 +592,7 @@ local function ClassSet(cls,key,value)
     elseif key == __delete__ then
         ClassesDelete[cls] = value;
         return;
-    elseif key == __friends__ then
-        value(cls);
+    elseif key == friends then
         return;
     else
         local property = ClassesWritable[cls][key];

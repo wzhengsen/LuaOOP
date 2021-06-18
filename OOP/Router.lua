@@ -36,32 +36,32 @@ local MetaMapName = Config.MetaMapName;
 local new = Config.new;
 local delete = Config.delete;
 
-local Public = Config.Modifiers.Public;
-local Private = Config.Modifiers.Private;
-local Protected = Config.Modifiers.Protected;
-local Static = Config.Modifiers.Static;
-local Const = Config.Modifiers.Const;
+local public = Config.Modifiers.public;
+local private = Config.Modifiers.private;
+local protected = Config.Modifiers.protected;
+local static = Config.Modifiers.static;
+local const = Config.Modifiers.const;
 
 local BitsMap = {
-    [Public] = 2 ^ 0,
-    [Private] = 2 ^ 1,
-    [Protected] = 2 ^ 2,
-    [Static] = 2 ^ 3,
-    [Const] = 2 ^ 4
+    [public] = 2 ^ 0,
+    [private] = 2 ^ 1,
+    [protected] = 2 ^ 2,
+    [static] = 2 ^ 3,
+    [const] = 2 ^ 4
 };
 if Version > 5.2 then
-    BitsMap.Public = math.tointeger(BitsMap.Public);
-    BitsMap.Private = math.tointeger(BitsMap.Private);
-    BitsMap.Protected = math.tointeger(BitsMap.Protected);
-    BitsMap.Static = math.tointeger(BitsMap.Static);
-    BitsMap.Const = math.tointeger(BitsMap.Const);
+    BitsMap.public = math.tointeger(BitsMap.public);
+    BitsMap.private = math.tointeger(BitsMap.private);
+    BitsMap.protected = math.tointeger(BitsMap.protected);
+    BitsMap.static = math.tointeger(BitsMap.static);
+    BitsMap.const = math.tointeger(BitsMap.const);
 end
 local Permission = {
-    Public = BitsMap[Public],
-    Private = BitsMap[Private],
-    Protected = BitsMap[Protected],
-    Static = BitsMap[Static],
-    Const = BitsMap[Const]
+    public = BitsMap[public],
+    private = BitsMap[private],
+    protected = BitsMap[protected],
+    static = BitsMap[static],
+    const = BitsMap[const]
 }
 local Router = {};
 
@@ -72,15 +72,8 @@ function Router:Begin(cls,key)
 end
 
 if Debug then
-    local Handlers = Config.Handlers;
-    local __properties__ = Config.__properties__;
-    local __friends__ = Config.__friends__;
-    local __singleton__ = Config.__singleton__;
-
     local ctor = Config.ctor;
     local dtor = Config.dtor;
-
-
 
     local FunctionWrapper = Compat.FunctionWrapper;
     local AccessStack = Internal.AccessStack;
@@ -93,10 +86,10 @@ if Debug then
 
     -- Rules:
     -- 1 - There can be no duplicate modifiers;
-    -- 2 - Public/Private/Protected cannot be used together;
-    -- 3 - Static cannot modify constructors and destructors;
+    -- 2 - public/private/protected cannot be used together;
+    -- 3 - static cannot modify constructors and destructors;
     -- 4 - Can't use modifiers that don't exist;
-    -- 5 - Reserved words cannot be modified (__singleton__/__friends__/Handlers/__properties__ and so on).
+    -- 5 - Reserved words cannot be modified (__singleton__/friends/handlers/set/get and so on).
     function Router:Pass(key)
         local bit = BitsMap[key];
         local decor = self.decor;
@@ -104,7 +97,7 @@ if Debug then
             if bits.band(decor,bit) ~= 0 then
                 error(("The %s modifier is not reusable."):format(key));
             elseif bits.band(decor,0x7) ~= 0 and bits.band(bit,0x7) ~= 0 then
-                -- Check Public,Private,Protected,they are 0x7
+                -- Check public,private,protected,they are 0x7
                 error(("The %s modifier cannot be used in conjunction with other access modifiers."):format(key));
             end
             self.decor = bits.bor(decor,bit);
@@ -124,15 +117,13 @@ if Debug then
         end
         local decor = self.decor;
         local isFunction = "function" == type(value);
-        if bits.band(decor,Permission.Static) ~= 0 then
+        if bits.band(decor,Permission.static) ~= 0 then
             if (key == ctor or key == dtor) then
-                error(("%s modifier cannot modify %s functions."):format(Static,key));
+                error(("%s modifier cannot modify %s functions."):format(static,key));
             end
-        elseif key == Handlers or key == __properties__ or key == __singleton__ or key == __friends__ then
-            error(("%s cannot be modified."):format(key));
         end
         if bits.band(decor,0x7) == 0 then
-            -- Without the Public modifier, Public is added by default.
+            -- Without the public modifier, public is added by default.
             decor = bits.bor(decor,0x1);
         end
         local cls = self.cls;
@@ -141,7 +132,7 @@ if Debug then
         else
             -- For non-functional, non-static members,
             -- add to the member table and generate it for each instance.
-            if bits.band(decor,Permission.Static) == 0 then
+            if bits.band(decor,Permission.static) == 0 then
                 ClassesMembers[cls][key] = value;
             end
         end
@@ -149,7 +140,7 @@ if Debug then
         local pms = ClassesPermisssions[cls];
         pms[key] = decor;
         if key == ctor then
-            -- Reassign permissions to "new", which are the same as ctor with the Static modifier.
+            -- Reassign permissions to "new", which are the same as ctor with the static modifier.
             pms[new] = bits.bor(decor,0x8);
         elseif key == dtor then
             pms[delete] = decor;
@@ -159,8 +150,8 @@ if Debug then
     end
 else
     local ClassesMetas = Internal.ClassesMetas;
-    local sc = Permission.Static;
-    -- In non-debug mode, no attention is paid to any modifiers other than Static.
+    local sc = Permission.static;
+    -- In non-debug mode, no attention is paid to any modifiers other than static.
     function Router:Pass(key)
         if BitsMap[key] == sc then
             self.decor = sc;

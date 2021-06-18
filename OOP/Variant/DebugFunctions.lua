@@ -45,11 +45,12 @@ local dtor = Config.dtor;
 local __new__ = Config.__new__;
 local __delete__ = Config.__delete__;
 
-local __friends__ = Config.__friends__;
+local friends = Config.friends;
 local __singleton__ = Config.__singleton__;
-local __properties__ = Config.__properties__;
 local Instance = Config.Instance;
-local Handlers = Config.Handlers;
+local handlers = Config.handlers;
+local set = Config.set;
+local get = Config.get;
 
 local DeathMarker = Config.DeathMarker;
 
@@ -98,10 +99,12 @@ local function CascadeGetPermission(self,key)
     local cls = self;
     if nil == pm then
         local bases = ClassesBases[self];
-        for _,base in ipairs(bases) do
-            cls,pm = CascadeGetPermission(base,key);
-            if nil ~= pm then
-                return cls,pm;
+        if bases then
+            for _,base in ipairs(bases) do
+                cls,pm = CascadeGetPermission(base,key);
+                if nil ~= pm then
+                    return cls,pm;
+                end
             end
         end
     end
@@ -123,19 +126,19 @@ local function CheckPermission(self,key,byObj,set)
         return true;
     end
 
-    if byObj and bits.band(pm,Permission.Static) ~= 0 then
+    if byObj and bits.band(pm,Permission.static) ~= 0 then
         error(("Objects cannot access static members of a class. - %s"):format(key));
     end
     if set then
-        if bits.band(pm,Permission.Const) ~= 0 then
-            -- Check Const.
+        if bits.band(pm,Permission.const) ~= 0 then
+            -- Check const.
             if ConstBehavior ~= 2 then
                 if ConstBehavior == 0 then
                     if Version > 5.4 then
-                        warn(("You cannot modify the Const value. - %s"):format(key));
+                        warn(("You cannot modify the const value. - %s"):format(key));
                     end
                 elseif ConstBehavior == 1 then
-                    error(("You cannot modify the Const value. - %s"):format(key));
+                    error(("You cannot modify the const value. - %s"):format(key));
                 end
                 return false;
             end
@@ -149,15 +152,15 @@ local function CheckPermission(self,key,byObj,set)
     end
 
     local stackCls = AccessStack[#AccessStack];
-    local friends = ClassesFriends[cls];
+    local _friends = ClassesFriends[cls];
     --Check if it is a friendly class.
-    if not friends or (not friends[stackCls] and not friends[AllClasses[stackCls]]) then
-        if bits.band(pm,Permission.Public) == 0 then
-            -- Check Public,Private,Protected.
+    if not _friends or (not _friends[stackCls] and not _friends[AllClasses[stackCls]]) then
+        if bits.band(pm,Permission.public) == 0 then
+            -- Check public,private,protected.
             if stackCls ~= cls then
-                if bits.band(pm,Permission.Private) ~= 0 then
+                if bits.band(pm,Permission.private) ~= 0 then
                     error(("Attempt to access private members outside the permission. - %s"):format(key));
-                elseif bits.band(pm,Permission.Protected) ~= 0 and (not stackCls or not stackCls.is(cls)) then
+                elseif bits.band(pm,Permission.protected) ~= 0 and (not stackCls or not stackCls.is(cls)) then
                     error(("Attempt to access protected members outside the permission. - %s"):format(key));
                 end
             end
@@ -179,22 +182,24 @@ local function CascadeGet(cls,key,called)
     if called[cls] then
         return nil;
     end
+    called[cls] = true;
     local all = ClassesAll[cls];
-    if nil == all then
-        return;
-    end
-    local ret = all[key];
-    if nil ~= ret then
-        return ret;
-    end
-    local bases = ClassesBases[cls];
-    if bases then
-        for _,base in ipairs(bases) do
-            ret = CascadeGet(base,key,called);
-            if nil ~= ret then
-                return ret;
+    if nil ~= all then
+        local ret = all[key];
+        if nil ~= ret then
+            return ret;
+        end
+        local bases = ClassesBases[cls];
+        if bases then
+            for _,base in ipairs(bases) do
+                ret = CascadeGet(base,key,called);
+                if nil ~= ret then
+                    return ret;
+                end
             end
         end
+    else
+        return cls[key];
     end
 end
 
@@ -289,7 +294,7 @@ end
 ---
 ---@param obj userdata
 ---
-local function RetrofitMeta(obj)
+local function RetrofiteUserDataObjectMeta(obj)
         -- Unlike the normal table type, which saves meta-tables directly in ClassesMetas[cls].
     -- The userdata type, on the other hand, gets its own meta-table and then retrofites this meta-table.
     -- The retrofited meta-table is saved in ClassesMetas[meta] and __index and __newindex are unique logic,
@@ -318,56 +323,87 @@ local function RetrofitMeta(obj)
 
     local index = rawget(meta,"__index");
     local newIndex = rawget(meta,"__newindex");
+    local indexFunc = "function" == type(index);
+    local newIndexFunc =  "function" == type(newIndex);
     rawset(meta,"__index",function(sender,key)
-        local ret = GetAndCheck(cls,key,sender);
-        if nil ~= ret then
-            return ret;
-        end
-        -- Finally, check the original method.
-        return index(sender,key);
-    end);
-    rawset(meta,"__newindex",function (sender,key,value)
-        local property = ClassesWritable[cls][key];
-        if property then
-            property(sender,value);
-            return;
-        else
-            if ClassesReadable[cls][key] then
-                if PropertyBehavior ~= 2 then
-                    if PropertyBehavior == 0 then
-                        if Version > 5.4 then
-                            warn("You can't write a read-only property.");
-                        end
-                    elseif PropertyBehavior == 1 then
-                        error("You can't write a read-only property.");
-                    end
-                    return;
-                end
+        local cls = ObjectsCls[sender];
+        if cls then
+            local ret = GetAndCheck(cls,key,sender);
+            if nil ~= ret then
+                return ret;
             end
         end
-        if not CheckPermission(cls,key,true,true) then
-            return;
+        -- Finally, check the original method or table.
+        if index then
+            return indexFunc and index(sender,key) or index[key];
+        end
+    end);
+    rawset(meta,"__newindex",function (sender,key,value)
+        local cls = ObjectsCls[sender];
+        if cls then
+            local property = ClassesWritable[cls][key];
+            if property then
+                property(sender,value);
+                return;
+            else
+                if ClassesReadable[cls][key] then
+                    if PropertyBehavior ~= 2 then
+                        if PropertyBehavior == 0 then
+                            if Version > 5.4 then
+                                warn("You can't write a read-only property.");
+                            end
+                        elseif PropertyBehavior == 1 then
+                            error("You can't write a read-only property.");
+                        end
+                        return;
+                    end
+                end
+            end
+            if not CheckPermission(cls,key,true,true) then
+                return;
+            end
+            local all = ObjectsAll[sender];
+            all[key] = value;
         end
         -- Finally, write by the original method.
-        newIndex(sender,key,value);
+        if not cls or newIndex then
+            if newIndexFunc then
+                newIndex(sender,key,value);
+            elseif newIndex then
+                newIndex[key] = value;
+            else
+                error(("attempt to index a %s value."):format(meta.__name or ""));
+            end
+        end
     end);
 
     ClassesMetas[meta] = meta;
 end
 
-local function ClassGet(self,key)
+local function FinishUserDataObject(obj,cls)
+    -- Instances of the userdata type require the last cls information.
+    -- Because multiple different lua classes can inherit from the same c++ class.
+    ObjectsCls[obj] = cls;
+    RetrofiteUserDataObjectMeta(obj);
+end
+
+local function ClassGet(cls,key)
     if BitsMap[key] then
-        return Router:Begin(self,key);
+        return Router:Begin(cls,key);
     end
-    if key == Handlers then
-        return ClassesHandlers[self];
+    if key == handlers then
+        return ClassesHandlers[cls];
+    elseif key == get then
+        return ClassesReadable[cls];
+    elseif key == set then
+        return ClassesWritable[cls];
     end
     -- Check the properties first.
-    local property = ClassesReadable[self][key];
+    local property = ClassesReadable[cls][key];
     if property then
-        return property(self);
+        return property(cls);
     else
-        if ClassesWritable[self][key] then
+        if ClassesWritable[cls][key] then
             if PropertyBehavior ~= 2 then
                 if PropertyBehavior == 0 then
                     if Version > 5.4 then
@@ -380,14 +416,14 @@ local function ClassGet(self,key)
             end
         end
     end
-    if not CheckPermission(self,key,false) then
+    if not CheckPermission(cls,key,false) then
         return;
     end
-    local ret = ClassesAll[self][key];
+    local ret = ClassesAll[cls][key];
     if nil ~= ret then
         return ret;
     end
-    for _, base in ipairs(ClassesBases[self]) do
+    for _, base in ipairs(ClassesBases[cls]) do
         ret = CascadeGet(base,key,{});
         if nil ~= ret then
             return ret;
@@ -395,24 +431,18 @@ local function ClassGet(self,key)
     end
 end
 
-local rwTable = {r = ClassesReadable,w = ClassesWritable};
 local function ClassSet(cls,key,value)
     -- The reserved words cannot be used.
     if ReservedWord[key] then
         error(("%s is a reserved word and you can't set it."):format(key));
     end
 
-    if key == __properties__ then
-        value = value(cls);
-        -- Register properties.
-        for rw,t in pairs(rwTable) do
-            local subT = value[rw];
-            if subT then
-                local dst = t[cls];
-                for k,v in pairs(subT) do
-                    dst[k] = FunctionWrapper(AccessStack,cls,v);
-                end
-            end
+    if key == friends then
+        assert("table" == type(value),("%s reserved word must be assigned to a table."):format(friends));
+        local fri = {};
+        ClassesFriends[cls] = fri;
+        for _,v in ipairs(value) do
+            fri[v] = true;
         end
         return;
     end
@@ -430,10 +460,10 @@ local function ClassSet(cls,key,value)
         -- Once register "__singleton__" for a class,set permission of "new","delete" method to protected.
         local pms = ClassesPermisssions[cls];
         local pm = pms[new];
-        if bits.band(pm,Permission.Private) == 0 then
-            pms[new] = Permission.Static + Permission.Protected;
+        if bits.band(pm,Permission.private) == 0 then
+            pms[new] = Permission.static + Permission.protected;
         end
-        pms[delete] = Permission.Protected;
+        pms[delete] = Permission.protected;
         return;
     elseif key == __new__ then
         assert(isFunction,("%s reserved word must be assigned to a function."):format(key));
@@ -442,15 +472,6 @@ local function ClassSet(cls,key,value)
     elseif key == __delete__ then
         assert(isFunction,("%s reserved word must be assigned to a function."):format(key));
         ClassesDelete[cls] = FunctionWrapper(AccessStack,cls,value);
-        return;
-    elseif key == __friends__ then
-        assert(isFunction,("%s reserved word must be assigned to a function."):format(__friends__));
-        local friends = {};
-        ClassesFriends[cls] = friends;
-        value = FunctionWrapper(AccessStack,cls,value);
-        for _, friend in ipairs({value(cls)}) do
-            friends[friend] = true;
-        end
         return;
     else
         local property = ClassesWritable[cls][key];
@@ -480,7 +501,7 @@ local function ClassSet(cls,key,value)
             if not isFunction then
                 ClassesMembers[cls][key] = value;
             end
-            ClassesPermisssions[cls][key] = Permission.Public;
+            ClassesPermisssions[cls][key] = Permission.public;
         end
         if isFunction then
             -- Wrap this function to include control of access permission.
@@ -496,7 +517,7 @@ local function ClassSet(cls,key,value)
 end
 
 Functions.MakeTableObjectMeta = MakeTableObjectMeta;
-Functions.RetrofitMeta = RetrofitMeta;
+Functions.FinishUserDataObject = FinishUserDataObject;
 Functions.ClassSet = ClassSet;
 Functions.ClassGet = ClassGet;
 
@@ -507,21 +528,32 @@ local function MakeClassHandlersTable(cls,handlers)
                 "string" == type(key) and key:find(On) == 1,
                 ("The name of handler function must start with \"%s\"."):format(On)
             );
-            assert("function" == type(value),"Event handler must be a function.");
+            assert("function" == type(value),"event handler must be a function.");
             -- Ensure that event response functions have access to member variables.
             rawset(t,key,FunctionWrapper(AccessStack,cls,value));
         end
     });
 end
 
+local function MakeClassGetSetTable(cls,...)
+    for _,v in ipairs({...}) do
+        local meta = getmetatable(v);
+        meta.__newindex = function(t,key,value)
+            rawset(t,key,FunctionWrapper(AccessStack,cls,value));
+        end;
+    end
+end
+
 function Functions.CreateClassTables()
-    local cls,bases,handlers,members,metas = CreateClassTables();
+    local cls,all,bases,handlers,members,metas,r,w = CreateClassTables();
 
     MakeClassHandlersTable(cls,handlers);
-    ClassesAll[cls] = {};
+    MakeClassGetSetTable(cls,r,w);
+    all = {}
+    ClassesAll[cls] = all;
     ClassesPermisssions[cls] = {};
 
-    return cls,bases,handlers,members,metas;
+    return cls,all,bases,handlers,members,metas;
 end
 
 function Functions.CheckClassName(cls,args)
@@ -554,7 +586,7 @@ function Functions.ClassInherite(cls,args,bases,handlers,members,metas)
             ClassesBanNew[cls] = true;
         elseif pms then
             local pm = pms[ctor];
-            if pm and bits.band(pm,Permission.Private) ~= 0 then
+            if pm and bits.band(pm,Permission.private) ~= 0 then
                 ClassesBanNew[cls] = true;
             end
         end
@@ -563,7 +595,7 @@ function Functions.ClassInherite(cls,args,bases,handlers,members,metas)
             ClassesBanDelete[cls] = true;
         elseif pms then
             local pm = pms[dtor];
-            if pm and bits.band(pm,Permission.Private) ~= 0 then
+            if pm and bits.band(pm,Permission.private) ~= 0 then
                 ClassesBanDelete[cls] = true;
             end
         end
@@ -615,11 +647,11 @@ local function CascadeDelete(obj,cls,called)
     local pm = ClassesPermisssions[cls][dtor];
     if pm then
         local aCls = AccessStack[#AccessStack];
-        local friends = ClassesFriends[cls];
-        if (not friends or (not friends[aCls] and not friends[AllClasses[cls]])) and
-        (bits.band(pm,Permission.Public) == 0) and
+        local _friends = ClassesFriends[cls];
+        if (not _friends or (not _friends[aCls] and not _friends[AllClasses[cls]])) and
+        (bits.band(pm,Permission.public) == 0) and
         (aCls ~= cls) and
-        (bits.band(pm,Permission.Private) ~= 0)then
+        (bits.band(pm,Permission.private) ~= 0)then
             error(("Attempt to access private members outside the permission. - %s"):format(dtor));
         end
     end
@@ -656,14 +688,14 @@ function Functions.AttachClassFunctions(cls,_is,_new,_delete)
     local all = ClassesAll[cls];
     local pms = ClassesPermisssions[cls];
     all[is] = _is;
-    pms[is] = Permission.Public;
+    pms[is] = Permission.public;
     -- In debug mode,the "new" method is public and static.
     all[new] = FunctionWrapper(AccessStack,cls,_new);
     -- Use + instead of | to try to keep lua 5.3 or lower compatible.
-    pms[new] = Permission.Public + Permission.Static;
+    pms[new] = Permission.public + Permission.static;
 
     all[delete] = FunctionWrapper(AccessStack,cls,_delete);
-    pms[delete] = Permission.Public;
+    pms[delete] = Permission.public;
 end
 
 return Functions;

@@ -26,7 +26,7 @@ require("OOP.Class");
 
 -- Simple test.
 local Simple = class();
-Simple.Static.Const.Private.HelloWorld = "你好世界！";
+Simple.static.const.private.HelloWorld = "你好世界！";
 
 Simple.myName = "simple";
 function Simple:ctor(myName)
@@ -52,7 +52,7 @@ assert(not class.IsNull(simple2));
 -- Inherite.
 local Base1 = class();
 Base1.A = "A";
-Base1.Private.pointer = nil;
+Base1.private.pointer = nil;
 function Base1:ctor(prefix)
     self.name = prefix .. Base1.A;
 end
@@ -91,22 +91,22 @@ assert(Debug and not ret or ret);
 
 -- Access permission.
 local P1 = class();
-P1.Private.InternalInfo = "secret";
-P1.Const.Info = "123456";
+P1.private.InternalInfo = "secret";
+P1.const.Info = "123456";
 function P1:ctor(ext)
     self.ext = ext;
 end
 
-function P1.Static.Private.PrintInternalInfo()
+function P1.static.private.PrintInternalInfo()
     print(P1.InternalInfo);
 end
 
-function P1.Protected:PrintSelf()
+function P1.protected:PrintSelf()
     print(self);
     self:PrintExt();
 end
 
-function P1.Private:PrintExt()
+function P1.private:PrintExt()
     print(self.ext);
     print(P1.PrintInternalInfo());
 end

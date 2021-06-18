@@ -32,15 +32,16 @@ local Config = {
 
     class = "class",
 
-    Event = "Event",
+    event = "event",
 
-    Handlers = "Handlers",
+    handlers = "handlers",
 
     IsNull = "IsNull",
 
-    __properties__ = "__properties__",
+    set = "set",
+    get = "get",
 
-    __friends__ = "__friends__",
+    friends = "friends",
 
     -- If __singleton__ is defined,
     -- then the class can only access the singleton using the Instance property
@@ -95,12 +96,12 @@ local Config = {
 
     -- Modifiers names.
     Modifiers = {
-        Public = "Public",
-        Private = "Private",
-        Protected = "Protected",
+        public = "public",
+        private = "private",
+        protected = "protected",
 
-        Static = "Static",
-        Const = "Const"
+        static = "static",
+        const = "const"
     },
 
     -- If __singleton__ is defined,
