@@ -32,11 +32,15 @@ local Config = {
 
     class = "class",
 
+    enum = "enum",
+
     event = "event",
 
     handlers = "handlers",
 
     IsNull = "IsNull",
+
+    Auto = "Auto",
 
     set = "set",
     get = "get",
@@ -139,6 +143,9 @@ local Config = {
 
     -- Same as PropertyBehavior.
     ConstBehavior = 1,
+
+    -- Same as PropertyBehavior.
+    EnumBehavior = 1,
 
     -- Used to extend inherited external classes.
     ExternalClass = {

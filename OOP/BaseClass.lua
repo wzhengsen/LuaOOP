@@ -19,6 +19,7 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 
+require("OOP.Enum");
 local Config = require("OOP.Config");
 local Null = Config.ExternalClass.Null;
 local DeathMarker = Config.DeathMarker;

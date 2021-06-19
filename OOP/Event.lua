@@ -90,8 +90,19 @@ local event = setmetatable({},{
                 for _,o in ipairs(order) do
                     for i,info in ipairs(objHandlers) do
                         if info.obj == o.obj then
-                            local swapIndex = o.index < 1 and 1 or (o.index > handlerLen and handlerLen or o.index);
-                            insert(objHandlers,swapIndex,remove(objHandlers,i));
+                            local idx = o.index;
+                            if idx == 0 then
+                                idx = 1;
+                            elseif idx > handlerLen then
+                                idx = handlerLen;
+                            elseif idx < 0 then
+                                if idx + 1 + handlerLen <= 0 then
+                                    idx = 1;
+                                else
+                                    idx = handlerLen - idx + 1;
+                                end
+                            end
+                            insert(objHandlers,idx,remove(objHandlers,i));
                             break;
                         end
                     end
@@ -148,7 +159,7 @@ local handlers = {};
 function handlers.On(eventName,obj,handler)
     -- Check or define the event name.
     local _ = event[eventName];
-    table.insert(EventPool[eventName].objHandlers,{
+    insert(EventPool[eventName].objHandlers,{
         obj = obj,
         enabled = true,
         handler = handler
@@ -182,7 +193,7 @@ end
 function handlers.Order(eventName,obj,index)
     -- Check or define the event name.
     local _ = event[eventName];
-    table.insert(EventOrder[eventName],{
+    insert(EventOrder[eventName],{
         obj = obj,
         index = index
     });

@@ -31,6 +31,8 @@ local Compat = require("OOP.Version.Compat");
 local bits = Compat.bits;
 local FunctionWrapper = Compat.FunctionWrapper;
 
+local E_Handlers = require("OOP.Event").handlers;
+
 local R = require("OOP.Router");
 local Router = R.Router;
 local BitsMap = R.BitsMap;
@@ -203,7 +205,35 @@ local function CascadeGet(cls,key,called)
     end
 end
 
+local HandlersControl = setmetatable({
+    obj = nil
+},{
+    __newindex = function (hc,key,value)
+        if nil == hc.obj then
+            return;
+        end
+        if "string" == type(key) then
+            error(("The object's %s key must be a string."):format(handlers));
+        end
+        local vt = type(value);
+        if value ~= nil and "number" ~= vt then
+            error(("The object's %s can only accpet number or nil."):format(handlers));
+        end
+        if nil == value then
+            -- If value is nil,we remove the response of this event name.
+            E_Handlers.Remove(key,hc.obj);
+        else
+            -- If value is a number,we sort it.
+            E_Handlers.Order(key,hc.obj,math.floor(value));
+        end
+    end
+});
+
 local function GetAndCheck(cls,key,sender)
+    if key == handlers then
+        HandlersControl.obj = sender;
+        return HandlersControl;
+    end
     if not CheckPermission(cls,key,true) then
         return nil;
     end
@@ -438,7 +468,9 @@ local function ClassSet(cls,key,value)
     end
 
     if key == friends then
-        assert("table" == type(value),("%s reserved word must be assigned to a table."):format(friends));
+        if "table" ~= type(value) then
+            error(("%s reserved word must be assigned to a table."):format(key));
+        end
         local fri = {};
         ClassesFriends[cls] = fri;
         for _,v in ipairs(value) do
@@ -449,7 +481,9 @@ local function ClassSet(cls,key,value)
 
     local isFunction = "function" == type(value);
     if key == __singleton__ then
-        assert(isFunction,("%s reserved word must be assigned to a function."):format(__singleton__));
+        if not isFunction then
+            error(("%s reserved word must be assigned to a function."):format(key));
+        end
         -- Register "Instance" automatically.
         ClassesReadable[cls][Instance] = FunctionWrapper(AccessStack,cls,function()
             return GetSingleton(cls,value);
@@ -466,11 +500,15 @@ local function ClassSet(cls,key,value)
         pms[delete] = Permission.protected;
         return;
     elseif key == __new__ then
-        assert(isFunction,("%s reserved word must be assigned to a function."):format(key));
+        if not isFunction then
+            error(("%s reserved word must be assigned to a function."):format(key));
+        end
         ClassesNew[cls] = FunctionWrapper(AccessStack,cls,value);
         return;
     elseif key == __delete__ then
-        assert(isFunction,("%s reserved word must be assigned to a function."):format(key));
+        if not isFunction then
+            error(("%s reserved word must be assigned to a function."):format(key));
+        end
         ClassesDelete[cls] = FunctionWrapper(AccessStack,cls,value);
         return;
     else
@@ -524,10 +562,9 @@ Functions.ClassGet = ClassGet;
 local function MakeClassHandlersTable(cls,handlers)
     return setmetatable(handlers,{
         __newindex = function(t,key,value)
-            assert(
-                "string" == type(key) and key:find(On) == 1,
-                ("The name of handler function must start with \"%s\"."):format(On)
-            );
+            if not ("string" == type(key) and key:find(On) == 1) then
+                error(("The name of handler function must start with \"%s\"."):format(On))
+            end
             assert("function" == type(value),"event handler must be a function.");
             -- Ensure that event response functions have access to member variables.
             rawset(t,key,FunctionWrapper(AccessStack,cls,value));
