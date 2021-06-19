@@ -343,7 +343,37 @@ Test.data = "321";
 ```
 
 ---
-### 3.6 - 友元类
+### 3.7 - final修饰
+---
+>不可继承的final类：
+```lua
+require("OOP.Class");
+-- class使用final修饰后，便不可再被继承。
+local FinalClass = class.final();
+-- ...
+local ErrorClass = class(FinalClass);--引发错误。
+```
+
+>不可重写的final成员：
+```lua
+require("OOP.Class");
+local Base = class();
+-- final修饰后的成员都不可以再被重写。
+Base.final.member1 = "1";
+Base.final.member2 = "2";
+function Base.final:FinalFunc()
+    -- ...
+end
+
+local ErrorClass = class(Base);
+ErrorClass.member1 = 1;-- 引发错误。
+ErrorClass.member2 = 2;-- 引发错误。
+function ErrorClass.final:FinalFunc()-- 引发错误。
+end
+```
+
+---
+### 3.7 - 友元类
 ---
 ```lua
 require("OOP.Class");
@@ -380,7 +410,7 @@ c2:ShowSecretC2(secret);-- 123     data = 123
 ```
 
 ---
-### 3.7 - 其它事项
+### 3.8 - 其它事项
 ---
 >对__init__和__del__的修饰将直接影响到new和delete方法，且无论如何，new必然是static修饰的，如：
 ```lua
