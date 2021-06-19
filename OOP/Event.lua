@@ -96,18 +96,17 @@ local event = setmetatable({},{
                             elseif idx > handlerLen then
                                 idx = handlerLen;
                             elseif idx < 0 then
-                                if idx + 1 + handlerLen <= 0 then
-                                    idx = 1;
-                                else
-                                    idx = handlerLen - idx + 1;
-                                end
+                                local newIdx = idx + 1 + handlerLen;
+                                idx = newIdx <= 0 and 1 or newIdx;
                             end
                             insert(objHandlers,idx,remove(objHandlers,i));
                             break;
                         end
                     end
                 end
-                EventOrder[k] = {};
+                for k,_ in pairs(order) do
+                    order[k] = nil;
+                end
             end
 
             for _,info in ipairs(objHandlers) do
