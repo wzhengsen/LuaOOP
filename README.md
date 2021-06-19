@@ -167,6 +167,7 @@ vertex:PrintXYZ();
 vertex:PrintRGB();
 
 -- 析构将自动级联调用。
+-- 输出：
 -- table: xxxxxxxx Point已析构。
 -- table: xxxxxxxx Point3D已析构。
 -- table: xxxxxxxx Color已析构。
@@ -262,7 +263,7 @@ print(test.data);
 require("OOP.Class");
 local Test = class();
 
--- 使用protected修饰data成员。
+-- 使用private修饰data成员。
 Test.private.data = "123";
 function Test:PrintMe()
     print(self.data);
@@ -423,7 +424,7 @@ function Test.static.DestroyInstance(inst)
     inst:delete();
 end
 function Test.static.CopyFromInstance(inst)
-    -- 引发错误，对象不能访问static成员。
+    -- 引发错误，new必然是静态成员，对象不能访问静态成员。
     return inst.new(table.unpack(inst.args));
 end
 function Test.private:ctor(...)
@@ -989,14 +990,14 @@ function Listener.handlers:Any()
 end
 
 local a = Listener.new();
--- a响应Any事件。
+-- a-响应Any事件。
 event.Any();
 -- 赋值为nil以移除事件响应。
 a.handlers.Any = nil;
 event.Any();-- 没有任何行为。
 
 local b = Listener.new();
--- b响应Any事件。
+-- b-响应Any事件。
 event.Any();
 -- b在析构后，也不再响应事件。
 b:delete();
@@ -1006,4 +1007,4 @@ event.Any();-- 没有任何行为。
 ---
 ## 12 - Lua5.1-Lua5.4兼容
 ---
-尽量确保Lua5.1-Lua5.4兼容的兼容性，但LuaJIT并未测试。
+尽量确保Lua5.1-Lua5.4的兼容性，但LuaJIT并未测试。
