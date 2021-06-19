@@ -21,9 +21,12 @@
 
 require("OOP.Enum");
 local Config = require("OOP.Config");
+local Internal = require("OOP.Variant.Internal");
 local Null = Config.ExternalClass.Null;
 local DeathMarker = Config.DeathMarker;
 local IsNull = Config.IsNull;
+local final = Config.Modifiers.final;
+local FinalClasses = Internal.FinalClasses;
 
 local class = setmetatable({},{
     __call = function(c,...)
@@ -48,5 +51,11 @@ function(t)
     return not t;
 end;
 class[IsNull] = _IsNull;
+
+class[final] = function (...)
+    local cls = class(...);
+    FinalClasses[cls] = true;
+    return cls;
+end
 
 return class;

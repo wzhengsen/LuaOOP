@@ -65,8 +65,11 @@ local GetSingleton = Functions.GetSingleton;
 local DestroySingleton = Functions.DestroySingleton;
 local ClassInherite = Functions.ClassInherite;
 local CreateClassObject = Functions.CreateClassObject;
+local FinalClassesMembers = Functions.FinalClassesMembers;
+local NamedClasses = Functions.NamedClasses;
 local AllClasses = Functions.AllClasses;
 local AllEnumerations = Functions.AllEnumerations;
+local FinalClasses = Functions.FinalClasses;
 local ClassesReadable = Functions.ClassesReadable;
 local ClassesWritable = Functions.ClassesWritable;
 local ClassesHandlers = Functions.ClassesHandlers;
@@ -156,7 +159,7 @@ local function CheckPermission(self,key,byObj,set)
     local stackCls = AccessStack[#AccessStack];
     local _friends = ClassesFriends[cls];
     --Check if it is a friendly class.
-    if not _friends or (not _friends[stackCls] and not _friends[AllClasses[stackCls]]) then
+    if not _friends or (not _friends[stackCls] and not _friends[NamedClasses[stackCls]]) then
         if bits.band(pm,Permission.public) == 0 then
             -- Check public,private,protected.
             if stackCls ~= cls then
@@ -466,6 +469,9 @@ local function ClassSet(cls,key,value)
     if ReservedWord[key] then
         error(("%s is a reserved word and you can't set it."):format(key));
     end
+    if FinalClassesMembers[cls][key] then
+        error(("You cannot define final members again.-%s"):format(key));
+    end
 
     if key == friends then
         if "table" ~= type(value) then
@@ -591,6 +597,7 @@ function Functions.CreateClassTables()
     all = {}
     ClassesAll[cls] = all;
     ClassesPermisssions[cls] = {};
+    FinalClassesMembers[cls] = {};
 
     return cls,all,bases,handlers,members,metas;
 end
@@ -605,6 +612,7 @@ function Functions.CheckClassName(cls,args)
 end
 
 function Functions.ClassInherite(cls,args,bases,handlers,members,metas)
+    local fm = FinalClassesMembers[cls];
     for idx, base in ipairs(args) do
         local baseType = type(base);
         assert(
@@ -613,8 +621,9 @@ function Functions.ClassInherite(cls,args,bases,handlers,members,metas)
             "Unavailable base class type."
         );
         if "string" == baseType then
-            assert(AllClasses[base],("Inherits a class that does not exist.[\"%s\"]").format(base));
+            assert(NamedClasses[base],("Inherits a class that does not exist.[\"%s\"]").format(base));
         end
+        assert(not FinalClasses[base],"You cannot inherit a final class.");
         for i,b in ipairs(args) do
             if b == base and idx ~= i then
                 error("It is not possible to inherit from the same class repeatedly.");
@@ -637,6 +646,10 @@ function Functions.ClassInherite(cls,args,bases,handlers,members,metas)
             if pm and bits.band(pm,Permission.private) ~= 0 then
                 ClassesBanDelete[cls] = true;
             end
+        end
+        local bfm = FinalClassesMembers[base];
+        for k,_ in pairs(bfm) do
+            fm[k] = true;
         end
     end
     ClassInherite(cls,args,bases,handlers,members,metas);
@@ -687,7 +700,7 @@ local function CascadeDelete(obj,cls,called)
     if pm then
         local aCls = AccessStack[#AccessStack];
         local _friends = ClassesFriends[cls];
-        if (not _friends or (not _friends[aCls] and not _friends[AllClasses[cls]])) and
+        if (not _friends or (not _friends[aCls] and not _friends[NamedClasses[cls]])) and
         (bits.band(pm,Permission.public) == 0) and
         (aCls ~= cls) and
         (bits.band(pm,Permission.private) ~= 0)then

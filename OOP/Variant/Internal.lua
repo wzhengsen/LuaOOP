@@ -23,13 +23,16 @@ local Config = require("OOP.Config");
 local Debug = Config.Debug;
 local WeakTable = {__mode = "k"};
 return {
-    AllClasses = {},
+    NamedClasses = {},
+    AllClasses = setmetatable({},WeakTable),
+    FinalClasses = setmetatable({},WeakTable),
     AllEnumerations = setmetatable({},WeakTable),
     ClassesReadable = setmetatable({},WeakTable),
     ClassesWritable = setmetatable({},WeakTable),
     ClassesHandlers = setmetatable({},WeakTable),
     ClassesBases = setmetatable({},WeakTable),
     ClassesMembers = setmetatable({},WeakTable),
+    FinalClassesMembers = setmetatable({},WeakTable),
     ClassesMetas = setmetatable({},WeakTable),
     ClassesNew = setmetatable({},WeakTable),
     ClassesDelete = setmetatable({},WeakTable),
@@ -48,6 +51,7 @@ return {
         [Config.Modifiers.private] = true,
         [Config.Modifiers.const] = true,
         [Config.Modifiers.static] = true,
+        [Config.Modifiers.final] = true,
         [Config.new] = true,
         [Config.delete] = true,
         [Config.is] = true,

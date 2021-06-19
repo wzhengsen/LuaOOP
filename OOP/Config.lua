@@ -105,7 +105,9 @@ local Config = {
         protected = "protected",
 
         static = "static",
-        const = "const"
+        const = "const",
+
+        final = "final"
     },
 
     -- If __singleton__ is defined,

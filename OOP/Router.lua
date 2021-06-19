@@ -43,13 +43,15 @@ local private = Config.Modifiers.private;
 local protected = Config.Modifiers.protected;
 local static = Config.Modifiers.static;
 local const = Config.Modifiers.const;
+local final = Config.Modifiers.final;
 
 local BitsMap = {
     [public] = 2 ^ 0,
     [private] = 2 ^ 1,
     [protected] = 2 ^ 2,
     [static] = 2 ^ 3,
-    [const] = 2 ^ 4
+    [const] = 2 ^ 4,
+    [final] = 2 ^ 5
 };
 if Version > 5.2 then
     BitsMap.public = math.tointeger(BitsMap.public);
@@ -57,13 +59,15 @@ if Version > 5.2 then
     BitsMap.protected = math.tointeger(BitsMap.protected);
     BitsMap.static = math.tointeger(BitsMap.static);
     BitsMap.const = math.tointeger(BitsMap.const);
+    BitsMap.final = math.tointeger(BitsMap.final);
 end
 local Permission = {
     public = BitsMap[public],
     private = BitsMap[private],
     protected = BitsMap[protected],
     static = BitsMap[static],
-    const = BitsMap[const]
+    const = BitsMap[const],
+    final = BitsMap[final]
 }
 local Router = {};
 
@@ -78,8 +82,8 @@ if Debug then
     local dtor = Config.dtor;
 
     local FunctionWrapper = Compat.FunctionWrapper;
-    local AccessStack = Internal.AccessStack;
     local ClassesAll = Internal.ClassesAll;
+    local FinalClassesMembers = Internal.FinalClassesMembers;
     local ClassesPermisssions = Internal.ClassesPermisssions;
 
     local RouterReservedWord = Internal.RouterReservedWord;
@@ -148,6 +152,9 @@ if Debug then
             pms[new] = bits.bor(decor,0x8);
         elseif key == dtor then
             pms[delete] = decor;
+        end
+        if bits.band(decor,Permission.final) ~= 0 then
+            FinalClassesMembers[cls][key] = true;
         end
         self.decor = 0;
         self.cls = nil;

@@ -57,6 +57,7 @@ local MetaMapName = Config.MetaMapName;
 local _IsNull = class.IsNull;
 
 local Functions = Internal;
+local NamedClasses = Functions.NamedClasses;
 local AllClasses = Functions.AllClasses;
 local AllEnumerations = Functions.AllEnumerations;
 local ClassesReadable = Functions.ClassesReadable;
@@ -164,9 +165,9 @@ end
 local function CheckClassName(cls,args)
     if type(args[1]) == "string" then
         local name = table.remove(args,1);
-        if nil == AllClasses[name] then
-            AllClasses[name] = cls;
-            AllClasses[cls] = name;
+        if nil == NamedClasses[name] then
+            NamedClasses[name] = cls;
+            NamedClasses[cls] = name;
         else
             return name;
         end
@@ -545,6 +546,7 @@ local function CreateClassTables()
     local members = {};
     local metas = {};
 
+    AllClasses[cls] = true;
     ClassesBases[cls] = bases;
 
     ClassesHandlers[cls] = handlers;
@@ -568,7 +570,7 @@ end
 local function ClassInherite(cls,args,bases,handlers,members,metas)
     for _, base in ipairs(args) do
         if "string" == type(base) then
-            base = AllClasses[base];
+            base = NamedClasses[base];
         end
         PushBase(cls,bases,base,handlers,members,metas);
     end
