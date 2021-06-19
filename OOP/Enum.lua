@@ -87,7 +87,7 @@ else
     end;
     function enum.New(first,...)
         local isString = type(first) == "string"
-        local e = isString and {} or first;;
+        local e = isString and {} or first;
         if isString then
             for k,v in ipairs({first,...}) do
                 e[v] = k;
