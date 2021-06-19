@@ -128,7 +128,7 @@ if Debug then
         end
         local cls = self.cls;
         if isFunction then
-            value = FunctionWrapper(AccessStack,cls,value);
+            value = FunctionWrapper(cls,value);
         else
             -- For non-functional, non-static members,
             -- add to the member table and generate it for each instance.

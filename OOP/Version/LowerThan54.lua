@@ -23,7 +23,8 @@ local Config = require("OOP.Config");
 local Version = Config.Version;
 local unpack = Version < 5.2 and unpack or table.unpack;
 local setmetatable = setmetatable;
-local table = table;
+local insert = table.insert;
+local remove = table.remove;
 local pcall = pcall;
 local error = error;
 
@@ -37,14 +38,15 @@ local error = error;
 ---@return ...
 ---
 local AllFunctions = setmetatable({},{__mode = "k"});
-local function FunctionWrapper(aStack,cls,f)
+local AccessStack = require("OOP.Variant.Internal").AccessStack;
+local function FunctionWrapper(cls,f)
     if AllFunctions[f] then
         return f;
     end
     local newF = function(...)
-        table.insert(aStack,cls);
+        insert(AccessStack,cls);
         local ret = {pcall(f,...)};
-        table.remove(aStack);
+        remove(AccessStack);
         if not ret[1] then
             error(ret[2]);
         end

@@ -19,8 +19,8 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 local setmetatable = setmetatable;
-local table = table;
-
+local insert = table.insert;
+local remove = table.remove;
 ---
 ---Wrapping the given function so that it handles the push and pop of the access stack correctly anyway,
 --to avoid the access stack being corrupted by an error being thrown in one of the callbacks.
@@ -31,17 +31,19 @@ local table = table;
 ---@return ...
 ---
 local AllFunctions = setmetatable({},{__mode = "k"});
-local function FunctionWrapper(aStack,cls,f)
+local AccessStack = require("OOP.Variant.Internal").AccessStack;
+local RAII = setmetatable({},{
+    __close = function ()
+        remove(AccessStack);
+    end
+});
+local function FunctionWrapper(cls,f)
     if AllFunctions[f] then
         return f;
     end
     local newF = function(...)
-        table.insert(aStack,cls);
-        local _<close> = setmetatable({},{
-            __close = function ()
-                table.remove(aStack);
-            end
-        });
+        insert(AccessStack,cls);
+        local _<close> = RAII;
         return f(...);
     end
     AllFunctions[newF] = true;

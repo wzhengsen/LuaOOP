@@ -20,10 +20,13 @@
 -- THE SOFTWARE.
 
 local Config = require("OOP.Config");
+local modf = math.modf;
+local assert = assert;
+local floor = math.floor;
 local bits = Config.Version == 5.2 and bit32 or {
     band = function (a,b)
-        local _,floatA = math.modf(a);
-        local _,floatB = math.modf(b);
+        local _,floatA = modf(a);
+        local _,floatB = modf(b);
         assert(floatA == 0 and floatB == 0 and a >= 0 and b >= 0 and a ~= math.huge and b ~= math.huge,"Illegal operand.");
         local ret = 0;
         for i = 1,32 do
@@ -33,14 +36,14 @@ local bits = Config.Version == 5.2 and bit32 or {
             if a % 2 == 1 and b % 2 == 1 then
                 ret = ret + 2 ^ (i - 1);
             end
-            a = math.floor(a / 2);
-            b = math.floor(b / 2);
+            a = floor(a / 2);
+            b = floor(b / 2);
         end
         return ret;
     end,
     bor = function (a,b)
-        local _,floatA = math.modf(a);
-        local _,floatB = math.modf(b);
+        local _,floatA = modf(a);
+        local _,floatB = modf(b);
         assert(floatA == 0 and floatB == 0 and a >= 0 and b >= 0 and a ~= math.huge and b ~= math.huge,"Illegal operand.");
         local ret = 0;
         for i = 1,32 do
@@ -50,8 +53,8 @@ local bits = Config.Version == 5.2 and bit32 or {
             if a % 2 == 1 or b % 2 == 1 then
                 ret = ret + 2 ^ (i - 1);
             end
-            a = math.floor(a / 2);
-            b = math.floor(b / 2);
+            a = floor(a / 2);
+            b = floor(b / 2);
         end
         return ret;
     end

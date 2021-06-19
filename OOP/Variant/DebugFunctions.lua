@@ -484,10 +484,10 @@ local function ClassSet(cls,key,value)
             error(("%s reserved word must be assigned to a function."):format(key));
         end
         -- Register "Instance" automatically.
-        ClassesReadable[cls][Instance] = FunctionWrapper(AccessStack,cls,function()
+        ClassesReadable[cls][Instance] = FunctionWrapper(cls,function()
             return GetSingleton(cls,value);
         end);
-        ClassesWritable[cls][Instance] = FunctionWrapper(AccessStack,cls,function(_,val)
+        ClassesWritable[cls][Instance] = FunctionWrapper(cls,function(_,val)
             DestroySingleton(cls,val)
         end);
         -- Once register "__singleton__" for a class,set permission of "new","delete" method to protected.
@@ -502,13 +502,13 @@ local function ClassSet(cls,key,value)
         if not isFunction then
             error(("%s reserved word must be assigned to a function."):format(key));
         end
-        ClassesNew[cls] = FunctionWrapper(AccessStack,cls,value);
+        ClassesNew[cls] = FunctionWrapper(cls,value);
         return;
     elseif key == __delete__ then
         if not isFunction then
             error(("%s reserved word must be assigned to a function."):format(key));
         end
-        ClassesDelete[cls] = FunctionWrapper(AccessStack,cls,value);
+        ClassesDelete[cls] = FunctionWrapper(cls,value);
         return;
     else
         local property = ClassesWritable[cls][key];
@@ -542,7 +542,7 @@ local function ClassSet(cls,key,value)
         end
         if isFunction then
             -- Wrap this function to include control of access permission.
-            value = FunctionWrapper(AccessStack,cls,value);
+            value = FunctionWrapper(cls,value);
         end
         all[key] = value;
     end
@@ -566,7 +566,7 @@ local function MakeClassHandlersTable(cls,handlers)
             end
             assert("function" == type(value),"event handler must be a function.");
             -- Ensure that event response functions have access to member variables.
-            rawset(t,key,FunctionWrapper(AccessStack,cls,value));
+            rawset(t,key,FunctionWrapper(cls,value));
         end
     });
 end
@@ -575,7 +575,7 @@ local function MakeClassGetSetTable(cls,...)
     for _,v in ipairs({...}) do
         local meta = getmetatable(v);
         meta.__newindex = function(t,key,value)
-            rawset(t,key,FunctionWrapper(AccessStack,cls,value));
+            rawset(t,key,FunctionWrapper(cls,value));
         end;
     end
 end
@@ -726,11 +726,11 @@ function Functions.AttachClassFunctions(cls,_is,_new,_delete)
     all[is] = _is;
     pms[is] = Permission.public;
     -- In debug mode,the "new" method is public and static.
-    all[new] = FunctionWrapper(AccessStack,cls,_new);
+    all[new] = FunctionWrapper(cls,_new);
     -- Use + instead of | to try to keep lua 5.3 or lower compatible.
     pms[new] = Permission.public + Permission.static;
 
-    all[delete] = FunctionWrapper(AccessStack,cls,_delete);
+    all[delete] = FunctionWrapper(cls,_delete);
     pms[delete] = Permission.public;
 end
 
