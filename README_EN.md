@@ -345,7 +345,7 @@ Test.data = "321";
 ```
 
 ---
-### 3.7 - final修饰
+### 3.7 - final
 ---
 >Non-inheritable final class:
 ```lua
@@ -412,7 +412,7 @@ c2:ShowSecretC2(secret);-- 123     data = 123
 ```
 
 ---
-### 3.8 - 其它事项
+### 3.8 - Other matters
 ---
 >The modifications to \_\_init\_\_ and \_\_del\_\_ will directly affect the new and delete methods, and in any case, new is necessarily static, e.g:
 ```lua
