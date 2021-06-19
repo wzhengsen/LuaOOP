@@ -32,6 +32,8 @@ local bits = Compat.bits;
 local Debug = Config.Debug;
 
 local MetaMapName = Config.MetaMapName;
+local AllEnumerations = Internal.AllEnumerations;
+local AllClasses = Internal.AllClasses;
 
 local new = Config.new;
 local delete = Config.delete;
@@ -116,7 +118,6 @@ if Debug then
             error(("You cannot modify meta-methods. - %s"):format(key));
         end
         local decor = self.decor;
-        local isFunction = "function" == type(value);
         if bits.band(decor,Permission.static) ~= 0 then
             if (key == ctor or key == dtor) then
                 error(("%s modifier cannot modify %s functions."):format(static,key));
@@ -127,12 +128,15 @@ if Debug then
             decor = bits.bor(decor,0x1);
         end
         local cls = self.cls;
+        local vt = type(value);
+        local isFunction = "function" == vt;
         if isFunction then
             value = FunctionWrapper(cls,value);
         else
-            -- For non-functional, non-static members,
+            local isTable = "table" == vt;
+            -- For non-functional, non-static members,non-class objects,non-enumeration objects,
             -- add to the member table and generate it for each instance.
-            if bits.band(decor,Permission.static) == 0 then
+            if bits.band(decor,Permission.static) == 0 and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
                 ClassesMembers[cls][key] = value;
             end
         end
@@ -160,7 +164,10 @@ else
     end
     function Router:End(key,value)
         local cls = self.cls;
-        if "function" ~= type(value) and self.decor ~= sc then
+        local vt = type(value);
+        local isFunction = "function" == vt;
+        local isTable = "table" == vt;
+        if not isFunction and self.decor ~= sc and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
             ClassesMembers[cls][key] = value;
         end
         rawset(cls,key,value);

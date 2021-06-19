@@ -56,9 +56,9 @@ local MetaMapName = Config.MetaMapName;
 
 local _IsNull = class.IsNull;
 
--- functions.
 local Functions = Internal;
 local AllClasses = Functions.AllClasses;
+local AllEnumerations = Functions.AllEnumerations;
 local ClassesReadable = Functions.ClassesReadable;
 local ClassesWritable = Functions.ClassesWritable;
 local ClassesHandlers = Functions.ClassesHandlers;
@@ -629,7 +629,10 @@ local function ClassSet(cls,key,value)
             return;
         end
         local exist = rawget(cls,key);
-        if not exist and "function" ~= type(value) then
+        local vt = type(value);
+        local isFunction = "function" == vt;
+        local isTable = "table" == vt;
+        if not exist and not isFunction and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
             ClassesMembers[cls][key] = value;
         end
         rawset(cls,key,value);

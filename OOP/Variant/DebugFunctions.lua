@@ -66,6 +66,7 @@ local DestroySingleton = Functions.DestroySingleton;
 local ClassInherite = Functions.ClassInherite;
 local CreateClassObject = Functions.CreateClassObject;
 local AllClasses = Functions.AllClasses;
+local AllEnumerations = Functions.AllEnumerations;
 local ClassesReadable = Functions.ClassesReadable;
 local ClassesWritable = Functions.ClassesWritable;
 local ClassesHandlers = Functions.ClassesHandlers;
@@ -478,7 +479,8 @@ local function ClassSet(cls,key,value)
         return;
     end
 
-    local isFunction = "function" == type(value);
+    local vt = type(value);
+    local isFunction = "function" == vt;
     if key == __singleton__ then
         if not isFunction then
             error(("%s reserved word must be assigned to a function."):format(key));
@@ -535,7 +537,8 @@ local function ClassSet(cls,key,value)
         local all = ClassesAll[cls];
         local exist = all[key];
         if not exist then
-            if not isFunction then
+            local isTable = "table" == vt;
+            if not isFunction and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
                 ClassesMembers[cls][key] = value;
             end
             ClassesPermisssions[cls][key] = Permission.public;
