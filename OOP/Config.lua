@@ -112,9 +112,6 @@ local Config = {
     -- this property will be generated automatically.
     Instance = "Instance",
 
-    -- The prefix of event handers.
-    On = "On",
-
     -- If a table has this key,means that the table is dead.
     DeathMarker = {},
 

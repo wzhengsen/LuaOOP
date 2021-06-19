@@ -30,12 +30,11 @@ local Config = require("OOP.Config");
 local Internal = require("OOP.Variant.Internal");
 local class = require("OOP.BaseClass");
 
-local E_Handlers = require("OOP.event").handlers;
+local E_Handlers = require("OOP.Event").handlers;
 local R = require("OOP.Router");
 local Router = R.Router;
 local BitsMap = R.BitsMap;
 
-local On = Config.On;
 local delete = Config.delete;
 local DeathMarker = Config.DeathMarker;
 local dtor = Config.dtor;
@@ -509,11 +508,10 @@ local function CreateClassDelete(cls)
     end
 end
 
-local OnLen = #On + 1;
 local function RegisterHandlersAndMembers(obj,all,handlers,members)
     for key,func in pairs(handlers) do
         -- Automatically listens to events.
-        E_Handlers.On(key:sub(OnLen),obj,func);
+        E_Handlers.On(key,obj,func);
     end
     for key,mem in pairs(members) do
         -- Automatically set member of object.

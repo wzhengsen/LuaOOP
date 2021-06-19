@@ -73,7 +73,7 @@ local event = setmetatable({},{
         EventOrder[k] = order;
         local EventCallLvl = 0;
 
-        local event = function(...)
+        local e = function(...)
             if not pool.enabled then
                 return;
             end
@@ -134,8 +134,8 @@ local event = setmetatable({},{
             RemakeObjList(pool,EventCallLvl,hole);
             EventCallLvl = EventCallLvl - 1;
         end;
-        t[k] = event;
-        return event;
+        t[k] = e;
+        return e;
     end
 })
 
@@ -145,7 +145,7 @@ local handlers = {};
 ---The first parameter of "handler" will be set with the current object.
 ---
 ---Another common way of listening for responses is:
----function someclass.handlers:OnSocketRecv(msg,data)
+---function someclass.handlers:SocketRecv(msg,data)
 ---    print(msg .. "&" .. data); -- abc&123
 ---end
 ---

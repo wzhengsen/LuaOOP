@@ -884,8 +884,7 @@ function Listener:ctor(name)
     self.name = name;
 end
 
--- 使用.handlers.On + 事件名来接收Email事件。
-function Listener.handlers:OnEmail(name,content)
+function Listener.handlers:Email(name,content)
     if name == self.name then
         -- 收到指定的邮件。
         print(content);
@@ -895,7 +894,7 @@ function Listener.handlers:OnEmail(name,content)
 end
 
 -- 接收事件的参数长度没有限制，比如接收有任意长度参数的名为Any的事件。
-function Listener.handlers:OnAny(...)
+function Listener.handlers:Any(...)
     print(...);
 end
 
@@ -912,6 +911,4 @@ event.Any(1,2,3);
 event.Any(nil);
 event.Any("any",true,-2,function()end,{});
 event.Any();
-
--- 如果event/handlers/On+事件名的命名方式不是你所需要的，请在Config文件中修改对应的命名映射。
 ```

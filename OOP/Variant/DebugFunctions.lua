@@ -41,7 +41,6 @@ local Permission = R.Permission;
 local new = Config.new;
 local delete = Config.delete;
 local is = Config.is;
-local On = Config.On;
 local ctor = Config.ctor;
 local dtor = Config.dtor;
 local __new__ = Config.__new__;
@@ -212,7 +211,7 @@ local HandlersControl = setmetatable({
         if nil == hc.obj then
             return;
         end
-        if "string" == type(key) then
+        if "string" ~= type(key) then
             error(("The object's %s key must be a string."):format(handlers));
         end
         local vt = type(value);
@@ -231,7 +230,7 @@ local HandlersControl = setmetatable({
 
 local function GetAndCheck(cls,key,sender)
     if key == handlers then
-        HandlersControl.obj = sender;
+        rawset(HandlersControl,"obj",sender);
         return HandlersControl;
     end
     if not CheckPermission(cls,key,true) then
@@ -562,8 +561,8 @@ Functions.ClassGet = ClassGet;
 local function MakeClassHandlersTable(cls,handlers)
     return setmetatable(handlers,{
         __newindex = function(t,key,value)
-            if not ("string" == type(key) and key:find(On) == 1) then
-                error(("The name of handler function must start with \"%s\"."):format(On))
+            if not ("string" == type(key)) then
+                error("The name of handler function must be a string.")
             end
             assert("function" == type(value),"event handler must be a function.");
             -- Ensure that event response functions have access to member variables.
