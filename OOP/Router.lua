@@ -113,6 +113,10 @@ if Debug then
         return self;
     end
     function Router:End(key,value)
+        local cls = self.cls;
+        if FinalClassesMembers[cls][key] then
+            error(("You cannot define final members again.-%s"):format(key));
+        end
         local bit = BitsMap[key] or RouterReservedWord[key];
         if bit then
             error(("The name is unavailable. - %s"):format(key));
@@ -131,7 +135,6 @@ if Debug then
             -- Without the public modifier, public is added by default.
             decor = bits.bor(decor,0x1);
         end
-        local cls = self.cls;
         local vt = type(value);
         local isFunction = "function" == vt;
         if isFunction then
