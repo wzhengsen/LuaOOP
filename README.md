@@ -20,8 +20,8 @@ LuaOOP是借鉴了C++/C#的部分类设计，并使用Lua实现的面向对象�
 * 单例（\_\_singleton\_\_）；
 * 扩展或继承外部类（生成userdata的类）；
 * Debug和Release运行模式；
-* 一组简单的消息传递模式；
-* lua5.1-lua5.4兼容。
+* 简单的事件分发模式；
+* Lua5.1-Lua5.4兼容。
 
 ---
 ## 1 - 基本的类构造及析构
@@ -874,8 +874,9 @@ end
 如果当前应用在Debug模式下已经进行了充分测试，可以更改Config.Debug为false来获取效率提升。
 
 ---
-## 11 - 一组简单的消息传递模式
+## 11 - 简单的事件分发模式
 ---
+>直接响应事件：
 ```lua
 require("OOP.Class");
 local Listener = class();
@@ -884,6 +885,8 @@ function Listener:ctor(name)
     self.name = name;
 end
 
+-- 接收名为Email的事件，携带2个额外参数。
+-- 但self一定为第一个参数。
 function Listener.handlers:Email(name,content)
     if name == self.name then
         -- 收到指定的邮件。
@@ -899,11 +902,12 @@ function Listener.handlers:Any(...)
 end
 
 
-local l1 = Listener.new("a");
-local l2 = Listener.new("b");
-local l3 = Listener.new("c");
+local a = Listener.new("a");
+local b = Listener.new("b");
+local c = Listener.new("c");
 
 -- 向b发送一封内容为123的邮件。
+-- 其参数与接收函数的参数一一对应。
 event.Email("b","123");
 
 -- 发送名为Any的事件。
@@ -912,3 +916,64 @@ event.Any(nil);
 event.Any("any",true,-2,function()end,{});
 event.Any();
 ```
+>指定顺序响应事件：
+```lua
+require("OOP.Class");
+local Listener = class();
+Listener.private.name = "";
+function Listener:ctor(name)
+    self.name = name;
+end
+
+function Listener.handlers:Any()
+    print(self.name.."响应Any事件。");
+end
+
+local a = Listener.new("a");
+local b = Listener.new("b");
+local c = Listener.new("c");
+-- 如果不作调整，响应顺序按照构造的先后顺序。
+-- 现在，可以指定c为第一个响应Any事件。
+c.handlers.Any = 1;
+
+-- c响应Any事件。
+-- a响应Any事件。
+-- b响应Any事件。
+event.Any();
+
+-- 或者，指定a为最后一个响应Any事件。
+a.handlers.Any = -1;
+
+-- c响应Any事件。
+-- b响应Any事件。
+-- a响应Any事件。
+event.Any();
+```
+
+>移除事件响应：
+```lua
+require("OOP.Class");
+local Listener = class();
+function Listener.handlers:Any()
+    print("响应Any事件。");
+end
+
+local a = Listener.new();
+-- a响应Any事件。
+event.Any();
+-- 赋值为nil以移除事件响应。
+a.handlers.Any = nil;
+event.Any();-- 没有任何行为。
+
+local b = Listener.new();
+-- b响应Any事件。
+event.Any();
+-- b在析构后，也不再响应事件。
+b:delete();
+event.Any();-- 没有任何行为。
+```
+
+---
+## 12 - Lua5.1-Lua5.4兼容
+---
+尽量确保Lua5.1-Lua5.4兼容的兼容性，但LuaJIT并未测试。

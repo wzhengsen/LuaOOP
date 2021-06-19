@@ -111,9 +111,7 @@ function P1.private:PrintExt()
     print(P1.PrintInternalInfo());
 end
 
-function P1.__friends__()
-    return "P2",C1;
-end
+P1.friends = {"P2",C1};
 
 local P2 = class("P2");
 function P2:ctor(obj)
@@ -172,7 +170,7 @@ p2:PrintObj();
 
 c1 = C1.new(p1);
 
--- __properties__ and __singleton__.
+-- properties and __singleton__.
 local Point = class();
 function Point:ctor(x,y)
     self._x = x;
@@ -182,31 +180,27 @@ function Point:Show()
     print("x = ",self._x);
     print("y = ",self.Y);
 end
-function Point.Handlers:OnNewEvent(...)
+function Point.handlers:NewEvent(...)
     print(...);
     self:Show();
     if ({...})[1] == 1 then
         return true;
     end
 end
-function Point.__properties__()
-    return {
-        r = {
-            X = function (self)
-                return self._x;
-            end,
-            Y = function (self)
-                return self._y;
-            end
-        },
-        w = {
-            XY = function (self,val)
-                self._x = val.x;
-                self._y = val.y;
-            end
-        }
-    };
+
+function Point.get:X()
+    return self._x;
 end
+
+function Point.get:Y()
+    return self._y;
+end
+
+function Point.set:XY(val)
+    self._x = val.x;
+    self._y = val.y;
+end
+
 local Point3D = class(Point);
 function Point3D:ctor(x,y,z)
     Point.ctor(self,x,y);
@@ -217,21 +211,15 @@ function Point3D:Show()
     print("z = ",self._z);
 end
 
-function Point3D.__properties__()
-    return {
-        r = {
-            Z = function (self)
-                return self._z;
-            end
-        },
-        w = {
-            XYZ = function (self,val)
-                self.XY = val;
-                self._z = val.z;
-            end
-        }
-    };
+function Point3D.get:Z()
+    return self._z;
 end
+
+function Point3D.set:XYZ(val)
+    self.XY = val;
+    self._z = val.z;
+end
+
 local pos1 = Point.new(1,2.2);
 local pos2 = Point.new(-42.33,4532);
 pos1:Show();
@@ -258,7 +246,7 @@ end
 function Single.__singleton__()
     return Single.new("abc");
 end
-function Single.Handlers:OnNewEvent(...)
+function Single.handlers:NewEvent(...)
     print(...);
 end
 
@@ -272,6 +260,6 @@ local d = Single.Instance;
 assert(class.IsNull(a) and a == c);
 assert(not class.IsNull(d) and d ~= c);
 
--- Event and Handlers.
-Event.NewEvent(3.8,"鹅嘎尔");
-Event.NewEvent(1,"fag",p2);
+-- event and handlers.
+event.NewEvent(3.8,"鹅嘎尔");
+event.NewEvent(1,"fag",p2);
