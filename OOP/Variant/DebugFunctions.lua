@@ -140,10 +140,10 @@ local function CheckPermission(self,key,byObj,set)
             if ConstBehavior ~= 2 then
                 if ConstBehavior == 0 then
                     if Version > 5.4 then
-                        warn(("You cannot modify the const value. - %s"):format(key));
+                        warn(("You cannot qualify the const value. - %s"):format(key));
                     end
                 elseif ConstBehavior == 1 then
-                    error(("You cannot modify the const value. - %s"):format(key));
+                    error(("You cannot qualify the const value. - %s"):format(key));
                 end
                 return false;
             end

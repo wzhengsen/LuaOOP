@@ -38,12 +38,12 @@ local AllClasses = Internal.AllClasses;
 local new = Config.new;
 local delete = Config.delete;
 
-local public = Config.Modifiers.public;
-local private = Config.Modifiers.private;
-local protected = Config.Modifiers.protected;
-local static = Config.Modifiers.static;
-local const = Config.Modifiers.const;
-local final = Config.Modifiers.final;
+local public = Config.Qualifiers.public;
+local private = Config.Qualifiers.private;
+local protected = Config.Qualifiers.protected;
+local static = Config.Qualifiers.static;
+local const = Config.Qualifiers.const;
+local final = Config.Qualifiers.final;
 
 local BitsMap = {
     [public] = 2 ^ 0,
@@ -88,27 +88,27 @@ if Debug then
 
     local RouterReservedWord = Internal.RouterReservedWord;
     -- It is only under debug that the values need to be routed to the corresponding fields of the types.
-    -- To save performance, all modifiers will be ignored under non-debug.
+    -- To save performance, all qualifiers will be ignored under non-debug.
 
     -- Rules:
-    -- 1 - There can be no duplicate modifiers;
+    -- 1 - There can be no duplicate qualifiers;
     -- 2 - public/private/protected cannot be used together;
-    -- 3 - static cannot modify constructors and destructors;
-    -- 4 - Can't use modifiers that don't exist;
+    -- 3 - static cannot qualify constructors and destructors;
+    -- 4 - Can't use qualifiers that don't exist;
     -- 5 - Reserved words cannot be modified (__singleton__/friends/handlers/set/get and so on).
     function Router:Pass(key)
         local bit = BitsMap[key];
         local decor = self.decor;
         if bit then
             if bits.band(decor,bit) ~= 0 then
-                error(("The %s modifier is not reusable."):format(key));
+                error(("The %s qualifier is not reusable."):format(key));
             elseif bits.band(decor,0x7) ~= 0 and bits.band(bit,0x7) ~= 0 then
                 -- Check public,private,protected,they are 0x7
-                error(("The %s modifier cannot be used in conjunction with other access modifiers."):format(key));
+                error(("The %s qualifier cannot be used in conjunction with other access qualifiers."):format(key));
             end
             self.decor = bits.bor(decor,bit);
         else
-            error(("There is no such modifier. - %s"):format(key));
+            error(("There is no such qualifier. - %s"):format(key));
         end
         return self;
     end
@@ -123,16 +123,16 @@ if Debug then
         end
         local meta = MetaMapName[key];
         if meta then
-            error(("You cannot modify meta-methods. - %s"):format(key));
+            error(("You cannot qualify meta-methods. - %s"):format(key));
         end
         local decor = self.decor;
         if bits.band(decor,Permission.static) ~= 0 then
             if (key == ctor or key == dtor) then
-                error(("%s modifier cannot modify %s functions."):format(static,key));
+                error(("%s qualifier cannot qualify %s functions."):format(static,key));
             end
         end
         if bits.band(decor,0x7) == 0 then
-            -- Without the public modifier, public is added by default.
+            -- Without the public qualifier, public is added by default.
             decor = bits.bor(decor,0x1);
         end
         local vt = type(value);
@@ -151,7 +151,7 @@ if Debug then
         local pms = ClassesPermisssions[cls];
         pms[key] = decor;
         if key == ctor then
-            -- Reassign permissions to "new", which are the same as ctor with the static modifier.
+            -- Reassign permissions to "new", which are the same as ctor with the static qualifier.
             pms[new] = bits.bor(decor,0x8);
         elseif key == dtor then
             pms[delete] = decor;
@@ -165,7 +165,7 @@ if Debug then
 else
     local ClassesMetas = Internal.ClassesMetas;
     local sc = Permission.static;
-    -- In non-debug mode, no attention is paid to any modifiers other than static.
+    -- In non-debug mode, no attention is paid to any qualifiers other than static.
     function Router:Pass(key)
         if BitsMap[key] == sc then
             self.decor = sc;

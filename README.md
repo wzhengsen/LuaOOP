@@ -482,9 +482,9 @@ Config.class = "struct";
 Config.new = "create";
 Config.delete = "dispose";
 Config.ctor = "__init__";
-Config.Modifiers.public = "PUBLIC";
-Config.Modifiers.private = "PRIVATE";
-Config.Modifiers.protected = "PROTECTED";
+Config.Qualifiers.public = "PUBLIC";
+Config.Qualifiers.private = "PRIVATE";
+Config.Qualifiers.protected = "PROTECTED";
 
 require("OOP.Class");
 local Test = struct();

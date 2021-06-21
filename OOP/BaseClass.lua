@@ -25,7 +25,7 @@ local Internal = require("OOP.Variant.Internal");
 local Null = Config.ExternalClass.Null;
 local DeathMarker = Config.DeathMarker;
 local IsNull = Config.IsNull;
-local final = Config.Modifiers.final;
+local final = Config.Qualifiers.final;
 local FinalClasses = Internal.FinalClasses;
 
 local class = setmetatable({},{

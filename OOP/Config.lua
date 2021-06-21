@@ -28,7 +28,7 @@ local Config = {
 
     --****************Rename fields start****************
     -- If you need to rename some of the LuaOOP names to suit specific needs,
-    -- please modify the following mapping.
+    -- please qualify the following mapping.
 
     class = "class",
 
@@ -98,8 +98,8 @@ local Config = {
         __close = Version > 5.3 and "__close__" or nil
     },
 
-    -- Modifiers names.
-    Modifiers = {
+    -- Qualifiers names.
+    Qualifiers = {
         public = "public",
         private = "private",
         protected = "protected",

@@ -204,7 +204,7 @@ local Vertex = class("Vertex","Point3D",Color);
 require("OOP.Class");
 local Test = class();
 
--- Use public to modify PrintMe method and data member.
+-- Use public to qualify PrintMe method and data member.
 Test.public.data = "123";
 function Test.public:PrintMe()
     print(self.data);
@@ -214,12 +214,12 @@ local test = Test.new();
 test:PrintMe();-- "123"
 print(test.data);-- "123"
 ```
->**Note: If there is no modifier,member method and member variable is public access permission in default,so,the above approach is equivalent to the follow approach:**
+>**Note: If there is no qualifier,member method and member variable is public access permission in default,so,the above approach is equivalent to the follow approach:**
 ```lua
 require("OOP.Class");
 local Test = class();
 
--- No modifiers are used,i.e. public access permission.
+-- No qualifiers are used,i.e. public access permission.
 Test.data = "123";
 function Test:PrintMe()
     print(self.data);
@@ -237,7 +237,7 @@ print(test.data);-- "123"
 require("OOP.Class");
 local Test = class();
 
--- Use protected to modify data member.
+-- Use protected to qualify data member.
 Test.protected.data = "123";
 function Test:PrintMe()
     print(self.data);
@@ -264,7 +264,7 @@ print(test.data);
 require("OOP.Class");
 local Test = class();
 
--- Use private to modify data member.
+-- Use private to qualify data member.
 Test.private.data = "123";
 function Test:PrintMe()
     print(self.data);
@@ -450,8 +450,8 @@ test4:delete();
 ```
 >Some special modifying rules:
 * Constructors and destructors cannot be modified with static or const;
-* None of the modifiers can appear more than once at the same time;
-* Cannot modify some special methods and members (properties/events/singleton, etc., see later).
+* None of the qualifiers can appear more than once at the same time;
+* Cannot qualify some special methods and members (properties/events/singleton, etc., see later).
 
 ---
 ## 4 - All reserved words are configurable
@@ -459,7 +459,7 @@ test4:delete();
 
 I don't like the reserved words and function names provided by default (e.g. class, private, new, etc.) or these reserved words and function names conflict with existing naming, what should I do?
 
-Before executing the ```require("OOP.Class");``` statement, please modify the named mapping fields in the [Config.lua](OOP/Config.lua) file, some of the default fields are listed below:
+Before executing the ```require("OOP.Class");``` statement, please qualify the named mapping fields in the [Config.lua](OOP/Config.lua) file, some of the default fields are listed below:
 ```lua
 class = "class"
 new = "new"
@@ -484,9 +484,9 @@ Config.class = "struct";
 Config.new = "create";
 Config.delete = "dispose";
 Config.ctor = "__init__";
-Config.Modifiers.public = "PUBLIC";
-Config.Modifiers.private = "PRIVATE";
-Config.Modifiers.protected = "PROTECTED";
+Config.Qualifiers.public = "PUBLIC";
+Config.Qualifiers.private = "PRIVATE";
+Config.Qualifiers.protected = "PROTECTED";
 
 require("OOP.Class");
 local Test = struct();
