@@ -369,7 +369,7 @@ end
 local ErrorClass = class(Base);
 ErrorClass.member1 = 1;-- 引发错误。
 ErrorClass.member2 = 2;-- 引发错误。
-function ErrorClass.final:FinalFunc()-- 引发错误。
+function ErrorClass:FinalFunc()-- 引发错误。
 end
 ```
 

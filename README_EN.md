@@ -370,7 +370,7 @@ end
 local ErrorClass = class(Base);
 ErrorClass.member1 = 1;-- Raise error.
 ErrorClass.member2 = 2;-- Raise error.
-function ErrorClass.final:FinalFunc()-- Raise error.
+function ErrorClass:FinalFunc()-- Raise error.
 end
 ```
 
