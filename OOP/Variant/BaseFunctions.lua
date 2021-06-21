@@ -162,12 +162,22 @@ end
 ---@param args table
 ---@return string?
 ---
+local reg = debug.getregistry();
 local function CheckClassName(cls,args)
     if type(args[1]) == "string" then
         local name = table.remove(args,1);
         if nil == NamedClasses[name] then
             NamedClasses[name] = cls;
             NamedClasses[cls] = name;
+            local oldMeta = reg[name];
+            if nil == oldMeta then
+                local meta = ClassesMetas[cls]
+                meta.__name = name;
+                reg[name] = meta;
+            else
+                ClassesMetas[cls] = oldMeta;
+                oldMeta.__name = name;
+            end
         else
             return name;
         end
@@ -576,7 +586,7 @@ local function ClassInherite(cls,args,bases,handlers,members,metas)
     end
 end
 
----In non-debug mode, no access modifiers are considered.
+---In non-debug mode, no access qualifiers are considered.
 ---
 ---@param cls table
 ---@param key any
