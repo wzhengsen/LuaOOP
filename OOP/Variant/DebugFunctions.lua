@@ -64,6 +64,7 @@ local Functions = require("OOP.Variant.BaseFunctions");
 local GetSingleton = Functions.GetSingleton;
 local DestroySingleton = Functions.DestroySingleton;
 local ClassInherite = Functions.ClassInherite;
+local PushBase = Functions.PushBase;
 local CreateClassObject = Functions.CreateClassObject;
 local FinalClassesMembers = Functions.FinalClassesMembers;
 local NamedClasses = Functions.NamedClasses;
@@ -611,8 +612,34 @@ function Functions.CheckClassName(cls,args)
     return name;
 end
 
-function Functions.ClassInherite(cls,args,bases,handlers,members,metas)
+function Functions.PushBase(cls,bases,base,handlers,members,metas)
+    PushBase(cls,bases,base,handlers,members,metas);
     local fm = FinalClassesMembers[cls];
+    local pms = ClassesPermisssions[base];
+    if ClassesBanNew[base] then
+        ClassesBanNew[cls] = true;
+    elseif pms then
+        local pm = pms[ctor];
+        if pm and bits.band(pm,Permission.private) ~= 0 then
+            ClassesBanNew[cls] = true;
+        end
+    end
+
+    if ClassesBanDelete[base] then
+        ClassesBanDelete[cls] = true;
+    elseif pms then
+        local pm = pms[dtor];
+        if pm and bits.band(pm,Permission.private) ~= 0 then
+            ClassesBanDelete[cls] = true;
+        end
+    end
+    local bfm = FinalClassesMembers[base];
+    for k,_ in pairs(bfm) do
+        fm[k] = true;
+    end
+end
+
+function Functions.ClassInherite(cls,args,bases,handlers,members,metas)
     for idx, base in ipairs(args) do
         local baseType = type(base);
         assert(
@@ -620,36 +647,11 @@ function Functions.ClassInherite(cls,args,bases,handlers,members,metas)
             or baseType == "string",
             "Unavailable base class type."
         );
-        if "string" == baseType then
-            assert(NamedClasses[base],("Inherits a class that does not exist.[\"%s\"]").format(base));
-        end
         assert(not FinalClasses[base],"You cannot inherit a final class.");
         for i,b in ipairs(args) do
             if b == base and idx ~= i then
                 error("It is not possible to inherit from the same class repeatedly.");
             end
-        end
-        local pms = ClassesPermisssions[base];
-        if ClassesBanNew[base] then
-            ClassesBanNew[cls] = true;
-        elseif pms then
-            local pm = pms[ctor];
-            if pm and bits.band(pm,Permission.private) ~= 0 then
-                ClassesBanNew[cls] = true;
-            end
-        end
-
-        if ClassesBanDelete[base] then
-            ClassesBanDelete[cls] = true;
-        elseif pms then
-            local pm = pms[dtor];
-            if pm and bits.band(pm,Permission.private) ~= 0 then
-                ClassesBanDelete[cls] = true;
-            end
-        end
-        local bfm = FinalClassesMembers[base];
-        for k,_ in pairs(bfm) do
-            fm[k] = true;
         end
     end
     ClassInherite(cls,args,bases,handlers,members,metas);

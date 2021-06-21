@@ -25,6 +25,8 @@ local pairs = pairs;
 local ipairs = ipairs;
 local type = type;
 local select = select;
+local remove = table.remove;
+local insert = table.insert;
 
 local Config = require("OOP.Config");
 local Internal = require("OOP.Variant.Internal");
@@ -57,6 +59,7 @@ local MetaMapName = Config.MetaMapName;
 local _IsNull = class.IsNull;
 
 local Functions = Internal;
+local RequireInheriteClasses = Functions.RequireInheriteClasses;
 local NamedClasses = Functions.NamedClasses;
 local AllClasses = Functions.AllClasses;
 local AllEnumerations = Functions.AllEnumerations;
@@ -165,7 +168,14 @@ end
 local reg = debug.getregistry();
 local function CheckClassName(cls,args)
     if type(args[1]) == "string" then
-        local name = table.remove(args,1);
+        local name = remove(args,1);
+        local ric = RequireInheriteClasses[name];
+        if ric then
+            for c,_ in pairs(ric) do
+                Functions.PushBase(c,ClassesBases[c],cls,ClassesHandlers[c],ClassesMembers[c],ClassesMetas[c]);
+                ric[c] = nil;
+            end
+        end
         if nil == NamedClasses[name] then
             NamedClasses[name] = cls;
             NamedClasses[cls] = name;
@@ -580,9 +590,18 @@ end
 local function ClassInherite(cls,args,bases,handlers,members,metas)
     for _, base in ipairs(args) do
         if "string" == type(base) then
+            local name = base;
             base = NamedClasses[base];
+            if nil == base then
+                -- If there is no class named 'base',record it in RequireInheriteClasses.
+                -- When the class which named 'base' is created,push 'base' into cls bases table.
+                RequireInheriteClasses[name] = RequireInheriteClasses[name] or {};
+                RequireInheriteClasses[name][cls] = true;
+                goto continue;
+            end
         end
-        PushBase(cls,bases,base,handlers,members,metas);
+        Functions.PushBase(cls,bases,base,handlers,members,metas);
+        ::continue::
     end
 end
 

@@ -24,6 +24,7 @@ local Debug = Config.Debug;
 local WeakTable = {__mode = "k"};
 return {
     NamedClasses = {},
+    RequireInheriteClasses = {},
     AllClasses = setmetatable({},WeakTable),
     FinalClasses = setmetatable({},WeakTable),
     AllEnumerations = setmetatable({},WeakTable),
