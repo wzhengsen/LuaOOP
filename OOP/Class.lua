@@ -27,6 +27,7 @@ local error = error;
 local Config = require("OOP.Config");
 local Debug = Config.Debug;
 local ctor = Config.ctor;
+local __cls__ = Config.__cls__;
 
 local Functions = Debug and require("OOP.Variant.DebugFunctions") or require("OOP.Variant.BaseFunctions");
 local ClassesBases = Functions.ClassesBases;
@@ -37,11 +38,11 @@ local CheckClassName = Functions.CheckClassName;
 local ClassInherite = Functions.ClassInherite;
 local CreateClassIs = Functions.CreateClassIs;
 local CreateClassDelete = Functions.CreateClassDelete;
-local FinishUserDataObject = Functions.FinishUserDataObject;
+local RetrofiteUserDataObjectMeta = Functions.RetrofiteUserDataObjectMeta;
 local RegisterHandlersAndMembers = Functions.RegisterHandlersAndMembers;
 local AttachClassFunctions = Functions.AttachClassFunctions;
-local MakeTableObjectMeta = Functions.MakeTableObjectMeta;
 local ClassesBanNew = Functions.ClassesBanNew;
+local ClassesMetas = Functions.ClassesMetas;
 
 local ClassMeta = {
     __index = Functions.ClassGet,
@@ -75,22 +76,21 @@ local function CreateClassNew(cls,clsAll,handlers,members)
             assert(not ClassesBanNew[cls],"The base classes constructor is not accessible.");
         end
         ClassCreateLayer = ClassCreateLayer + 1;
-        local obj,all = CreateClassObject(cls,...);
-        if nil == obj then
+        local ok,obj,all = pcall(CreateClassObject,cls,...);
+        if not ok or nil == obj then
             ClassCreateLayer = ClassCreateLayer - 1;
             return nil;
         end
 
         if ClassCreateLayer == 1 then
             RegisterHandlersAndMembers(obj,all,handlers,members);
-
-            if "table" == type(obj) then
-                setmetatable(obj,MakeTableObjectMeta(cls));
+            local oType = type(obj);
+            if "userdata" == oType then
+                RetrofiteUserDataObjectMeta(obj,cls);
             else
-                FinishUserDataObject(obj,cls);
+                setmetatable(obj,ClassesMetas[cls]);
             end
         end
-
         ObjectInit(obj,cls,clsAll,...);
         return obj;
     end;
@@ -103,11 +103,12 @@ function class.New(...)
     CheckClassName(cls,args);
     ClassInherite(cls,args,bases,handlers,members,metas);
 
-    local _is = CreateClassIs(cls,bases);
-    local _new = CreateClassNew(cls,all,handlers,members);
-    local _delete = CreateClassDelete(cls);
-
-    AttachClassFunctions(cls,_is,_new,_delete);
+    AttachClassFunctions(
+        cls,
+        CreateClassIs(cls,bases),
+        CreateClassNew(cls,all,handlers,members),
+        CreateClassDelete(cls)
+    );
 
     return setmetatable(cls,ClassMeta);
 end

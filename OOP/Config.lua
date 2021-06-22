@@ -163,6 +163,8 @@ local Config = {
     HoleLimit = 15,
 
     --****************Functional fields end****************
+
+    __cls__ = "🧬"
 };
 
 -- Reverse mapping to meta method names.
