@@ -186,6 +186,10 @@ local Point3D = class("Point3D","Point");
 -- ...
 local Color = class();
 -- ...
+
+-- 使用类名继承类时，可以继承还未定义的类。
+-- 比如现在，"Vertex"还未定义，但仍然可以使用其名字继承它。
+local Vertex1 = class("Vertex1","Vertex");
 -- 继承Point3D与Color。
 -- 混合使用类名和类变量来继承。
 local Vertex = class("Vertex","Point3D",Color);

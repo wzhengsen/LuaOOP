@@ -187,6 +187,10 @@ local Point3D = class("Point3D","Point");
 -- ...
 local Color = class();
 -- ...
+
+-- When you inherit a class by its name, you can inherit a class that is not yet defined.
+-- For example, right now, "Vertex" is not yet defined, but you can still inherit it by its name.
+local Vertex1 = class("Vertex1","Vertex");
 -- Inherite from Point3D and Color.
 -- Inherited by mixing class name and class variable.
 local Vertex = class("Vertex","Point3D",Color);
