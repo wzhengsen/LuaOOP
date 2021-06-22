@@ -634,8 +634,10 @@ function Functions.PushBase(cls,bases,base,handlers,members,metas)
         end
     end
     local bfm = FinalClassesMembers[base];
-    for k,_ in pairs(bfm) do
-        fm[k] = true;
+    if bfm then
+        for k,_ in pairs(bfm) do
+            fm[k] = true;
+        end
     end
 end
 
