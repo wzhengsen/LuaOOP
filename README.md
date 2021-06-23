@@ -168,10 +168,10 @@ vertex:PrintRGB();
 
 -- 析构将自动级联调用。
 -- 输出：
--- table: xxxxxxxx Point已析构。
--- table: xxxxxxxx Point3D已析构。
--- table: xxxxxxxx Color已析构。
 -- table: xxxxxxxx Vertex已析构。
+-- table: xxxxxxxx Point3D已析构。
+-- table: xxxxxxxx Point已析构。
+-- table: xxxxxxxx Color已析构。
 vertex:delete();
 ```
 

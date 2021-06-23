@@ -169,10 +169,10 @@ vertex:PrintRGB();
 
 -- The destructor will be called automatically in cascade.
 -- Output:
--- table: xxxxxxxx Point is destructed.
--- table: xxxxxxxx Point3D is destructed.
--- table: xxxxxxxx Color is destructed.
 -- table: xxxxxxxx Vertex is destructed.
+-- table: xxxxxxxx Point3D is destructed.
+-- table: xxxxxxxx Point is destructed.
+-- table: xxxxxxxx Color is destructed.
 vertex:delete();
 ```
 

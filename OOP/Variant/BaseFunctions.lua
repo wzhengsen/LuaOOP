@@ -19,8 +19,10 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 
+local getmetatable = getmetatable;
 local setmetatable = setmetatable;
 local rawset = rawset;
+local rawget = rawget;
 local pairs = pairs;
 local ipairs = ipairs;
 local type = type;
@@ -53,6 +55,7 @@ local set = Config.set;
 local friends = Config.friends;
 local __new__ = Config.__new__;
 local __delete__ = Config.__delete__;
+local Meta = Config.Meta;
 
 local MetaMapName = Config.MetaMapName;
 
@@ -158,43 +161,40 @@ local function CreateClassPropertiesTable(cls,bases,rw)
 end
 
 
----Check the class name.
----If there is a duplicate class name, return that name, otherwise return nil
+local registry = debug.getregistry();
 ---
----@param cls table
+---Check the class and return the meta-table for the class object.
+---
 ---@param args table
----@return string?
+---@return table cls
+---@return table metas
+---@return string? name
 ---
-local reg = debug.getregistry();
-local function CheckClassName(cls,args)
+local function CheckClass(args)
+    local metas = nil;
+    local name = nil;
+    local cls = {};
     if type(args[1]) == "string" then
-        local name = remove(args,1);
-        local ric = RequireInheriteClasses[name];
-        if ric then
-            for c,_ in pairs(ric) do
-                Functions.PushBase(c,ClassesBases[c],cls,ClassesHandlers[c],ClassesMembers[c],ClassesMetas[c]);
-                ric[c] = nil;
-            end
-        end
-        if nil == NamedClasses[name] then
+        name = remove(args,1);
+        if NamedClasses[name] then
+            error(("You cannot use this name \"%s\", which is already used by other class.").format(name));
+        else
             NamedClasses[name] = cls;
             NamedClasses[cls] = name;
-            local oldMeta = reg[name];
-            if nil == oldMeta then
-                local meta = ClassesMetas[cls];
-                meta.__name = name;
-                meta[__cls__] = cls;
-                reg[name] = meta;
+            metas = registry[name];
+            if nil == metas then
+                -- If a meta table by that name does not exist in the registry, it is created.
+                metas = {__name = name,[__cls__] = cls};
+                registry[name] = metas;
             else
-                ClassesMetas[cls] = oldMeta;
-                oldMeta.__name = name;
-                oldMeta[__cls__] = cls;
+                metas[__cls__] = cls;
             end
-        else
-            return name;
         end
+    else
+        metas = {};
     end
-    return nil;
+    Functions.MakeInternalObjectMeta(cls,metas);
+    return cls,metas,name;
 end
 
 local function PushBase(cls,bases,base,handlers,members,metas)
@@ -216,11 +216,9 @@ local function PushBase(cls,bases,base,handlers,members,metas)
     end
     found = ClassesMetas[base];
     if found then
-        for key,meta in pairs(found) do
-            if key ~= "__name"
-            and key ~= __cls__
-            and key ~= "__index"
-            and key ~= "__newindex" then
+        for key,_ in pairs(Meta) do
+            local meta = found[key];
+            if nil ~= meta and nil == metas[key] then
                 metas[key] = meta;
             end
         end
@@ -361,65 +359,101 @@ local HandlersControl = setmetatable({
 ---@param cls table
 ---@return table
 ---
-local function MakeInternalObjectMeta(cls)
-    local meta = {};
-    ClassesMetas[cls] = meta;
-    meta.__index = function (sender,key)
+local function MakeInternalObjectMeta(cls,metas)
+    ClassesMetas[cls] = metas;
+    metas.__index = function (sender,key)
         if key == handlers then
             rawset(HandlersControl,"obj",sender);
             return HandlersControl;
         end
         local ret = nil;
+        local cCls = nil;
         if "userdata" == type(sender) then
             local all = ObjectsAll[sender];
             if not all then
                 all = {};
                 ObjectsAll[sender] = all;
-                RegisterHandlersAndMembers(sender,all,ClassesHandlers[cls],ClassesMembers[cls]);
+            end
+            cCls = ObjectsCls[sender];
+            if not cCls then
+                cCls = metas[__cls__];
+                ObjectsCls[sender] = cCls;
             end
             ret = all[key];
             if nil ~= ret then
                 return ret;
             end
+        else
+            cCls = cls;
         end
 
         -- Check the key of current class first.
-        ret = rawget(cls,key);
+        ret = rawget(cCls,key);
         if nil ~= ret then
             return ret;
         end
         -- Check the properties of current class.
-        local property = ClassesReadable[cls][key];
+        local property = ClassesReadable[cCls][key];
         if property then
             return property(sender);
         end
         -- Check base class.
-        for _, base in ipairs(ClassesBases[cls]) do
+        for _, base in ipairs(ClassesBases[cCls]) do
             ret = CascadeGet(base,key,{});
             if nil ~= ret then
                 return ret;
             end
         end
     end;
-    meta.__newindex = function (sender,key,value)
-        local property = ClassesWritable[cls][key];
+    metas.__newindex = function (sender,key,value)
+        local isUserData = "userdata" == type(sender);
+        local cCls = nil;
+        if isUserData then
+            cCls = ObjectsCls[sender];
+            if not cCls then
+                cCls = metas[__cls__];
+                ObjectsCls[sender] = cCls;
+            end
+        else
+            cCls = cls;
+        end
+        local property = ClassesWritable[cCls][key];
         if property then
             property(sender,value);
             return;
         end
-        if "userdata" == type(sender) then
+        if isUserData then
             local all = ObjectsAll[sender];
             if not all then
                 all = {};
                 ObjectsAll[sender] = all;
-                RegisterHandlersAndMembers(sender,all,ClassesHandlers[cls],ClassesMembers[cls]);
             end
             all[key] = value;
             return;
         end
         rawset(sender,key,value);
     end;
-    return meta;
+    return metas;
+end
+
+local function RetrofiteMetaMethod(meta,methodName,method)
+    local oldMethod = rawget(meta,methodName);
+    rawset(meta,methodName,function (sender,...)
+        local all = ObjectsAll[sender];
+        if not all then
+            if methodName ~= "__close" and methodName ~= "__gc" then
+                if nil ~= oldMethod then
+                    return oldMethod(sender,...);
+                elseif methodName == "__eq" then
+                    return false;
+                else
+                    error(("This meta method is not implemented.-%s"):format(methodName));
+                end
+            end
+        elseif method then
+            return method(sender,...);
+        end
+    end);
 end
 
 --- Generate a meta-table for an object (typically a userdata).
@@ -442,11 +476,13 @@ local function RetrofiteUserDataObjectMetaExternal(obj,meta,cls)
         __newindex = function (sender,key,value)
             -- Copy the operation on clsMeta to meta.
             rawset(sender,key,value);
-            rawset(meta,key,value);
+            RetrofiteMetaMethod(meta,key,value)
         end
     });
     for k,v in pairs(clsMeta) do
-        rawset(meta,k,v);
+        if Meta[k] then
+            RetrofiteMetaMethod(meta,k,v)
+        end
     end
 
     local index = rawget(meta,"__index");
@@ -521,23 +557,18 @@ local function RetrofiteUserDataObjectMetaExternal(obj,meta,cls)
     ClassesMetas[meta] = meta;
 end
 
-local d_setmetatable = debug.setmetatable;
-local function RetrofiteUserDataObjectMeta(obj,toCls)
+local function RetrofiteUserDataObjectMeta(obj,cls)
+    -- Instances of the userdata type require the last cls information.
+    -- Because multiple different lua classes can inherit from the same c++ class.
+    ObjectsCls[obj] = cls;
+
     local meta = getmetatable(obj);
-    local cls = rawget(meta,__cls__);
-    if cls then
-        if cls ~= toCls then
-            d_setmetatable(obj,ClassesMetas[toCls]);
-        end
-    else
-        -- Instances of the userdata type require the last cls information.
-        -- Because multiple different lua classes can inherit from the same c++ class.
-        ObjectsCls[obj] = cls;
+    -- If the __cls__ field exists in the meta table,
+    -- then this userdata can be considered as internal userdata and does not need to retrofite the meta table.
+    if nil == rawget(meta,__cls__) then
         RetrofiteUserDataObjectMetaExternal(obj,meta,cls);
     end
 end
-
-
 
 --[[
     Cascade calls to dtor.
@@ -559,16 +590,16 @@ local function CascadeDelete(self,cls,called)
     if called[cls] then
         return;
     end
+    local del = rawget(cls,dtor);
+    if del then
+        del(self);
+    end
+    called[cls] = true;
     local bases = ClassesBases[cls];
     if bases then
         for _,base in ipairs(bases) do
             CascadeDelete(self,base,called);
         end
-        local del = rawget(cls,dtor);
-        if del then
-            del(self);
-        end
-        called[cls] = true;
     end
 end
 
@@ -592,37 +623,28 @@ end
 ---Create a class table with base info.
 ---
 ---@param cls table
----@param metas table
----@return table cls
 ---@return table all
 ---@return table bases
 ---@return table handlers
 ---@return table members
----@return table metas
 ---@return table r
 ---@return table w
 ---
-local function CreateClassTables(cls,metas)
-    cls = cls or {};
+local function CreateClassTables(cls)
     local bases = {};
     local handlers = {};
     local members = {};
-    metas = metas or MakeInternalObjectMeta(cls);
 
     AllClasses[cls] = true;
     ClassesBases[cls] = bases;
-
     ClassesHandlers[cls] = handlers;
 
     local r,w = CreateClassPropertiesTable(cls,bases);
     ClassesReadable[cls] = r;
     ClassesWritable[cls] = w;
-
     ClassesMembers[cls] = members;
-    ClassesMetas[cls] = metas;
 
-
-    return cls,cls,bases,handlers,members,metas,r,w;
+    return cls,bases,handlers,members,r,w;
 end
 
 local function AttachClassFunctions(cls,_is,_new,_delete)
@@ -631,7 +653,14 @@ local function AttachClassFunctions(cls,_is,_new,_delete)
     cls[delete] = _delete;
 end
 
-local function ClassInherite(cls,args,bases,handlers,members,metas)
+local function ClassInherite(cls,args,bases,handlers,members,metas,name)
+    local ric = RequireInheriteClasses[name];
+    if ric then
+        for c,_ in pairs(ric) do
+            Functions.PushBase(c,ClassesBases[c],cls,ClassesHandlers[c],ClassesMembers[c],ClassesMetas[c]);
+            ric[c] = nil;
+        end
+    end
     for _, base in ipairs(args) do
         if "string" == type(base) then
             local name = base;
@@ -723,14 +752,16 @@ Functions.GetSingleton = GetSingleton;
 Functions.DestroySingleton = DestroySingleton;
 Functions.IsNull = _IsNull;
 Functions.Copy = Copy;
-Functions.CheckClassName = CheckClassName;
+Functions.CheckClass = CheckClass;
 Functions.PushBase = PushBase;
 Functions.CreateClassIs = CreateClassIs;
 Functions.CreateClassDelete = CreateClassDelete;
 Functions.CreateClassObject = CreateClassObject;
 Functions.CallDel = CallDel;
+Functions.MakeInternalObjectMeta = MakeInternalObjectMeta;
 Functions.RegisterHandlersAndMembers = RegisterHandlersAndMembers;
 Functions.RetrofiteUserDataObjectMeta = RetrofiteUserDataObjectMeta;
+Functions.RetrofiteMetaMethod = RetrofiteMetaMethod;
 Functions.CreateClassTables = CreateClassTables;
 Functions.AttachClassFunctions = AttachClassFunctions;
 Functions.ClassInherite = ClassInherite;

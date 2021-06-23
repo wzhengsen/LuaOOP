@@ -23,6 +23,7 @@ local setmetatable = setmetatable;
 local type = type;
 local pcall = pcall;
 local error = error;
+local remove = table.remove;
 
 local Config = require("OOP.Config");
 local Debug = Config.Debug;
@@ -34,7 +35,7 @@ local ClassesBases = Functions.ClassesBases;
 local CreateClassObject = Functions.CreateClassObject;
 local class = Functions.class;
 local CreateClassTables = Functions.CreateClassTables;
-local CheckClassName = Functions.CheckClassName;
+local CheckClass = Functions.CheckClass;
 local ClassInherite = Functions.ClassInherite;
 local CreateClassIs = Functions.CreateClassIs;
 local CreateClassDelete = Functions.CreateClassDelete;
@@ -43,6 +44,7 @@ local RegisterHandlersAndMembers = Functions.RegisterHandlersAndMembers;
 local AttachClassFunctions = Functions.AttachClassFunctions;
 local ClassesBanNew = Functions.ClassesBanNew;
 local ClassesMetas = Functions.ClassesMetas;
+local NamedClasses = Functions.NamedClasses;
 
 local ClassMeta = {
     __index = Functions.ClassGet,
@@ -96,12 +98,16 @@ local function CreateClassNew(cls,clsAll,handlers,members)
     end;
 end
 
+---Create a class, passing in parameters to inherit from other classes.
+---
+---@vararg string|table
+---@return table class
 function class.New(...)
-    local cls,all,bases,handlers,members,metas = CreateClassTables();
-
     local args = {...};
-    CheckClassName(cls,args);
-    ClassInherite(cls,args,bases,handlers,members,metas);
+    local cls,metas,name = CheckClass(args);
+    local all,bases,handlers,members = CreateClassTables(cls);
+
+    ClassInherite(cls,args,bases,handlers,members,metas,name);
 
     AttachClassFunctions(
         cls,
