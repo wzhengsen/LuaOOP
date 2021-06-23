@@ -112,7 +112,7 @@ if Debug then
         end
         return self;
     end
-    function Router:End(key,value)
+    function Router:Done(key,value)
         local cls = self.cls;
         if FinalClassesMembers[cls][key] then
             error(("You cannot define final members again.-%s"):format(key));
@@ -172,7 +172,7 @@ else
         end
         return self;
     end
-    function Router:End(key,value)
+    function Router:Done(key,value)
         local cls = self.cls;
         local vt = type(value);
         local isFunction = "function" == vt;
@@ -197,7 +197,7 @@ setmetatable(Router,{
         return self:Pass(key);
     end,
     __newindex = function (self,key,val)
-        self:End(key,val);
+        self:Done(key,val);
     end
 });
 
