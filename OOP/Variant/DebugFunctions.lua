@@ -477,7 +477,6 @@ local function ClassGet(cls,key)
         if property[2] then
             return property[1]();
         end
-        return property[1](cls);
     else
         if ClassesWritable[cls][key] then
             if PropertyBehavior ~= 2 then
@@ -566,8 +565,6 @@ local function ClassSet(cls,key,value)
         if property then
             if property[2] then
                 property[1](value);
-            else
-                property[1](cls,value);
             end
             return;
         else

@@ -713,7 +713,6 @@ local function ClassGet(cls,key)
         if property[2] then
             return property[1]()
         end
-        return property[1](cls);
     end
     for _, base in ipairs(ClassesBases[cls]) do
         local ret = CascadeGet(base,key,{});
@@ -746,8 +745,6 @@ local function ClassSet(cls,key,value)
         if property then
             if property[2] then
                 property[1](value);
-            else
-                property[1](cls,value);
             end
             return;
         end
