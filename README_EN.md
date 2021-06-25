@@ -21,7 +21,13 @@ LuaOOP is an object-oriented pattern that borrows some of the class design from 
 * Extend or inherit from external classes (classes that generate userdata);
 * Debug and Release run modes;
 * Simple event dispatch mode;
+* Enumeration;
 * Lua5.1-Lua5.4 compat.
+
+> planned or to be implemented
+
+* pure virtual functions.
+* New semantics when const qualifies methods.
 
 ---
 ## 1 - Basic class construction and destruction
