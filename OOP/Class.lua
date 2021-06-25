@@ -23,12 +23,12 @@ local setmetatable = setmetatable;
 local type = type;
 local pcall = pcall;
 local error = error;
-local remove = table.remove;
 
 local Config = require("OOP.Config");
 local Debug = Config.Debug;
 local ctor = Config.ctor;
-local __cls__ = Config.__cls__;
+
+local i18n = require("OOP.i18n");
 
 local Functions = Debug and require("OOP.Variant.DebugFunctions") or require("OOP.Variant.BaseFunctions");
 local ClassesBases = Functions.ClassesBases;
@@ -75,7 +75,7 @@ end
 local function CreateClassNew(cls,clsAll,handlers,members)
     return function(...)
         if Debug then
-            assert(not ClassesBanNew[cls],"The base classes constructor is not accessible.");
+            assert(not ClassesBanNew[cls],i18n"The base classes constructor is not accessible.");
         end
         ClassCreateLayer = ClassCreateLayer + 1;
         local ok,obj,all = pcall(CreateClassObject,cls,...);

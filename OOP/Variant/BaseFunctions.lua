@@ -30,6 +30,7 @@ local select = select;
 local remove = table.remove;
 
 local Config = require("OOP.Config");
+local i18n = require("OOP.i18n");
 local Internal = require("OOP.Variant.Internal");
 local class = require("OOP.BaseClass");
 
@@ -50,12 +51,13 @@ local __cls__ = Config.__cls__;
 local __singleton__ = Config.__singleton__;
 local Instance = Config.Instance;
 local handlers = Config.handlers;
-local get = Config.get;
-local set = Config.set;
 local friends = Config.friends;
 local __new__ = Config.__new__;
 local __delete__ = Config.__delete__;
 local Meta = Config.Meta;
+local static = Config.Qualifiers.static;
+local get = Config.get;
+local set = Config.set;
 
 local MetaMapName = Config.MetaMapName;
 
@@ -177,7 +179,7 @@ local function CheckClass(args)
     if type(args[1]) == "string" then
         name = remove(args,1);
         if NamedClasses[name] then
-            error(("You cannot use this name \"%s\", which is already used by other class.").format(name));
+            error((i18n"You cannot use this name \"%s\", which is already used by other class.").format(name));
         else
             NamedClasses[name] = cls;
             NamedClasses[cls] = name;
@@ -395,7 +397,10 @@ local function MakeInternalObjectMeta(cls,metas)
         -- Check the properties of current class.
         local property = ClassesReadable[cCls][key];
         if property then
-            return property(sender);
+            if property[2] then
+                return property[1]();
+            end
+            return property[1](sender);
         end
         -- Check base class.
         for _, base in ipairs(ClassesBases[cCls]) do
@@ -419,7 +424,11 @@ local function MakeInternalObjectMeta(cls,metas)
         end
         local property = ClassesWritable[cCls][key];
         if property then
-            property(sender,value);
+            if property[2] then
+                property[1](value);
+            else
+                property[1](sender,value);
+            end
             return;
         end
         if isUserData then
@@ -447,7 +456,7 @@ local function RetrofiteMetaMethod(meta,methodName,method)
                 elseif methodName == "__eq" then
                     return false;
                 else
-                    error(("This meta method is not implemented.-%s"):format(methodName));
+                    error((i18n"This meta method is not implemented. - %s"):format(methodName));
                 end
             end
         elseif method then
@@ -513,7 +522,10 @@ local function RetrofiteUserDataObjectMetaExternal(obj,meta,cls)
             -- Check cls properties.
             local property = ClassesReadable[cls][key];
             if property then
-                return property(sender);
+                if property[2] then
+                    return property[1]();
+                end
+                return property[1](sender);
             end
             -- Check cls bases.
             for _, base in ipairs(ClassesBases[cls]) do
@@ -535,7 +547,11 @@ local function RetrofiteUserDataObjectMetaExternal(obj,meta,cls)
         if cls then
             local property = ClassesWritable[cls][key];
             if property then
-                property(sender,value);
+                if property[2] then
+                    property[1](value);
+                else
+                    property[1](sender,value);
+                end
                 return;
             end
             local all = ObjectsAll[sender];
@@ -549,7 +565,7 @@ local function RetrofiteUserDataObjectMetaExternal(obj,meta,cls)
             elseif newIndex then
                 newIndex[key] = value;
             else
-                error(("attempt to index a %s value."):format(meta.__name or ""));
+                error((i18n"attempt to index a %s value."):format(meta.__name or ""));
             end
         end
     end);
@@ -690,15 +706,14 @@ local function ClassGet(cls,key)
     end
     if key == handlers then
         return ClassesHandlers[cls];
-    elseif key == get then
-        return ClassesReadable[cls];
-    elseif key == set then
-        return ClassesWritable[cls];
     end
     -- Check the properties first.
     local property = ClassesReadable[cls][key];
     if property then
-        return property(cls);
+        if property[2] then
+            return property[1]()
+        end
+        return property[1](cls);
     end
     for _, base in ipairs(ClassesBases[cls]) do
         local ret = CascadeGet(base,key,{});
@@ -711,10 +726,10 @@ end
 local function ClassSet(cls,key,value)
     if key == __singleton__ then
         -- Register "Instance" automatically.
-        ClassesReadable[cls][Instance] = function ()
+        cls[static][get][Instance] = function ()
             return GetSingleton(cls,value);
         end;
-        ClassesWritable[cls][Instance] = function (_,val)
+        cls[static][set][Instance] = function (val)
             DestroySingleton(cls,val)
         end;
         return;
@@ -729,7 +744,11 @@ local function ClassSet(cls,key,value)
     else
         local property = ClassesWritable[cls][key];
         if property then
-            property(cls,value);
+            if property[2] then
+                property[1](value);
+            else
+                property[1](cls,value);
+            end
             return;
         end
         local exist = rawget(cls,key);

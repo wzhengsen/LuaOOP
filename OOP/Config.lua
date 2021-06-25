@@ -162,6 +162,10 @@ local Config = {
     -- the list of objects is rearranged to optimise speed.
     HoleLimit = 15,
 
+    -- The language configuration, with a nil value, means that English is used by default.
+    -- Currently only English and Chinese are available, use "zh" for Chinese.
+    Language = nil,
+
     --****************Functional fields end****************
 
     __cls__ = "🧬"
