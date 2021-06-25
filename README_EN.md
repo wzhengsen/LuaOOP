@@ -455,7 +455,7 @@ test4:delete();
 >Some special modifying rules:
 * Constructors and destructors cannot be modified with static or const;
 * None of the qualifiers can appear more than once at the same time;
-* Cannot qualify some special methods and members (properties/events/singleton, etc., see later).
+* Cannot qualify some special methods and members (events/singleton, etc., see later).
 
 ---
 ## 4 - All reserved words are configurable
@@ -527,7 +527,7 @@ function Point:ctor(x,y)
         self.y = y;
     end
 end
-function Point.private:GetXY()
+function Point:GetXY()
     return {x = self.x,y = self.y};
 end
 function Point:SetX(x)
@@ -537,8 +537,8 @@ end
 -- where get means read-only, set means write-only.
 -- Associate the XY property with the Point.GetXY method.
 Point.get.XY = Point.GetXY;
--- Associate the X property with the Point.SetX method.
-Point.set.X = Point.SetX;
+-- Associate the X property with the Point.SetX method,you can also use the access qualifier.
+Point.protected.set.X = Point.SetX;
 -- It can also be defined directly as a member function.
 function Point.set:Y(y)
     self.y = y;
@@ -547,12 +547,26 @@ end
 
 local Point3D = class(Point);
 Point3D.private.z = 0;
-
+Point3D.private._Count = 0;
 function Point3D:ctor(x,y,z)
     Point.ctor(self,x,y);
     if z then
         self.z = z;
     end
+    Point3D.Count = Point3D.Count + 1;
+end
+
+-- Static properties, accessible only using classes,e.g. Point3D.Count
+function Point3D.static.get.Count()
+    return Point3D._Count;
+end
+function Point3D.static.set.Count(val)
+    Point3D._Count = val;
+end
+
+function Point3D:TrySetX(x)
+    -- Properties qualified by protected can be accessed here.
+    self.X = x;
 end
 
 local p = Point.new(3,5);
@@ -561,16 +575,16 @@ local xy = p.XY;
 print("X = " .. xy.x);-- X = 3
 print("Y = " .. xy.y);-- Y = 5
 
-p.X = 999;
+p:SetX(999);
+--p.X = 999;--X is now a private permission and is not accessible here.
 p.Y = 888;
 -- Using GetXY is equivalent to using the XY property.
 xy = p:GetXY();
 print("X = " .. xy.x);-- X = 999
 print("Y = " .. xy.y);-- Y = 888
 
-
 local p3d = Point3D.new(0,-1,0.5);
-p3d.X = 100;
+p3d:TrySetX(100);
 p3d.Y = 99;
 -- Properties can be inherited, and can access the properties of the base class.
 xy = p3d.XY;
@@ -581,6 +595,9 @@ print("Y = " .. xy.y);-- Y = 99
 -- Accordingly, write-only attributes cannot be read.
 -- If you need to change this behavior, please change the Config.PropertyBehavior value.
 p3d.XY = {x = 200,y = 300};
+
+-- Raise error, static properties cannot be accessed using objects.
+print(p3d.Count);
 ```
 
 ---

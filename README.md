@@ -453,7 +453,7 @@ test4:delete();
 >一些特殊的修饰规则：
 * 构造函数和析构函数不能使用static或const修饰；
 * 各个修饰符都不能同时出现一次以上；
-* 不能修饰一些特殊的方法和成员（属性/事件/单例等，见后文）。
+* 不能修饰一些特殊的方法和成员（事件/单例等，见后文）。
 
 ---
 ## 4 - 全部保留字可配置
@@ -525,7 +525,7 @@ function Point:ctor(x,y)
         self.y = y;
     end
 end
-function Point.private:GetXY()
+function Point:GetXY()
     return {x = self.x,y = self.y};
 end
 function Point:SetX(x)
@@ -535,8 +535,8 @@ end
 -- 其中get表示只读，set表示只写。
 -- 将XY属性和Point.GetXY方法关联。
 Point.get.XY = Point.GetXY;
--- 将X属性和Point.SetX方法关联。
-Point.set.X = Point.SetX;
+-- 将X属性和Point.SetX方法关联，也可以使用访问权修饰符。
+Point.protected.set.X = Point.SetX;
 -- 也可以直接定义为成员函数。
 function Point.set:Y(y)
     self.y = y;
@@ -545,12 +545,26 @@ end
 
 local Point3D = class(Point);
 Point3D.private.z = 0;
-
+Point3D.private._Count = 0;
 function Point3D:ctor(x,y,z)
     Point.ctor(self,x,y);
     if z then
         self.z = z;
     end
+    Point3D.Count = Point3D.Count + 1;
+end
+
+-- 静态属性，只能使用类访问，如Point3D.Count
+function Point3D.static.get.Count()
+    return Point3D._Count;
+end
+function Point3D.static.set.Count(val)
+    Point3D._Count = val;
+end
+
+function Point3D:TrySetX(x)
+    -- 可以在此访问被protected修饰的属性。
+    self.X = x;
 end
 
 local p = Point.new(3,5);
@@ -559,16 +573,16 @@ local xy = p.XY;
 print("X = " .. xy.x);-- X = 3
 print("Y = " .. xy.y);-- Y = 5
 
-p.X = 999;
+p:SetX(999);
+--p.X = 999;--X现在为private权限，此处不可访问。
 p.Y = 888;
 -- 使用GetXY和使用XY属性是等价的。
 xy = p:GetXY();
 print("X = " .. xy.x);-- X = 999
 print("Y = " .. xy.y);-- Y = 888
 
-
 local p3d = Point3D.new(0,-1,0.5);
-p3d.X = 100;
+p3d:TrySetX(100);
 p3d.Y = 99;
 -- 属性可以被继承，可以访问基类的属性。
 xy = p3d.XY;
@@ -579,6 +593,9 @@ print("Y = " .. xy.y);-- Y = 99
 -- 相应的，只写属性也不能被读取。
 -- 如果需要改变此行为，请修改Config.PropertyBehavior值。
 p3d.XY = {x = 200,y = 300};
+
+-- 引发错误，静态属性不能使用对象访问。
+print(p3d.Count);
 ```
 
 ---
