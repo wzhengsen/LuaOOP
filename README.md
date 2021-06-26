@@ -568,9 +568,10 @@ function Point3D.static.set.Count(val)
     Point3D._Count = val;
 end
 
-function Point3D:TrySetX(x)
+function Point3D.set:X(x)
     -- 可以在此访问被protected修饰的属性。
-    self.X = x;
+    Point.set.X(self,x);
+    print("Point3D重写X属性。");
 end
 
 local p = Point.new(3,5);
@@ -588,7 +589,8 @@ print("X = " .. xy.x);-- X = 999
 print("Y = " .. xy.y);-- Y = 888
 
 local p3d = Point3D.new(0,-1,0.5);
-p3d:TrySetX(100);
+-- X属性已被重写。
+p3d.X = 100;-- "Point3D重写X属性。"
 p3d.Y = 99;
 -- 属性可以被继承，可以访问基类的属性。
 xy = p3d.XY;

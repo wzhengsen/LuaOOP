@@ -570,9 +570,10 @@ function Point3D.static.set.Count(val)
     Point3D._Count = val;
 end
 
-function Point3D:TrySetX(x)
+function Point3D.set:X(x)
     -- Properties qualified by protected can be accessed here.
-    self.X = x;
+    Point.set.X(self,x);
+    print("Point3D override X property.");
 end
 
 local p = Point.new(3,5);
@@ -590,7 +591,8 @@ print("X = " .. xy.x);-- X = 999
 print("Y = " .. xy.y);-- Y = 888
 
 local p3d = Point3D.new(0,-1,0.5);
-p3d:TrySetX(100);
+-- The X property has been overrided.
+p3d.X = 100;-- "Point3D override X property."
 p3d.Y = 99;
 -- Properties can be inherited, and can access the properties of the base class.
 xy = p3d.XY;
