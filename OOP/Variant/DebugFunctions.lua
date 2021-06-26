@@ -41,6 +41,7 @@ local R = require("OOP.Router");
 local Router = R.Router;
 local BitsMap = R.BitsMap;
 local Permission = R.Permission;
+local Begin = R.Begin;
 
 local __cls__ = Config.__cls__;
 local new = Config.new;
@@ -183,6 +184,7 @@ local function CheckPermission(self,key,byObj,set)
     return true;
 end
 
+Functions.CheckPermission = CheckPermission;
 
 ---Cascade to get the value of the corresponding key of a class and its base class
 ---(ignoring metamethods).
@@ -463,7 +465,7 @@ end
 
 local function ClassGet(cls,key)
     if BitsMap[key] then
-        return Router:Begin(cls,key);
+        return Begin(Router,cls,key);
     end
     if key == handlers then
         return ClassesHandlers[cls];
@@ -565,8 +567,8 @@ local function ClassSet(cls,key,value)
         if property then
             if property[2] then
                 property[1](value);
+                return;
             end
-            return;
         else
             if ClassesWritable[cls][key] then
                 if PropertyBehavior ~= 2 then

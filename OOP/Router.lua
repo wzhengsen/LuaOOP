@@ -84,10 +84,14 @@ local Permission = {
 }
 local Router = {};
 
-function Router:Begin(cls,key)
-    rawset(self,"decor",0);
-    rawset(self,"cls",cls);
-    return self:Pass(key);
+local Pass = nil;
+local Done = nil;
+local decor = 0;
+local cls = 0;
+local function Begin(self,outCls,key)
+    decor = 0;
+    cls = outCls;
+    return Pass(self,key);
 end
 
 if Debug then
@@ -109,10 +113,9 @@ if Debug then
     -- 3 - static cannot qualify constructors and destructors;
     -- 4 - Can't use qualifiers that don't exist;
     -- 5 - Reserved words cannot be modified (__singleton__/friends/handlers).
-    function Router:Pass(key)
+    Pass = function(self,key)
         local bit = BitsMap[key];
         if bit then
-            local decor = self.decor;
             if band(decor,bit) ~= 0 then
                 error((i18n"The %s qualifier is not reusable."):format(key));
             elseif band(decor,0x7) ~= 0 and band(bit,0x7) ~= 0 then
@@ -122,14 +125,25 @@ if Debug then
                 -- Check set,get,const,they are 0xd0
                 error((i18n"%s,%s,%s cannot be used at the same time."):format(get,set,const));
             end
-            self.decor = bor(decor,bit);
+            decor = bor(decor,bit);
         else
+            local get_set = band(decor,0xc0);
+            if get_set ~= 0 then
+                if bor(decor,0xc0) == 0xc0 then
+                    Internal.CheckPermission(cls,key,false);
+                    local property = (get_set == Permission.get and ClassesReadable or ClassesWritable)[cls][key];
+                    if property then
+                        return property[1];
+                    else
+                        error((i18n"There is no such property. - %s"):format(key));
+                    end
+                end
+            end
             error((i18n"There is no such qualifier. - %s"):format(key));
         end
         return self;
     end
-    function Router:Done(key,value)
-        local cls = self.cls;
+    Done = function(_,key,value)
         if FinalClassesMembers[cls][key] then
             error((i18n"You cannot define final members again. - %s"):format(key));
         end
@@ -141,7 +155,6 @@ if Debug then
         if meta then
             error((i18n"You cannot qualify meta-methods. - %s"):format(key));
         end
-        local decor = self.decor;
         if band(decor,Permission.static) ~= 0 then
             if (key == ctor or key == dtor) then
                 error((i18n"%s qualifier cannot qualify %s method."):format(static,key));
@@ -192,24 +205,28 @@ if Debug then
         if band(decor,Permission.final) ~= 0 then
             FinalClassesMembers[cls][key] = true;
         end
-        self.decor = 0;
-        self.cls = nil;
+        decor = 0;
+        cls = nil;
     end
 else
     local ClassesMetas = Internal.ClassesMetas;
     local sc = Permission.static;
     local gt = Permission.get;
     -- In non-debug mode, no attention is paid to any qualifiers other than static.
-    function Router:Pass(key)
+    Pass = function(self,key)
         local bit = BitsMap[key];
         if bit then
-            self.decor = bor(self.decor,bit);
+            decor = bor(decor,bit);
+        else
+            local get_set = band(decor,0xc0);
+            if get_set ~= 0 then
+                local property = (get_set == gt and ClassesReadable or ClassesWritable)[cls][key];
+                return property and property[1] or nil;
+            end
         end
         return self;
     end
-    function Router:Done(key,value)
-        local cls = self.cls;
-        local decor = self.decor;
+    Done = function(_,key,value)
         local vt = type(value);
         local isFunction = "function" == vt;
         local isTable = "table" == vt;
@@ -224,8 +241,8 @@ else
         else
             rawset(cls,key,value);
         end
-        self.decor = 0;
-        self.cls = nil;
+        decor = 0;
+        cls = nil;
 
         local meta = MetaMapName[key];
         if meta then
@@ -237,15 +254,16 @@ end
 
 setmetatable(Router,{
     __index = function (self,key)
-        return self:Pass(key);
+        return Pass(self,key);
     end,
     __newindex = function (self,key,val)
-        self:Done(key,val);
+        Done(self,key,val);
     end
 });
 
 return {
     Router = Router,
     BitsMap = BitsMap,
-    Permission = Permission
+    Permission = Permission,
+    Begin = Begin
 };

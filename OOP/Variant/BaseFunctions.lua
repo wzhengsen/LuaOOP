@@ -38,6 +38,7 @@ local E_Handlers = require("OOP.Event").handlers;
 local R = require("OOP.Router");
 local Router = R.Router;
 local BitsMap = R.BitsMap;
+local Begin = R.Begin;
 
 local delete = Config.delete;
 local DeathMarker = Config.DeathMarker;
@@ -702,7 +703,7 @@ end
 ---
 local function ClassGet(cls,key)
     if BitsMap[key] then
-        return Router:Begin(cls,key);
+        return Begin(Router,cls,key);
     end
     if key == handlers then
         return ClassesHandlers[cls];
@@ -745,8 +746,8 @@ local function ClassSet(cls,key,value)
         if property then
             if property[2] then
                 property[1](value);
+                return;
             end
-            return;
         end
         local exist = rawget(cls,key);
         local vt = type(value);

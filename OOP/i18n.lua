@@ -132,7 +132,11 @@ local LanguageMap = {
     },
     ["Illegal operand."] = {
         zh = "非法操作数。"
+    },
+    ["There is no such property. - %s"] = {
+        zh = "没有这个属性。 - %s"
     }
+
 };
 
 return function (words)
