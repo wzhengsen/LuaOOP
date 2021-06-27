@@ -49,6 +49,7 @@ local protected = Config.Qualifiers.protected;
 local static = Config.Qualifiers.static;
 local const = Config.Qualifiers.const;
 local final = Config.Qualifiers.final;
+local virtual = Config.Qualifiers.virtual;
 local get = Config.get;
 local set = Config.set;
 
@@ -60,17 +61,19 @@ local BitsMap = {
     [const] = 2 ^ 4,
     [final] = 2 ^ 5,
     [get] = 2 ^ 6,
-    [set] = 2 ^ 7
+    [set] = 2 ^ 7,
+    [virtual] = 2 ^ 8
 };
 if Version > 5.2 then
-    BitsMap.public = math.tointeger(BitsMap.public);
-    BitsMap.private = math.tointeger(BitsMap.private);
-    BitsMap.protected = math.tointeger(BitsMap.protected);
-    BitsMap.static = math.tointeger(BitsMap.static);
-    BitsMap.const = math.tointeger(BitsMap.const);
-    BitsMap.final = math.tointeger(BitsMap.final);
-    BitsMap.get = math.tointeger(BitsMap.get);
-    BitsMap.set = math.tointeger(BitsMap.set);
+    BitsMap[public] = math.tointeger(BitsMap[public]);
+    BitsMap[private] = math.tointeger(BitsMap[private]);
+    BitsMap[protected] = math.tointeger(BitsMap[protected]);
+    BitsMap[static] = math.tointeger(BitsMap[static]);
+    BitsMap[const] = math.tointeger(BitsMap[const]);
+    BitsMap[final] = math.tointeger(BitsMap[final]);
+    BitsMap[get] = math.tointeger(BitsMap[get]);
+    BitsMap[set] = math.tointeger(BitsMap[set]);
+    BitsMap[virtual] = math.tointeger(BitsMap[virtual]);
 end
 local Permission = {
     public = BitsMap[public],
@@ -102,6 +105,7 @@ if Debug then
     local ClassesAll = Internal.ClassesAll;
     local FinalClassesMembers = Internal.FinalClassesMembers;
     local ClassesPermisssions = Internal.ClassesPermisssions;
+    local VirtualClassesMembers = Internal.VirtualClassesMembers;
 
     local RouterReservedWord = Internal.RouterReservedWord;
     -- It is only under debug that the values need to be routed to the corresponding fields of the types.
@@ -124,6 +128,11 @@ if Debug then
             elseif band(decor,0xd0) ~= 0 and band(bit,0xd0) ~= 0 then
                 -- Check set,get,const,they are 0xd0
                 error((i18n"%s,%s,%s cannot be used at the same time."):format(get,set,const));
+            else
+                local checkVirtual = band(bor(bit,decor),Permission.virtual * 2 - 1);
+                if checkVirtual ~= 0 and checkVirtual ~= Permission.virtual then
+                    error(i18n"It is not necessary to use pure virtual functions with other qualifiers.");
+                end
             end
             decor = bor(decor,bit);
         else
@@ -155,17 +164,34 @@ if Debug then
         if meta then
             error((i18n"You cannot qualify meta-methods. - %s"):format(key));
         end
-        if band(decor,Permission.static) ~= 0 then
-            if (key == ctor or key == dtor) then
+        local vcm = VirtualClassesMembers[cls];
+        if decor == Permission.virtual then
+            if value ~= 0 then
+                error((i18n"The pure virtual function %s must be assigned a value of 0."):format(key));
+            end
+            vcm[key] = true;
+            decor = 0;
+            cls = nil;
+            return;
+        else
+            if band(decor,Permission.static) ~= 0 and
+            (key == ctor or key == dtor) then
                 error((i18n"%s qualifier cannot qualify %s method."):format(static,key));
             end
-        end
-        if band(decor,0x7) == 0 then
-            -- Without the public qualifier, public is added by default.
-            decor = bor(decor,0x1);
+            if band(decor,0x7) == 0 then
+                -- Without the public qualifier, public is added by default.
+                decor = bor(decor,0x1);
+            end
         end
         local vt = type(value);
         local isFunction = "function" == vt;
+        if vcm[key] then
+            -- Check pure virtual functions.
+            if not isFunction then
+                error((i18n"%s must be overridden as a function."):format(key));
+            end
+            vcm[key] = nil;
+        end
         local get_set = band(decor,0xc0);
         local isStatic = band(decor,Permission.static) ~= 0;
         if isFunction then

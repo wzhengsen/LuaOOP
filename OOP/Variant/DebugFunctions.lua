@@ -77,6 +77,7 @@ local ClassInherite = Functions.ClassInherite;
 local PushBase = Functions.PushBase;
 local CreateClassObject = Functions.CreateClassObject;
 local FinalClassesMembers = Functions.FinalClassesMembers;
+local VirtualClassesMembers = Functions.VirtualClassesMembers;
 local NamedClasses = Functions.NamedClasses;
 local AllClasses = Functions.AllClasses;
 local AllEnumerations = Functions.AllEnumerations;
@@ -560,26 +561,35 @@ local function ClassSet(cls,key,value)
         ClassesDelete[cls] = FunctionWrapper(cls,value);
         return;
     else
-        if not CheckPermission(cls,key,false,true) then
-            return;
-        end
-        local property = ClassesWritable[cls][key];
-        if property then
-            if property[2] then
-                property[1](value);
+        local vcm = VirtualClassesMembers[cls];
+        if vcm[key] then
+            -- Check pure virtual functions.
+            if not isFunction then
+                error((i18n"%s must be overridden as a function."):format(key));
+            end
+            vcm[key] = nil;
+        else
+            if not CheckPermission(cls,key,false,true) then
                 return;
             end
-        else
-            if ClassesWritable[cls][key] then
-                if PropertyBehavior ~= 2 then
-                    if PropertyBehavior == 0 then
-                        if Version > 5.4 then
-                            warn(("You can't write a read-only property. - %s"):format(key));
-                        end
-                    elseif PropertyBehavior == 1 then
-                        error((i18n"You can't write a read-only property. - %s"):format(key));
-                    end
+            local property = ClassesWritable[cls][key];
+            if property then
+                if property[2] then
+                    property[1](value);
                     return;
+                end
+            else
+                if ClassesWritable[cls][key] then
+                    if PropertyBehavior ~= 2 then
+                        if PropertyBehavior == 0 then
+                            if Version > 5.4 then
+                                warn(("You can't write a read-only property. - %s"):format(key));
+                            end
+                        elseif PropertyBehavior == 1 then
+                            error((i18n"You can't write a read-only property. - %s"):format(key));
+                        end
+                        return;
+                    end
                 end
             end
         end
@@ -630,6 +640,7 @@ function Functions.CreateClassTables(cls)
     ClassesAll[cls] = all;
     ClassesPermisssions[cls] = {};
     FinalClassesMembers[cls] = {};
+    VirtualClassesMembers[cls] = {};
 
     return all,bases,handlers,members,r,w;
 end
@@ -637,6 +648,7 @@ end
 function Functions.PushBase(cls,bases,base,handlers,members,metas)
     PushBase(cls,bases,base,handlers,members,metas);
     local fm = FinalClassesMembers[cls];
+    local vm = VirtualClassesMembers[cls];
     local pms = ClassesPermisssions[base];
     if ClassesBanNew[base] then
         ClassesBanNew[cls] = true;
@@ -655,10 +667,17 @@ function Functions.PushBase(cls,bases,base,handlers,members,metas)
             ClassesBanDelete[cls] = true;
         end
     end
-    local bfm = FinalClassesMembers[base];
-    if bfm then
-        for k,_ in pairs(bfm) do
+    local fcm = FinalClassesMembers[base];
+    if fcm then
+        for k,_ in pairs(fcm) do
             fm[k] = true;
+        end
+    end
+
+    local vcm = VirtualClassesMembers[base];
+    if vcm then
+        for k,_ in pairs(vcm) do
+            vm[k] = true;
         end
     end
 end

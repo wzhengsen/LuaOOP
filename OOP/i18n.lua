@@ -135,8 +135,19 @@ local LanguageMap = {
     },
     ["There is no such property. - %s"] = {
         zh = "没有这个属性。 - %s"
-    }
-
+    },
+    ["Cannot construct class with unoverridden pure virtual functions. - %s"] = {
+        zh = "不能构造类，具有未重写的纯虚函数。 - %s"
+    },
+    ["%s must be overridden as a function."] = {
+        zh = "%s必须被重写为一个函数。"
+    },
+    ["The pure virtual function %s must be assigned a value of 0."] = {
+        zh = "纯虚函数%s必须分配为0值。"
+    },
+    ["It is not necessary to use pure virtual functions with other qualifiers."] = {
+        zh = "纯虚函数不必和其它修饰符一同使用。"
+    },
 };
 
 return function (words)

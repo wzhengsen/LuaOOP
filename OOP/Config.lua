@@ -107,7 +107,9 @@ local Config = {
         static = "static",
         const = "const",
 
-        final = "final"
+        final = "final",
+
+        virtual = "virtual"
     },
 
     -- If __singleton__ is defined,

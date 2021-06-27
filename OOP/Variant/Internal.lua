@@ -43,6 +43,7 @@ return {
     FinalClasses = Debug and setmetatable({},WeakTable) or nil,
     ClassesAll = Debug and setmetatable({},WeakTable) or nil,
     FinalClassesMembers = Debug and setmetatable({},WeakTable) or nil,
+    VirtualClassesMembers = Debug and setmetatable({},WeakTable) or nil,
     ClassesFriends = Debug and setmetatable({},WeakTable) or nil,
     ClassesBanNew = Debug and setmetatable({},WeakTable) or nil,
     ClassesBanDelete = Debug and setmetatable({},WeakTable) or nil,
