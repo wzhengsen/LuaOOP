@@ -12,7 +12,7 @@ LuaOOP是借鉴了C++/C#的部分类设计，并使用Lua实现的面向对象�
 
 * 基本的类构造及析构；
 * 类的单继承、多继承；
-* 访问权控制（public/protected/private/static/const/friends）；
+* 访问权控制（public/protected/private/static/const/friends/final）；
 * 全部保留字可配置；
 * 属性；
 * 运行时类型判断（is）;
@@ -22,11 +22,11 @@ LuaOOP是借鉴了C++/C#的部分类设计，并使用Lua实现的面向对象�
 * Debug和Release运行模式；
 * 简单的事件分发模式；
 * 枚举；
+* 纯虚函数；
 * Lua5.1-Lua5.4兼容。
 
 >计划中或待实现
 
-* 纯虚函数；
 * 当const修饰方法时的新语义。
 
 ---
@@ -39,6 +39,11 @@ local Point = class();
 -- 成员x，成员y。
 Point.x = 0;
 Point.y = 0;
+-- 也可使用表类型的成员，且表类型的成员将被深拷贝。
+Point.data = {
+    something = "",
+    others = {}
+};
 
 -- 构造函数（可以不提供，以使用默认构造）。
 function Point:ctor(x,y)
@@ -59,6 +64,10 @@ function Point:PrintXY()
 end
 
 local p1 = Point.new(1,2);
+-- 表类型的成员被深拷贝，对象的成员不等于类的成员。
+assert(p1.data ~= Point.data);
+assert(p1.data.others ~= Point.data.others);
+
 local p2 = Point.new();
 p1:PrintXY();-- x = 1 y = 2
 p2:PrintXY();-- x = 0 y = 0
@@ -1034,6 +1043,81 @@ event.Any();-- 没有任何行为。
 ```
 
 ---
-## 12 - Lua5.1-Lua5.4兼容
+## 12 - 枚举
+---
+一般地，使用**enum**来创建一个枚举类型。\
+与直接使用一个简单的表或使用一系列变量作为枚举不同的是，使用enum生成的枚举类型是默认**不可变**的。\
+与函数类型相似，枚举类型**不会**被作为成员赋值给对象作为初值。
+```lua
+require("OOP.Class");
+-- 枚举方式1。
+local Number1 = enum("One","Two","Three");
+print(Number1.One);--1
+print(Number1.Two);--2
+print(Number1.Three);--3
+
+-- 枚举方式2。
+local Number2 = enum {
+    Four = 4,
+    Five = 5,
+    Six = 6
+};
+print(Number2.Four);--4
+print(Number2.Five);--5
+print(Number2.Six);--6
+
+-- 枚举方式3。
+local Number3 = enum {
+    Seven = enum.Auto(7),
+    Eight = enum.Auto(),
+    Nine = enum.Auto()
+};
+print(Number3.Seven);--7
+print(Number3.Eight);--8
+print(Number3.Nine);--9
+-- 枚举不可改变。
+Number3.Nine = 10;--引发错误。（或者修改Config.EnumBehavior来改变这一行为）
+
+local Test = class();
+Test.Number1 = Number1;
+-- 枚举可以被static修饰，令其只能被类访问。
+Test.static.Number2 = Number2;
+
+local test = Test.new();
+-- 枚举不会被作为成员复制给对象，对象的枚举和类的枚举保持相同。
+assert(test.Number1 == Test.Number1);
+
+print(Test.Number2.Four);
+print(test.Number2.Four);--引发错误，对象不能访问静态枚举。
+```
+
+---
+## 13 - 纯虚函数
+---
+一般地，使用**virtual**来声明一个纯虚函数。\
+与c++中不同的是，virtual**只能**用来声明纯虚函数，且**不能**和其它访问限定符同时使用。
+```lua
+require("OOP.Class");
+local Interface = class();
+Interface.virtual.DoSomething1 = 0;
+Interface.virtual.DoSomething2 = 0;
+
+local Test1 = class(Interface);
+function Test1:DoSomething1()
+    print("DoSomething1");
+end
+local test1 = Test1.new();--引发错误，DoSomething2还未被重写，不能实例化。
+
+local Test2 = class(Test1);
+function Test2:DoSomething2()
+    print("DoSomething2");
+end
+local test2 = Test2.new();
+test2:DoSomething1();-- "DoSomething1"
+test2:DoSomething2();-- "DoSomething2"
+```
+
+---
+## 14 - Lua5.1-Lua5.4兼容
 ---
 尽量确保Lua5.1-Lua5.4的兼容性，但LuaJIT并未测试。

@@ -12,7 +12,7 @@ LuaOOP is an object-oriented pattern that borrows some of the class design from 
 
 * Basic class construction and destruction;
 * Single and multiple inheritance of classes;
-* Access control（public/protected/private/static/const/friends）;
+* Access control（public/protected/private/static/const/friends/final）;
 * All reserved words are configurable;
 * Properties;
 * Runtime type judgment（is）;
@@ -22,11 +22,11 @@ LuaOOP is an object-oriented pattern that borrows some of the class design from 
 * Debug and Release run modes;
 * Simple event dispatch mode;
 * Enumeration;
+* Pure virtual functions;
 * Lua5.1-Lua5.4 compat.
 
 > planned or to be implemented
 
-* pure virtual functions.
 * New semantics when const qualifies methods.
 
 ---
@@ -39,6 +39,11 @@ local Point = class();
 -- member x,member y.
 Point.x = 0;
 Point.y = 0;
+-- Members of table types can also be used, and members of table types will be deep-copied.
+Point.data = {
+    something = "",
+    others = {}
+};
 
 -- Construction(may not be provided to use the default construction).
 function Point:ctor(x,y)
@@ -59,6 +64,10 @@ function Point:PrintXY()
 end
 
 local p1 = Point.new(1,2);
+-- The members of the table type are deep-copied and the members of the object are not equal to the members of the class.
+assert(p1.data ~= Point.data);
+assert(p1.data.others ~= Point.data.others);
+
 local p2 = Point.new();
 p1:PrintXY();-- x = 1 y = 2
 p2:PrintXY();-- x = 0 y = 0
@@ -591,7 +600,7 @@ print("X = " .. xy.x);-- X = 999
 print("Y = " .. xy.y);-- Y = 888
 
 local p3d = Point3D.new(0,-1,0.5);
--- The X property has been overrided.
+-- The X property has been overridden.
 p3d.X = 100;-- "Point3D override X property."
 p3d.Y = 99;
 -- Properties can be inherited, and can access the properties of the base class.
@@ -1038,6 +1047,81 @@ event.Any();-- There is no behavior.
 ```
 
 ---
-## 12 - Lua5.1-Lua5.4 compat
+## 12 - Enumeration
+---
+In general, use **enum** to create an enumeration type.\
+Unlike using a simple table directly or using a series of variables as an enumeration, the type of enumeration generated using enum is **immutable** by default.\
+Similar to function types, enumeration types **will not** be assigned as members to objects as initial values.
+```lua
+require("OOP.Class");
+-- Enumeration method 1.
+local Number1 = enum("One","Two","Three");
+print(Number1.One);--1
+print(Number1.Two);--2
+print(Number1.Three);--3
+
+-- Enumeration method 2.
+local Number2 = enum {
+    Four = 4,
+    Five = 5,
+    Six = 6
+};
+print(Number2.Four);--4
+print(Number2.Five);--5
+print(Number2.Six);--6
+
+-- Enumeration method 3.
+local Number3 = enum {
+    Seven = enum.Auto(7),
+    Eight = enum.Auto(),
+    Nine = enum.Auto()
+};
+print(Number3.Seven);--7
+print(Number3.Eight);--8
+print(Number3.Nine);--9
+-- The enumeration is immutable.
+Number3.Nine = 10;--Raise an error. (or modify Config.EnumBehavior to change this behavior)
+
+local Test = class();
+Test.Number1 = Number1;
+-- Enumerations can be modified by static so that they can only be accessed by classes.
+Test.static.Number2 = Number2;
+
+local test = Test.new();
+-- Enumerations are not copied to objects as members, and the object's enumeration and the class's enumeration remain the same.
+assert(test.Number1 == Test.Number1);
+
+print(Test.Number2.Four);
+print(test.Number2.Four);--Raises an error, the object cannot access the static enumeration.
+```
+
+---
+## 13 - Pure virtual functions
+---
+In general, use **virtual** to declare a pure virtual function.\
+Unlike in C++, virtual can **only** be used to declare pure virtual functions, and **cannot** be used in conjunction with other access qualifiers.
+```lua
+require("OOP.Class");
+local Interface = class();
+Interface.virtual.DoSomething1 = 0;
+Interface.virtual.DoSomething2 = 0;
+
+local Test1 = class(Interface);
+function Test1:DoSomething1()
+    print("DoSomething1");
+end
+local test1 = Test1.new();--Raise an error, DoSomething2 has not been overridden and cannot be instantiated.
+
+local Test2 = class(Test1);
+function Test2:DoSomething2()
+    print("DoSomething2");
+end
+local test2 = Test2.new();
+test2:DoSomething1();-- "DoSomething1"
+test2:DoSomething2();-- "DoSomething2"
+```
+
+---
+## 14 - Lua5.1-Lua5.4 compat
 ---
 Try to ensure Lua5.1-Lua5.4 compatibility, but LuaJIT is not tested.
