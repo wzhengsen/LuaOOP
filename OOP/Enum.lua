@@ -29,7 +29,7 @@ local Version = Config.Version;
 local i18n = require("OOP.i18n");
 local EnumBehavior = Config.EnumBehavior;
 local Auto = Config.Auto;
-local AllEnumerations = require("OOP.Variant.Internal");
+local AllEnumerations = require("OOP.Variant.Internal").AllEnumerations;
 local enum = setmetatable({},{
     __call = function (e,...)
         return e.New(...);

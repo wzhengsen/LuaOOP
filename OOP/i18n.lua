@@ -148,6 +148,9 @@ local LanguageMap = {
     ["It is not necessary to use pure virtual functions with other qualifiers."] = {
         zh = "纯虚函数不必和其它修饰符一同使用。"
     },
+    ["The pure virtual function %s cannot be overridden as a static function."] = {
+        zh = "纯虚函数%s不能被重写为一个静态函数。"
+    }
 };
 
 return function (words)

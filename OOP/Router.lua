@@ -83,7 +83,8 @@ local Permission = {
     const = BitsMap[const],
     final = BitsMap[final],
     get = BitsMap[get],
-    set = BitsMap[set]
+    set = BitsMap[set],
+    virtual = BitsMap[virtual]
 }
 local Router = {};
 
@@ -129,8 +130,8 @@ if Debug then
                 -- Check set,get,const,they are 0xd0
                 error((i18n"%s,%s,%s cannot be used at the same time."):format(get,set,const));
             else
-                local checkVirtual = band(bor(bit,decor),Permission.virtual * 2 - 1);
-                if checkVirtual ~= 0 and checkVirtual ~= Permission.virtual then
+                local temp = bor(bit,decor);
+                if band(temp,Permission.virtual) ~= 0 and band(temp,Permission.virtual - 1) ~= 0 then
                     error(i18n"It is not necessary to use pure virtual functions with other qualifiers.");
                 end
             end
@@ -173,15 +174,15 @@ if Debug then
             decor = 0;
             cls = nil;
             return;
-        else
-            if band(decor,Permission.static) ~= 0 and
-            (key == ctor or key == dtor) then
-                error((i18n"%s qualifier cannot qualify %s method."):format(static,key));
-            end
-            if band(decor,0x7) == 0 then
-                -- Without the public qualifier, public is added by default.
-                decor = bor(decor,0x1);
-            end
+        end
+        local isStatic = band(decor,Permission.static) ~= 0;
+        if isStatic and
+        (key == ctor or key == dtor) then
+            error((i18n"%s qualifier cannot qualify %s method."):format(static,key));
+        end
+        if band(decor,0x7) == 0 then
+            -- Without the public qualifier, public is added by default.
+            decor = bor(decor,0x1);
         end
         local vt = type(value);
         local isFunction = "function" == vt;
@@ -190,10 +191,12 @@ if Debug then
             if not isFunction then
                 error((i18n"%s must be overridden as a function."):format(key));
             end
+            if isStatic then
+                error((i18n"The pure virtual function %s cannot be overridden as a static function."):format(key));
+            end
             vcm[key] = nil;
         end
         local get_set = band(decor,0xc0);
-        local isStatic = band(decor,Permission.static) ~= 0;
         if isFunction then
             value = FunctionWrapper(cls,value);
         elseif get_set == 0 then
@@ -238,6 +241,7 @@ else
     local ClassesMetas = Internal.ClassesMetas;
     local sc = Permission.static;
     local gt = Permission.get;
+    local vir = Permission.virtual;
     -- In non-debug mode, no attention is paid to any qualifiers other than static.
     Pass = function(self,key)
         local bit = BitsMap[key];
@@ -253,6 +257,12 @@ else
         return self;
     end
     Done = function(_,key,value)
+        if band(decor,vir) ~= 0 then
+            -- Skip pure virtual functions.
+            decor = 0;
+            cls = nil;
+            return;
+        end
         local vt = type(value);
         local isFunction = "function" == vt;
         local isTable = "table" == vt;
