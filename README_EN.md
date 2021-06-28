@@ -10,20 +10,20 @@ LuaOOP is an object-oriented pattern that borrows some of the class design from 
 
 >What features LuaOOP provides?
 
-* Basic class construction and destruction;
-* Single and multiple inheritance of classes;
-* Access control（public/protected/private/static/const/friends/final）;
-* All reserved words are configurable;
-* Properties;
-* Runtime type judgment（is）;
-* Meta-methods and Operator overloading;
-* Singleton（\_\_singleton\_\_）;
-* Extend or inherit from external classes (classes that generate userdata);
-* Debug and Release run modes;
-* Simple event dispatch mode;
-* Enumeration;
-* Pure virtual functions;
-* Lua5.1-Lua5.4 compat.
+* [Basic class construction and destruction](#1---basic-class-construction-and-destruction);
+* [Single and multiple inheritance of classes](#2---single-and-multiple-inheritance-of-class);
+* [Access control](#3---access-control)（public/protected/private/static/const/friends/final）;
+* [All reserved words are configurable](#4---all-reserved-words-are-configurable);
+* [Properties](#5---properties);
+* [Runtime type judgment](#6---runtime-type-judgment)（is）;
+* [Meta-methods and Operator overloading](#7---meta-methods-and-operator-overloading);
+* [Singleton](#8---singleton)（\_\_singleton\_\_）;
+* [Extend or inherit from external classes](#9---extend-or-inherit-from-external-classes) (classes that generate userdata);
+* [Debug and Release run modes](#10---debug-and-release-run-modes);
+* [Simple event dispatch mode](#11---simple-event-dispatch-mode);
+* [Enumeration](#12---enumeration);
+* [Pure virtual functions](#13---pure-virtual-functions);
+* [Lua5.1-Lua5.4 compat](#14---lua51-lua54-compat).
 
 > planned or to be implemented
 
