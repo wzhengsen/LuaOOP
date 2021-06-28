@@ -39,6 +39,7 @@ local Config = {
     handlers = "handlers",
 
     IsNull = "IsNull",
+    Break = "Break",
 
     Auto = "Auto",
 

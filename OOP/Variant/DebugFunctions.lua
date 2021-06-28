@@ -143,6 +143,11 @@ end
 ---@return boolean
 ---
 local function CheckPermission(self,key,byObj,set)
+    local stackCls = AccessStack[#AccessStack];
+    if stackCls == 0 then
+        -- 0 means that any access rights can be broken.
+        return true;
+    end
     local cls,pm = CascadeGetPermission(self,key);
     if not pm then
         return true;
@@ -177,7 +182,6 @@ local function CheckPermission(self,key,byObj,set)
         -- Allow public.
         return true;
     end
-    local stackCls = AccessStack[#AccessStack];
     if stackCls == cls then
         return true;
     end
