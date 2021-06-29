@@ -27,6 +27,7 @@ LuaOOP是借鉴了C++/C#的部分类设计，并使用Lua实现的面向对象�
 
 >计划中或待实现
 
+* 自定义修饰符；
 * 当const修饰方法时的新语义。
 
 ---
@@ -465,9 +466,34 @@ local test4 = Test.CreateInstance();
 -- 引发错误，delete已是private成员。
 test4:delete();
 ```
+
+>使用class.Break来强行突破访问权限：
+```lua
+require("OOP.Class");
+local Test = class();
+Test.private.mySecret = "123";
+Test.private.myInfo = "abc";
+function Test.protected:GetMyInfo()
+    return self.myInfo;
+end
+
+local test = Test.new();
+
+local forceBreak = class.Break(function()
+    -- 现在已突破访问权，可以访问任意成员。
+    return test:GetMyInfo(),test.mySecret;
+end);
+print(forceBreak());
+
+-- 在class.Break外仍然不能访问。
+print(test.mySecret);
+```
+
 >一些特殊的修饰规则：
 * 构造函数和析构函数不能使用static或const修饰；
 * 各个修饰符都不能同时出现一次以上；
+* 纯虚函数的修饰只能单独使用（见后文）；
+* 属性和常量修饰不能同时使用（见后文）；
 * 不能修饰一些特殊的方法和成员（事件/单例等，见后文）。
 
 ---

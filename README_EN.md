@@ -27,6 +27,7 @@ LuaOOP is an object-oriented pattern that borrows some of the class design from 
 
 > planned or to be implemented
 
+* Custom qualifiers;
 * New semantics when const qualifies methods.
 
 ---
@@ -467,9 +468,34 @@ local test4 = Test.CreateInstance();
 -- Raise error, delete is already a private member.
 test4:delete();
 ```
+
+>Use class.Break to force a break in access permissions:
+```lua
+require("OOP.Class");
+local Test = class();
+Test.private.mySecret = "123";
+Test.private.myInfo = "abc";
+function Test.protected:GetMyInfo()
+    return self.myInfo;
+end
+
+local test = Test.new();
+
+local forceBreak = class.Break(function()
+    -- Access permissions have now been broken and can access any member.
+    return test:GetMyInfo(),test.mySecret;
+end);
+print(forceBreak());
+
+-- remains inaccessible outside of class.Break.
+print(test.mySecret);
+```
+
 >Some special modifying rules:
 * Constructors and destructors cannot be modified with static or const;
 * None of the qualifiers can appear more than once at the same time;
+* Pure virtual function qualifier can only be used alone (see later);
+* Property and constant qualifier cannot be used together (see later);
 * Cannot qualify some special methods and members (events/singleton, etc., see later).
 
 ---
