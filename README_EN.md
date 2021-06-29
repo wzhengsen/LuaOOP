@@ -434,7 +434,7 @@ c2:ShowSecretC2(secret);-- 123     data = 123
 ---
 ### 3.8 - Other matters
 ---
->The modifications to \_\_init\_\_ and \_\_del\_\_ will directly affect the new and delete methods, and in any case, new is necessarily static, e.g:
+>The modifications to ctor and dtor will directly affect the new and delete methods, and in any case, new is necessarily static, e.g:
 ```lua
 require("OOP.Class");
 local Test = class();

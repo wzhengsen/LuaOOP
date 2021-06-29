@@ -433,7 +433,7 @@ c2:ShowSecretC2(secret);-- 123     data = 123
 ---
 ### 3.8 - 其它事项
 ---
->对__init__和__del__的修饰将直接影响到new和delete方法，且无论如何，new必然是static修饰的，如：
+>对ctor和dtor的修饰将直接影响到new和delete方法，且无论如何，new必然是static修饰的，如：
 ```lua
 require("OOP.Class");
 local Test = class();
