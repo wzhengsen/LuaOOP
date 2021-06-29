@@ -234,11 +234,10 @@ local function CascadeGet(cls,key,called)
     end
 end
 
-local HandlersControl = setmetatable({
-    obj = nil
-},{
-    __newindex = function (hc,key,value)
-        if nil == hc.obj then
+local HandlersControlObj = nil;
+local HandlersControl = setmetatable({},{
+    __newindex = function (_,key,value)
+        if nil == HandlersControlObj then
             return;
         end
         if "string" ~= type(key) then
@@ -250,17 +249,17 @@ local HandlersControl = setmetatable({
         end
         if nil == value then
             -- If value is nil,we remove the response of this event name.
-            E_Handlers.Remove(key,hc.obj);
+            E_Handlers.Remove(key,HandlersControlObj);
         else
             -- If value is a number,we sort it.
-            E_Handlers.Order(key,hc.obj,math.floor(value));
+            E_Handlers.Order(key,HandlersControlObj,math.floor(value));
         end
     end
 });
 
 local function GetAndCheck(cls,key,sender,metas)
     if key == handlers then
-        rawset(HandlersControl,"obj",sender);
+        HandlersControlObj = sender;
         return HandlersControl;
     end
     local cCls = nil;

@@ -343,16 +343,15 @@ local function RegisterHandlersAndMembers(obj,all,handlers,members)
     end
 end
 
-local HandlersControl = setmetatable({
-    obj = nil
-},{
-    __newindex = function (hc,key,value)
+local HandlersControlObj = nil;
+local HandlersControl = setmetatable({},{
+    __newindex = function (_,key,value)
         if nil == value then
             -- If value is nil,we remove the response of this event name.
-            E_Handlers.Remove(key,hc.obj);
+            E_Handlers.Remove(key,HandlersControlObj);
         else
             -- If value is a number,we sort it.
-            E_Handlers.Order(key,hc.obj,math.floor(value));
+            E_Handlers.Order(key,HandlersControlObj,math.floor(value));
         end
     end
 });
@@ -366,7 +365,7 @@ local function MakeInternalObjectMeta(cls,metas)
     ClassesMetas[cls] = metas;
     metas.__index = function (sender,key)
         if key == handlers then
-            rawset(HandlersControl,"obj",sender);
+            HandlersControlObj = sender;
             return HandlersControl;
         end
         local ret = nil;
@@ -503,7 +502,7 @@ local function RetrofiteUserDataObjectMetaExternal(obj,meta,cls)
         local ret = nil;
         if all then
             if key == handlers then
-                rawset(HandlersControl,"obj",sender);
+                HandlersControlObj = sender;
                 return HandlersControl;
             end
             ret = all[key];
