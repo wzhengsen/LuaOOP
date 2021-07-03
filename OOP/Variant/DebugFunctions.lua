@@ -20,6 +20,8 @@
 -- THE SOFTWARE.
 
 local getmetatable = getmetatable;
+local setmetatable = setmetatable;
+local debug = debug;
 local rawset = rawset;
 local rawget = rawget;
 local type = type;
@@ -788,8 +790,12 @@ function Functions.CreateClassDelete(cls)
             d(self);
         else
             CascadeDelete(self,cls,{});
-            setmetatable(self,nil);
-            self[DeathMarker] = true;
+            if "userdata" == type(self) then
+                debug.setmetatable(self,nil);
+            else
+                setmetatable(self,nil);
+                self[DeathMarker] = true;
+            end
         end
         ObjectsAll[self] = nil;
     end
