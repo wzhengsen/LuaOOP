@@ -32,7 +32,7 @@ local Break = Config.Break;
 
 local i18n = require("OOP.i18n");
 
-local Functions = Debug and require("OOP.Variant.DebugFunctions") or require("OOP.Variant.BaseFunctions");
+local Functions = Debug and require("OOP.Variant.DebugFunctions") or require("OOP.Variant.ReleaseFunctions");
 local ClassesBases = Functions.ClassesBases;
 local CreateClassObject = Functions.CreateClassObject;
 local class = Functions.class;
@@ -126,7 +126,7 @@ function class.New(...)
 end
 
 if Debug then
-    local BreakFunctionWrapper = require("OOP.Version.Compat").BreakFunctionWrapper;
+    local BreakFunctionWrapper = require("OOP.BaseFunctions").BreakFunctionWrapper;
     class[Break] = function (f)
         assert("function" == type(f),(i18n"%s must wrap a function."):format(Break));
         return BreakFunctionWrapper(f);

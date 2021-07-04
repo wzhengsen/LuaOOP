@@ -32,10 +32,12 @@ local Config = require("OOP.Config");
 local Version = Config.Version;
 local i18n = require("OOP.i18n");
 
-local Compat = require("OOP.Version.Compat");
-local bits = Compat.bits;
+local BaseFunctions = require("OOP.BaseFunctions");
+local bits = BaseFunctions.bits;
 local band = bits.band;
-local FunctionWrapper = Compat.FunctionWrapper;
+local FunctionWrapper = BaseFunctions.FunctionWrapper;
+local Update2Children = BaseFunctions.Update2Children;
+local Update2ChildrenWithKey = BaseFunctions.Update2ChildrenWithKey;
 
 local E_Handlers = require("OOP.Event").handlers;
 
@@ -71,7 +73,7 @@ local MetaMapName = Config.MetaMapName;
 local PropertyBehavior = Config.PropertyBehavior;
 local ConstBehavior = Config.ConstBehavior;
 
-local Functions = require("OOP.Variant.BaseFunctions");
+local Functions = require("OOP.Variant.ReleaseFunctions");
 local GetSingleton = Functions.GetSingleton;
 local DestroySingleton = Functions.DestroySingleton;
 local RetrofiteMetaMethod = Functions.RetrofiteMetaMethod;
@@ -567,13 +569,17 @@ local function ClassSet(cls,key,value)
         if not isFunction then
             error((i18n"%s reserved word must be assigned to a function."):format(key));
         end
-        ClassesNew[cls] = FunctionWrapper(cls,value);
+        value = FunctionWrapper(cls,value);
+        ClassesNew[cls] = value;
+        Update2Children(cls,ClassesNew,value);
         return;
     elseif key == __delete__ then
         if not isFunction then
             error((i18n"%s reserved word must be assigned to a function."):format(key));
         end
-        ClassesDelete[cls] = FunctionWrapper(cls,value);
+        value = FunctionWrapper(cls,value);
+        ClassesDelete[cls] = value;
+        Update2Children(cls,ClassesDelete,value);
         return;
     else
         local vcm = VirtualClassesMembers[cls];
@@ -583,6 +589,7 @@ local function ClassSet(cls,key,value)
                 error((i18n"%s must be overridden as a function."):format(key));
             end
             vcm[key] = nil;
+            Update2ChildrenWithKey(cls,VirtualClassesMembers,key,nil);
         else
             if not CheckPermission(cls,key,false,true) then
                 return;
@@ -614,6 +621,7 @@ local function ClassSet(cls,key,value)
             local isTable = "table" == vt;
             if not isFunction and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
                 ClassesMembers[cls][key] = value;
+                Update2ChildrenWithKey(cls,ClassesMembers,key,value);
             end
             ClassesPermisssions[cls][key] = p_public;
         end
@@ -627,6 +635,7 @@ local function ClassSet(cls,key,value)
     if meta then
         local metas = ClassesMetas[cls];
         metas[meta] = value;
+        Update2ChildrenWithKey(cls,ClassesMetas,meta,value);
     end
 end
 
@@ -642,7 +651,9 @@ local function MakeClassHandlersTable(cls,handlers)
             end
             assert("function" == type(value),i18n"event handler must be a function.");
             -- Ensure that event response functions have access to member variables.
-            rawset(t,key,FunctionWrapper(cls,value));
+            value = FunctionWrapper(cls,value)
+            rawset(t,key,value);
+            Update2ChildrenWithKey(cls,ClassesHandlers,key,value);
         end
     });
 end

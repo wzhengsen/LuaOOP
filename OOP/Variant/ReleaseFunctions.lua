@@ -28,11 +28,18 @@ local ipairs = ipairs;
 local type = type;
 local select = select;
 local remove = table.remove;
+local insert = table.insert;
 
 local Config = require("OOP.Config");
 local i18n = require("OOP.i18n");
 local Internal = require("OOP.Variant.Internal");
 local class = require("OOP.BaseClass");
+local BaseFunctions = require("OOP.BaseFunctions");
+
+local Copy = BaseFunctions.Copy;
+local Update2Children = BaseFunctions.Update2Children;
+local Update2ChildrenWithKey = BaseFunctions.Update2ChildrenWithKey;
+
 
 local E_Handlers = require("OOP.Event").handlers;
 local R = require("OOP.Router");
@@ -65,7 +72,7 @@ local MetaMapName = Config.MetaMapName;
 local _IsNull = class.IsNull;
 
 local Functions = Internal;
-local RequireInheriteClasses = Functions.RequireInheriteClasses;
+local ClassesChildrenByName = Functions.ClassesChildrenByName;
 local NamedClasses = Functions.NamedClasses;
 local AllClasses = Functions.AllClasses;
 local AllEnumerations = Functions.AllEnumerations;
@@ -73,6 +80,7 @@ local ClassesReadable = Functions.ClassesReadable;
 local ClassesWritable = Functions.ClassesWritable;
 local ClassesHandlers = Functions.ClassesHandlers;
 local ClassesBases = Functions.ClassesBases;
+local ClassesChildren = Functions.ClassesChildren;
 local ClassesMembers = Functions.ClassesMembers;
 local ClassesMetas = Functions.ClassesMetas;
 local ClassesNew = Functions.ClassesNew;
@@ -80,31 +88,6 @@ local ClassesDelete = Functions.ClassesDelete;
 local ClassesSingleton = Functions.ClassesSingleton;
 local ObjectsAll = Functions.ObjectsAll;
 local ObjectsCls = Functions.ObjectsCls;
-
----Copy any value.
----
----@param any any
----@return any
----
-local function Copy(any,existTab)
-    if type(any) ~= "table" then
-        return any;
-    end
-    if existTab then
-        local ret = existTab[any];
-        if nil ~= ret then
-            return ret;
-        end
-    end
-
-    existTab = existTab or {};
-    local tempTab = {};
-    existTab[any] = tempTab;
-    for k,v in pairs(any) do
-        tempTab[Copy(k,existTab)] = Copy(v,existTab);
-    end
-    return tempTab;
-end
 
 ---Get the single instance, where it is automatically judged empty
 ---and does not require the user to care.
@@ -233,6 +216,14 @@ local function PushBase(cls,bases,base,handlers,members,metas)
     local _delete = ClassesDelete[base];
     if _delete then
         ClassesDelete[cls] = _delete;
+    end
+    -- Record the current class into the subclasses table of the base class,
+    -- and if there are any member (except for functions, but containing metamethods and events) changes in the base class afterwards,
+    -- they will be mapped to all subclasses.
+
+    local children = ClassesChildren[base];
+    if children then
+        children[#children + 1] = cls;
     end
     bases[#bases + 1] = base;
 end
@@ -648,11 +639,17 @@ end
 ---
 local function CreateClassTables(cls)
     local bases = {};
-    local handlers = {};
+    local handlers = setmetatable({},{
+        __newindex = function (h,k,v)
+            rawset(h,k,v);
+            Update2ChildrenWithKey(cls,ClassesHandlers,k,v);
+        end
+    });
     local members = {};
 
     AllClasses[cls] = true;
     ClassesBases[cls] = bases;
+    ClassesChildren[cls] = {};
     ClassesHandlers[cls] = handlers;
 
     local r,w = CreateClassPropertiesTable(cls,bases);
@@ -670,22 +667,25 @@ local function AttachClassFunctions(cls,_is,_new,_delete)
 end
 
 local function ClassInherite(cls,args,bases,handlers,members,metas,name)
-    local ric = RequireInheriteClasses[name];
-    if ric then
-        for c,_ in pairs(ric) do
-            Functions.PushBase(c,ClassesBases[c],cls,ClassesHandlers[c],ClassesMembers[c],ClassesMetas[c]);
-            ric[c] = nil;
+    local children = ClassesChildrenByName[name];
+    if children then
+        -- If some class inherits by name before that class is defined,
+        -- update the bases table and children table here.
+        ClassesChildren[cls] = children;
+        ClassesChildrenByName[name] = nil;
+        for _,child in ipairs(children) do
+            insert(ClassesBases[child],cls);
         end
     end
     for _, base in ipairs(args) do
         if "string" == type(base) then
-            local name = base;
+            local baseName = base;
             base = NamedClasses[base];
             if nil == base then
-                -- If there is no class named 'base',record it in RequireInheriteClasses.
+                -- If there is no class named 'base',record it in ClassesChildrenByName.
                 -- When the class which named 'base' is created,push 'base' into cls bases table.
-                RequireInheriteClasses[name] = RequireInheriteClasses[name] or {};
-                RequireInheriteClasses[name][cls] = true;
+                ClassesChildrenByName[baseName] = ClassesChildrenByName[baseName] or {};
+                insert(ClassesChildrenByName[baseName],cls);
                 goto continue;
             end
         end
@@ -734,9 +734,11 @@ local function ClassSet(cls,key,value)
         return;
     elseif key == __new__ then
         ClassesNew[cls] = value;
+        Update2Children(cls,ClassesNew,value);
         return;
     elseif key == __delete__ then
         ClassesDelete[cls] = value;
+        Update2Children(cls,ClassesDelete,value);
         return;
     elseif key == friends then
         return;
@@ -754,12 +756,14 @@ local function ClassSet(cls,key,value)
         local isTable = "table" == vt;
         if not exist and not isFunction and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
             ClassesMembers[cls][key] = value;
+            Update2ChildrenWithKey(cls,ClassesMembers,key,value);
         end
         rawset(cls,key,value);
     end
     local meta = MetaMapName[key];
     if meta then
         ClassesMetas[cls][meta] = value;
+        Update2ChildrenWithKey(cls,ClassesMetas,meta,value);
     end
 end
 
@@ -767,7 +771,6 @@ Functions.class = class;
 Functions.GetSingleton = GetSingleton;
 Functions.DestroySingleton = DestroySingleton;
 Functions.IsNull = _IsNull;
-Functions.Copy = Copy;
 Functions.CheckClass = CheckClass;
 Functions.PushBase = PushBase;
 Functions.CreateClassIs = CreateClassIs;

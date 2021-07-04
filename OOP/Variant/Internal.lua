@@ -24,15 +24,19 @@ local Debug = Config.Debug;
 local WeakTable = {__mode = "k"};
 return {
     NamedClasses = {},
-    RequireInheriteClasses = {},
+    ClassesChildrenByName = {},
     AllClasses = setmetatable({},WeakTable),
     AllEnumerations = setmetatable({},WeakTable),
     ClassesReadable = setmetatable({},WeakTable),
     ClassesWritable = setmetatable({},WeakTable),
     ClassesHandlers = setmetatable({},WeakTable),
     ClassesBases = setmetatable({},WeakTable),
+    -- Record which classes inherit from this class.
+    ClassesChildren = setmetatable({},WeakTable),
     ClassesMembers = setmetatable({},WeakTable),
     ClassesMetas = setmetatable({},WeakTable),
+    -- In order to keep __new__/__delete__/__singleton__ from being freely available and used externally,
+    -- they are stored in ClassesNew/ClassesDelete/ClassesSingleton instead of directly in the class.
     ClassesNew = setmetatable({},WeakTable),
     ClassesDelete = setmetatable({},WeakTable),
     ClassesSingleton = setmetatable({},WeakTable),

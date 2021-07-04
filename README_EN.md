@@ -29,6 +29,7 @@ LuaOOP is an object-oriented pattern that borrows some of the class design from 
 
 * Custom qualifiers;
 * New semantics when const qualifies methods.
+* class.default and class.delete。
 
 ---
 ## 1 - Basic class construction and destruction

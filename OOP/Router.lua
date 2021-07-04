@@ -28,8 +28,8 @@ local i18n = require("OOP.i18n");
 local Internal = require("OOP.Variant.Internal");
 local ClassesMembers = Internal.ClassesMembers;
 
-local Compat = require("OOP.Version.Compat");
-local bits = Compat.bits;
+local BaseFunctions = require("OOP.BaseFunctions");
+local bits = BaseFunctions.bits;
 local band = bits.band;
 local bor = bits.bor;
 local Debug = Config.Debug;
@@ -91,6 +91,7 @@ local p_static = Permission.static;
 local p_virtual = Permission.virtual;
 local p_get = Permission.get;
 local p_final = Permission.final;
+local p_private = Permission.private;
 
 local Router = {};
 
@@ -108,11 +109,15 @@ if Debug then
     local ctor = Config.ctor;
     local dtor = Config.dtor;
 
-    local FunctionWrapper = Compat.FunctionWrapper;
+    local FunctionWrapper = BaseFunctions.FunctionWrapper;
+    local Update2Children = BaseFunctions.Update2Children;
+    local Update2ChildrenWithKey = BaseFunctions.Update2ChildrenWithKey;
     local ClassesAll = Internal.ClassesAll;
     local FinalClassesMembers = Internal.FinalClassesMembers;
     local ClassesPermisssions = Internal.ClassesPermisssions;
     local VirtualClassesMembers = Internal.VirtualClassesMembers;
+    local ClassesBanNew = Internal.ClassesBanNew;
+    local ClassesBanDelete = Internal.ClassesBanDelete;
 
     local RouterReservedWord = Internal.RouterReservedWord;
     -- It is only under debug that the values need to be routed to the corresponding fields of the types.
@@ -177,6 +182,7 @@ if Debug then
                 error((i18n"The pure virtual function %s must be assigned a value of 0."):format(key));
             end
             vcm[key] = true;
+            Update2ChildrenWithKey(cls,VirtualClassesMembers,key,true);
             decor = 0;
             cls = nil;
             return;
@@ -211,6 +217,7 @@ if Debug then
             -- add to the member table and generate it for each instance.
             if not isStatic and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
                 ClassesMembers[cls][key] = value;
+                Update2ChildrenWithKey(cls,ClassesMembers,key,value);
             end
         end
 
@@ -232,13 +239,20 @@ if Debug then
             if key == ctor then
                 -- Reassign permissions to "new", which are the same as ctor with the static qualifier.
                 pms[new] = bor(decor,0x8);
+                if band(decor,p_private) then
+                    Update2Children(cls,ClassesBanNew,true);
+                end
             elseif key == dtor then
                 pms[delete] = decor;
+                if band(decor,p_private) then
+                    Update2Children(cls,ClassesBanDelete,true);
+                end
             end
         end
 
         if band(decor,p_final) ~= 0 then
             FinalClassesMembers[cls][key] = true;
+            Update2ChildrenWithKey(cls,FinalClassesMembers,key,true);
         end
         decor = 0;
         cls = nil;
