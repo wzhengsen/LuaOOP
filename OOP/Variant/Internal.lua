@@ -43,6 +43,7 @@ return {
     ObjectsAll = setmetatable({},WeakTable),
     ObjectsCls = setmetatable({},WeakTable),
     ClassesStaticProperties = setmetatable({},WeakTable),
+    ClassesStatic = setmetatable({},WeakTable),
     ClassesPermisssions = Debug and setmetatable({},WeakTable) or nil,
     FinalClasses = Debug and setmetatable({},WeakTable) or nil,
     ClassesAll = Debug and setmetatable({},WeakTable) or nil,

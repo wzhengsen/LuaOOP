@@ -99,6 +99,7 @@ local ClassesDelete = Functions.ClassesDelete;
 local ObjectsAll = Functions.ObjectsAll;
 local ObjectsCls = Functions.ObjectsCls;
 local CreateClassTables = Functions.CreateClassTables;
+local ClassesStatic = Functions.ClassesStatic;
 
 local ClassesAll = Functions.ClassesAll;
 local ClassesPermisssions = Functions.ClassesPermisssions;
@@ -216,11 +217,22 @@ local function CascadeGet(cls,key,called)
         return nil;
     end
     called[cls] = true;
+    local ret = rawget(cls,key);
+    if nil ~= ret then
+        return ret;
+    end
     local all = ClassesAll[cls];
     if nil ~= all then
-        local ret = all[key];
+        ret = all[key];
         if nil ~= ret then
             return ret;
+        end
+        ret = ClassesStatic[cls];
+        if ret then
+            ret = ret[key];
+            if nil ~= ret then
+                return ret;
+            end
         end
         local bases = ClassesBases[cls];
         if bases then
@@ -232,7 +244,13 @@ local function CascadeGet(cls,key,called)
             end
         end
     else
-        return cls[key];
+        ret = ClassesStatic[cls];
+        if ret then
+            ret = ret[key];
+            if nil ~= ret then
+                return ret;
+            end
+        end
     end
 end
 
@@ -294,10 +312,11 @@ local function GetAndCheck(cls,key,sender,metas)
     end
     -- Check the properties of current class.
     local property = ClassesReadable[cCls][key];
-    if property then
+    if property and not property[2] then
         return property[1](sender);
     else
-        if ClassesWritable[cCls][key] then
+        property = ClassesWritable[cCls][key];
+        if property and not property[2] then
             if PropertyBehavior ~= 2 then
                 if PropertyBehavior == 0 then
                     warn(("You can't read a write-only property. - %s"):format(key));
@@ -350,11 +369,12 @@ function Functions.MakeInternalObjectMeta(cls,metas)
             return;
         end
         local property = ClassesWritable[cCls][key];
-        if property then
+        if property and not property[2] then
             property[1](sender,value);
             return;
         else
-            if ClassesReadable[cCls][key] then
+            property = ClassesReadable[cCls][key];
+            if property and not property[2] then
                 if PropertyBehavior ~= 2 then
                     if PropertyBehavior == 0 then
                         warn(("You can't write a read-only property. - %s"):format(key));
@@ -429,11 +449,12 @@ local function RetrofiteUserDataObjectMetaExternal(obj,meta,cls)
                 return;
             end
             local property = ClassesWritable[cls][key];
-            if property then
+            if property and not property[2] then
                 property[1](sender,value);
                 return;
             else
-                if ClassesReadable[cls][key] then
+                property = ClassesReadable[cls][key];
+                if property and not property[2] then
                     if PropertyBehavior ~= 2 then
                         if PropertyBehavior == 0 then
                             warn(("You can't write a read-only property. - %s"):format(key));
@@ -490,7 +511,7 @@ local function ClassGet(cls,key)
             return property[1]();
         end
     else
-        property = ClassesWritable[cls][key]
+        property = ClassesWritable[cls][key];
         if property and property[2] then
             if PropertyBehavior ~= 2 then
                 if PropertyBehavior == 0 then
@@ -503,6 +524,10 @@ local function ClassGet(cls,key)
         end
     end
     local ret = ClassesAll[cls][key];
+    if nil ~= ret then
+        return ret;
+    end
+    ret = ClassesStatic[cls][key];
     if nil ~= ret then
         return ret;
     end
@@ -593,7 +618,7 @@ local function ClassSet(cls,key,value)
                 end
             else
                 property = ClassesWritable[cls][key];
-                if property and property[1] then
+                if property and property[2] then
                     if PropertyBehavior ~= 2 then
                         if PropertyBehavior == 0 then
                             warn(("You can't write a read-only property. - %s"):format(key));
@@ -620,6 +645,7 @@ local function ClassSet(cls,key,value)
             value = FunctionWrapper(cls,value);
         end
         all[key] = value;
+        ClassesStatic[cls][key] = nil;
     end
     local meta = MetaMapName[key];
     if meta then

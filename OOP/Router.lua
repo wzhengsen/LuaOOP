@@ -39,6 +39,7 @@ local AllEnumerations = Internal.AllEnumerations;
 local AllClasses = Internal.AllClasses;
 local ClassesReadable = Internal.ClassesReadable;
 local ClassesWritable = Internal.ClassesWritable;
+local ClassesStatic = Internal.ClassesStatic;
 
 local new = Config.new;
 local delete = Config.delete;
@@ -243,7 +244,7 @@ if Debug then
             -- and index 2 representing whether the property is a static property.
             (get_set == p_get and ClassesReadable or ClassesWritable)[cls][key] = {value,isStatic};
         else
-            ClassesAll[cls][key] = value;
+            (isStatic and ClassesStatic or ClassesAll)[cls][key] = value;
             if key == ctor then
                 -- Reassign permissions to "new", which are the same as ctor with the static qualifier.
                 pms[new] = bor(decor,0x8);
@@ -300,7 +301,12 @@ else
         if get_set ~= 0 then
             (get_set == p_get and ClassesReadable or ClassesWritable)[cls][key] = {value,isStatic};
         else
-            rawset(cls,key,value);
+            if isStatic then
+                ClassesStatic[cls][key] = value;
+            else
+                rawset(cls,key,value);
+                ClassesStatic[cls][key] = nil;
+            end
         end
         decor = 0;
         cls = nil;

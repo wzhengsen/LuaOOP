@@ -86,6 +86,7 @@ local ClassesMetas = Functions.ClassesMetas;
 local ClassesNew = Functions.ClassesNew;
 local ClassesDelete = Functions.ClassesDelete;
 local ClassesSingleton = Functions.ClassesSingleton;
+local ClassesStatic = Functions.ClassesStatic;
 local ObjectsAll = Functions.ObjectsAll;
 local ObjectsCls = Functions.ObjectsCls;
 
@@ -311,6 +312,13 @@ local function CascadeGet(cls,key,called)
     if nil ~= ret then
         return ret;
     end
+    local static = ClassesStatic[cls];
+    if static then
+        ret = rawget(static,key);
+        if nil ~= ret then
+            return ret;
+        end
+    end
     local bases = ClassesBases[cls];
     if bases then
         for _,base in ipairs(bases) do
@@ -382,10 +390,7 @@ local function MakeInternalObjectMeta(cls,metas)
 
         -- Check the properties of current class.
         local property = ClassesReadable[cCls][key];
-        if property then
-            if property[2] then
-                return property[1]();
-            end
+        if property and not property[2] then
             return property[1](sender);
         end
 
@@ -416,12 +421,8 @@ local function MakeInternalObjectMeta(cls,metas)
             cCls = cls;
         end
         local property = ClassesWritable[cCls][key];
-        if property then
-            if property[2] then
-                property[1](value);
-            else
-                property[1](sender,value);
-            end
+        if property and not property[2] then
+            property[1](sender,value);
             return;
         end
         if isUserData then
@@ -514,10 +515,7 @@ local function RetrofiteUserDataObjectMetaExternal(obj,meta,cls)
 
             -- Check cls properties.
             local property = ClassesReadable[cls][key];
-            if property then
-                if property[2] then
-                    return property[1]();
-                end
+            if property and not property[2] then
                 return property[1](sender);
             end
             -- Check cls bases.
@@ -539,12 +537,8 @@ local function RetrofiteUserDataObjectMetaExternal(obj,meta,cls)
         local cls = ObjectsCls[sender];
         if cls then
             local property = ClassesWritable[cls][key];
-            if property then
-                if property[2] then
-                    property[1](value);
-                else
-                    property[1](sender,value);
-                end
+            if property and not property[2] then
+                property[1](sender,value);
                 return;
             end
             local all = ObjectsAll[sender];
@@ -653,6 +647,7 @@ local function CreateClassTables(cls)
     ClassesBases[cls] = bases;
     ClassesChildren[cls] = {};
     ClassesHandlers[cls] = handlers;
+    ClassesStatic[cls] = {};
 
     local r,w = CreateClassPropertiesTable(cls,bases);
     ClassesReadable[cls] = r;
@@ -711,15 +706,18 @@ local function ClassGet(cls,key)
     end
     -- Check the properties first.
     local property = ClassesReadable[cls][key];
-    if property then
-        if property[2] then
-            -- Is static property?
-            -- Class can't access object's property directly.
-            return property[1]()
-        end
+    if property and property[2] then
+        -- Is static property?
+        -- Class can't access object's property directly.
+        return property[1]()
+    end
+    local static = ClassesStatic[cls];
+    local ret = static[key];
+    if nil ~= ret then
+        return ret;
     end
     for _, base in ipairs(ClassesBases[cls]) do
-        local ret = CascadeGet(base,key,{});
+        ret = CascadeGet(base,key,{});
         if nil ~= ret then
             return ret;
         end
@@ -748,13 +746,11 @@ local function ClassSet(cls,key,value)
         return;
     else
         local property = ClassesWritable[cls][key];
-        if property then
-            if property[2] then
-                -- Is static property?
-                -- Class can't access object's property directly.
-                property[1](value);
-                return;
-            end
+        if property and property[2] then
+            -- Is static property?
+            -- Class can't access object's property directly.
+            property[1](value);
+            return;
         end
         local exist = rawget(cls,key);
         local vt = type(value);
@@ -765,6 +761,7 @@ local function ClassSet(cls,key,value)
             Update2ChildrenWithKey(cls,ClassesMembers,key,value);
         end
         rawset(cls,key,value);
+        ClassesStatic[cls][key] = nil;
     end
     local meta = MetaMapName[key];
     if meta then
