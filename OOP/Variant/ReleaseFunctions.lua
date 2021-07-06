@@ -380,11 +380,6 @@ local function MakeInternalObjectMeta(cls,metas)
             cCls = cls;
         end
 
-        -- Check the key of current class first.
-        ret = rawget(cCls,key);
-        if nil ~= ret then
-            return ret;
-        end
         -- Check the properties of current class.
         local property = ClassesReadable[cCls][key];
         if property then
@@ -393,6 +388,13 @@ local function MakeInternalObjectMeta(cls,metas)
             end
             return property[1](sender);
         end
+
+        -- Check the key of current class.
+        ret = rawget(cCls,key);
+        if nil ~= ret then
+            return ret;
+        end
+
         -- Check base class.
         for _, base in ipairs(ClassesBases[cCls]) do
             ret = CascadeGet(base,key,{});
