@@ -114,6 +114,9 @@ local p_private = Permission.private;
 local p_const = Permission.const;
 local p_static = Permission.static;
 
+local class = require("OOP.BaseClass");
+local c_delete = class.delete;
+
 ---Cascade to get permission values up to the top of the base class.
 ---
 ---@param self table
@@ -573,6 +576,18 @@ local function ClassSet(cls,key,value)
 
     local vt = type(value);
     local isFunction = "function" == vt;
+
+    if key == ctor or key == dtor then
+        if not isFunction then
+            error((i18n"%s reserved word must be assigned to a function."):format(key));
+        end
+        local isCtor = key == ctor;
+        local ban = value == c_delete;
+        local keyTable = isCtor and ClassesBanNew or ClassesBanDelete;
+        keyTable[cls] = ban;
+        Update2Children(cls,keyTable,ban);
+    end
+
     if key == __singleton__ then
         if not isFunction then
             error((i18n"%s reserved word must be assigned to a function."):format(key));
@@ -823,6 +838,9 @@ end
 
 function Functions.CreateClassDelete(cls)
     return function (self)
+        if ClassesBanDelete[cls] then
+            error(i18n"The class/base classes destructor is not accessible.");
+        end
         CascadeDelete(self,cls,{});
         local d = ClassesDelete[cls];
         if d then

@@ -54,6 +54,9 @@ local virtual = Config.Qualifiers.virtual;
 local get = Config.get;
 local set = Config.set;
 
+local class = require("OOP.BaseClass");
+local c_delete = class.delete;
+
 local BitsMap = {
     [public] = 2 ^ 0,
     [private] = 2 ^ 1,
@@ -210,6 +213,7 @@ if Debug then
             vcm[key] = nil;
         end
         local get_set = band(decor,0xc0);
+        local oVal = value;
         if isFunction then
             value = FunctionWrapper(cls,value);
         elseif get_set == 0 then
@@ -248,14 +252,12 @@ if Debug then
             if key == ctor then
                 -- Reassign permissions to "new", which are the same as ctor with the static qualifier.
                 pms[new] = bor(decor,0x8);
-                if band(decor,p_private) then
-                    Update2Children(cls,ClassesBanNew,true);
-                end
+                local ban = band(decor,p_private) ~= 0 or oVal == c_delete;
+                Update2Children(cls,ClassesBanNew,ban);
             elseif key == dtor then
                 pms[delete] = decor;
-                if band(decor,p_private) then
-                    Update2Children(cls,ClassesBanDelete,true);
-                end
+                local ban = band(decor,p_private) ~= 0 or oVal == c_delete;
+                Update2Children(cls,ClassesBanDelete,ban);
             end
         end
 

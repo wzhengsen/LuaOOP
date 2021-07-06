@@ -29,6 +29,7 @@ local final = Config.Qualifiers.final;
 local FinalClasses = Internal.FinalClasses;
 local ClassDefault = Config["class.default"];
 local ClassDelete = Config["class.delete"];
+local i18n = require("OOP.i18n");
 
 local class = setmetatable({},{
     __call = function(c,...)
@@ -61,6 +62,6 @@ class[final] = function (...)
 end
 
 class[ClassDefault] = function ()end;
-class[ClassDelete] = function ()end;
+class[ClassDelete] = function () error(i18n"This is the function that has been deleted.");end;
 
 return class;

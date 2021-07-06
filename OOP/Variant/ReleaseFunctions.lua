@@ -51,6 +51,7 @@ local Begin = R.Begin;
 local delete = Config.delete;
 local DeathMarker = Config.DeathMarker;
 local dtor = Config.dtor;
+local ctor = Config.ctor;
 local IsInherite = Config.ExternalClass.IsInherite;
 
 local new = Config.new;
