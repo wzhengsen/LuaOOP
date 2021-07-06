@@ -302,9 +302,10 @@ end
 ---@param cls table
 ---@param key any
 ---@param called table
+---@param byObject? boolean
 ---@return any
 ---
-local function CascadeGet(cls,key,called)
+local function CascadeGet(cls,key,called,byObject)
     if called[cls] then
         return nil;
     end
@@ -313,17 +314,19 @@ local function CascadeGet(cls,key,called)
     if nil ~= ret then
         return ret;
     end
-    local static = ClassesStatic[cls];
-    if static then
-        ret = rawget(static,key);
-        if nil ~= ret then
-            return ret;
+    if not byObject then
+        local static = ClassesStatic[cls];
+        if static then
+            ret = rawget(static,key);
+            if nil ~= ret then
+                return ret;
+            end
         end
     end
     local bases = ClassesBases[cls];
     if bases then
         for _,base in ipairs(bases) do
-            ret = CascadeGet(base,key,called);
+            ret = CascadeGet(base,key,called,byObject);
             if nil ~= ret then
                 return ret;
             end
@@ -403,7 +406,7 @@ local function MakeInternalObjectMeta(cls,metas)
 
         -- Check base class.
         for _, base in ipairs(ClassesBases[cCls]) do
-            ret = CascadeGet(base,key,{});
+            ret = CascadeGet(base,key,{},true);
             if nil ~= ret then
                 return ret;
             end
@@ -521,7 +524,7 @@ local function RetrofiteUserDataObjectMetaExternal(obj,meta,cls)
             end
             -- Check cls bases.
             for _, base in ipairs(ClassesBases[cls]) do
-                ret = CascadeGet(base,key,{});
+                ret = CascadeGet(base,key,{},true);
                 if nil ~= ret then
                     return ret;
                 end
@@ -665,8 +668,9 @@ local function CreateClassTables(cls)
 end
 
 local function AttachClassFunctions(cls,_is,_new,_delete)
+    local static = ClassesStatic[cls];
     cls[is] = _is;
-    cls[new] = _new;
+    static[new] = _new;
     cls[delete] = _delete;
 end
 

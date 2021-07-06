@@ -18,9 +18,11 @@
 -- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
+
 local setmetatable = setmetatable;
 local insert = table.insert;
 local remove = table.remove;
+
 ---
 ---Wrapping the given function so that it handles the push and pop of the access stack correctly anyway,
 --to avoid the access stack being corrupted by an error being thrown in one of the callbacks.
@@ -38,7 +40,7 @@ local RAII = setmetatable({},{
     end
 });
 local function FunctionWrapper(cls,f)
-    local newF = AllFunctions[f]
+    local newF = AllFunctions[f];
     if nil == newF then
         newF = function(...)
             insert(AccessStack,cls);
@@ -52,7 +54,7 @@ local function FunctionWrapper(cls,f)
 end
 
 local function BreakFunctionWrapper(f)
-    local newF = AllFunctions[f]
+    local newF = AllFunctions[f];
     if nil == newF then
         newF = function(...)
             -- 0 means that any access rights can be broken.

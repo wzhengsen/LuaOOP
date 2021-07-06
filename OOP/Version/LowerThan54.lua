@@ -40,7 +40,7 @@ local error = error;
 local AllFunctions = setmetatable({},{__mode = "k"});
 local AccessStack = require("OOP.Variant.Internal").AccessStack;
 local function FunctionWrapper(cls,f)
-    local newF = AllFunctions[f]
+    local newF = AllFunctions[f];
     if nil == newF then
         newF = function(...)
             insert(AccessStack,cls);
@@ -58,7 +58,7 @@ local function FunctionWrapper(cls,f)
 end
 
 local function BreakFunctionWrapper(f)
-    local newF = AllFunctions[f]
+    local newF = AllFunctions[f];
     if nil == newF then
         newF = function(...)
             -- 0 means that any access rights can be broken.

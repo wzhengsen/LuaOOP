@@ -210,9 +210,10 @@ Functions.CheckPermission = CheckPermission;
 ---@param cls table
 ---@param key any
 ---@param called table
+---@param byObject? boolean
 ---@return any
 ---
-local function CascadeGet(cls,key,called)
+local function CascadeGet(cls,key,called,byObject)
     if called[cls] then
         return nil;
     end
@@ -227,17 +228,19 @@ local function CascadeGet(cls,key,called)
         if nil ~= ret then
             return ret;
         end
-        ret = ClassesStatic[cls];
-        if ret then
-            ret = ret[key];
-            if nil ~= ret then
-                return ret;
+        if byObject then
+            ret = ClassesStatic[cls];
+            if ret then
+                ret = ret[key];
+                if nil ~= ret then
+                    return ret;
+                end
             end
         end
         local bases = ClassesBases[cls];
         if bases then
             for _,base in ipairs(bases) do
-                ret = CascadeGet(base,key,called);
+                ret = CascadeGet(base,key,called,byObject);
                 if nil ~= ret then
                     return ret;
                 end
@@ -334,7 +337,7 @@ local function GetAndCheck(cls,key,sender,metas)
     end
     -- Check bases.
     for _, base in ipairs(ClassesBases[cCls]) do
-        ret = CascadeGet(base,key,{});
+        ret = CascadeGet(base,key,{},true);
         if nil ~= ret then
             return ret;
         end
@@ -364,6 +367,10 @@ function Functions.MakeInternalObjectMeta(cls,metas)
             end
         else
             cCls = cls;
+        end
+        -- The reserved words cannot be used.
+        if ReservedWord[key] then
+            error((i18n"%s is a reserved word and you can't set it."):format(key));
         end
         if not CheckPermission(cCls,key,true,true) then
             return;
@@ -445,6 +452,10 @@ local function RetrofiteUserDataObjectMetaExternal(obj,meta,cls)
     rawset(meta,"__newindex",function (sender,key,value)
         local cls = ObjectsCls[sender];
         if cls then
+            -- The reserved words cannot be used.
+            if ReservedWord[key] then
+                error((i18n"%s is a reserved word and you can't set it."):format(key));
+            end
             if not CheckPermission(cls,key,true,true) then
                 return;
             end
@@ -830,11 +841,12 @@ end
 
 function Functions.AttachClassFunctions(cls,_is,_new,_delete)
     local all = ClassesAll[cls];
+    local static = ClassesStatic[cls];
     local pms = ClassesPermisssions[cls];
     all[is] = _is;
     pms[is] = p_public;
     -- In debug mode,the "new" method is public and static.
-    all[new] = FunctionWrapper(cls,_new);
+    static[new] = FunctionWrapper(cls,_new);
     -- Use + instead of | to try to keep lua 5.3 or lower compatible.
     pms[new] = p_public + p_static;
 
