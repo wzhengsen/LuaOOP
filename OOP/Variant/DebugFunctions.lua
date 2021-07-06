@@ -21,7 +21,7 @@
 
 local getmetatable = getmetatable;
 local setmetatable = setmetatable;
-local debug = debug;
+local d_setmetatable = debug.setmetatable;
 local rawset = rawset;
 local rawget = rawget;
 local type = type;
@@ -812,13 +812,13 @@ end
 
 function Functions.CreateClassDelete(cls)
     return function (self)
+        CascadeDelete(self,cls,{});
         local d = ClassesDelete[cls];
         if d then
             d(self);
         else
-            CascadeDelete(self,cls,{});
             if "userdata" == type(self) then
-                debug.setmetatable(self,nil);
+                d_setmetatable(self,nil);
             else
                 setmetatable(self,nil);
                 self[DeathMarker] = true;

@@ -29,6 +29,7 @@ local type = type;
 local select = select;
 local remove = table.remove;
 local insert = table.insert;
+local d_setmetatable = debug.setmetatable;
 
 local Config = require("OOP.Config");
 local i18n = require("OOP.i18n");
@@ -608,18 +609,24 @@ end
 
 local function CallDel(self)
     CascadeDelete(self,self[is](),{});
+    ObjectsAll[self] = nil;
 end
 
 local function CreateClassDelete(cls)
     return function (self)
+        Functions.CascadeDelete(self,cls,{});
         local d = ClassesDelete[cls];
         if d then
             d(self);
         else
-            CascadeDelete(self,cls,{});
-            setmetatable(self,nil);
-            self[DeathMarker] = true;
+            if "userdata" == type(self) then
+                d_setmetatable(self,nil);
+            else
+                setmetatable(self,nil);
+                self[DeathMarker] = true;
+            end
         end
+        ObjectsAll[self] = nil;
     end
 end
 
