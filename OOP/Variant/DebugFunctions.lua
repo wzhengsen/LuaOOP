@@ -27,9 +27,9 @@ local rawget = rawget;
 local type = type;
 local pairs = pairs;
 local ipairs = ipairs;
+local warn = warn or print;
 
 local Config = require("OOP.Config");
-local Version = Config.Version;
 local i18n = require("OOP.i18n");
 
 local BaseFunctions = require("OOP.BaseFunctions");
@@ -165,9 +165,7 @@ local function CheckPermission(self,key,byObj,set)
             -- Check const.
             if ConstBehavior ~= 2 then
                 if ConstBehavior == 0 then
-                    if Version > 5.4 then
-                        warn(("You cannot change the const value. - %s"):format(key));
-                    end
+                    warn(("You cannot change the const value. - %s"):format(key));
                 elseif ConstBehavior == 1 then
                     error((i18n"You cannot change the const value. - %s"):format(key));
                 end
@@ -302,9 +300,7 @@ local function GetAndCheck(cls,key,sender,metas)
         if ClassesWritable[cCls][key] then
             if PropertyBehavior ~= 2 then
                 if PropertyBehavior == 0 then
-                    if Version > 5.4 then
-                        warn(("You can't read a write-only property. - %s"):format(key));
-                    end
+                    warn(("You can't read a write-only property. - %s"):format(key));
                 elseif PropertyBehavior == 1 then
                     error((i18n"You can't read a write-only property. - %s"):format(key));
                 end
@@ -361,9 +357,7 @@ function Functions.MakeInternalObjectMeta(cls,metas)
             if ClassesReadable[cCls][key] then
                 if PropertyBehavior ~= 2 then
                     if PropertyBehavior == 0 then
-                        if Version > 5.4 then
-                            warn(("You can't write a read-only property. - %s"):format(key));
-                        end
+                        warn(("You can't write a read-only property. - %s"):format(key));
                     elseif PropertyBehavior == 1 then
                         error((i18n"You can't write a read-only property. - %s"):format(key));
                     end
@@ -442,9 +436,7 @@ local function RetrofiteUserDataObjectMetaExternal(obj,meta,cls)
                 if ClassesReadable[cls][key] then
                     if PropertyBehavior ~= 2 then
                         if PropertyBehavior == 0 then
-                            if Version > 5.4 then
-                                warn(("You can't write a read-only property. - %s"):format(key));
-                            end
+                            warn(("You can't write a read-only property. - %s"):format(key));
                         elseif PropertyBehavior == 1 then
                             error((i18n"You can't write a read-only property. - %s"):format(key));
                         end
@@ -498,12 +490,11 @@ local function ClassGet(cls,key)
             return property[1]();
         end
     else
-        if ClassesWritable[cls][key] then
+        property = ClassesWritable[cls][key]
+        if property and property[2] then
             if PropertyBehavior ~= 2 then
                 if PropertyBehavior == 0 then
-                    if Version > 5.4 then
-                        warn(("You can't read a write-only property. - %s"):format(key));
-                    end
+                    warn(("You can't read a write-only property. - %s"):format(key));
                 elseif PropertyBehavior == 1 then
                     error((i18n"You can't read a write-only property. - %s"):format(key));
                 end
@@ -601,12 +592,11 @@ local function ClassSet(cls,key,value)
                     return;
                 end
             else
-                if ClassesWritable[cls][key] then
+                property = ClassesWritable[cls][key];
+                if property and property[1] then
                     if PropertyBehavior ~= 2 then
                         if PropertyBehavior == 0 then
-                            if Version > 5.4 then
-                                warn(("You can't write a read-only property. - %s"):format(key));
-                            end
+                            warn(("You can't write a read-only property. - %s"):format(key));
                         elseif PropertyBehavior == 1 then
                             error((i18n"You can't write a read-only property. - %s"):format(key));
                         end

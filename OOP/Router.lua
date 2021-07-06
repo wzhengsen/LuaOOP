@@ -222,6 +222,14 @@ if Debug then
         end
 
         local pms = ClassesPermisssions[cls];
+        -- Instead of identifying the property with static,
+        -- attach static to the property to avoid static checks occurring before taking the property
+        -- (the property can have the same name as the static member).
+        if isStatic then
+            if get_set ~= 0 or ClassesReadable[cls][key] or ClassesWritable[cls][key] then
+                decor = decor - p_static;
+            end
+        end
         pms[key] = decor;
         if get_set ~= 0 then
             if not isFunction then

@@ -711,6 +711,8 @@ local function ClassGet(cls,key)
     local property = ClassesReadable[cls][key];
     if property then
         if property[2] then
+            -- Is static property?
+            -- Class can't access object's property directly.
             return property[1]()
         end
     end
@@ -746,6 +748,8 @@ local function ClassSet(cls,key,value)
         local property = ClassesWritable[cls][key];
         if property then
             if property[2] then
+                -- Is static property?
+                -- Class can't access object's property directly.
                 property[1](value);
                 return;
             end
