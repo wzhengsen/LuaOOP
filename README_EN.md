@@ -10,26 +10,25 @@ LuaOOP is an object-oriented pattern that borrows some of the class design from 
 
 >What features LuaOOP provides?
 
-* [Basic class construction and destruction](#1---basic-class-construction-and-destruction);
-* [Single and multiple inheritance of classes](#2---single-and-multiple-inheritance-of-class);
-* [Access control](#3---access-control)（public/protected/private/static/const/friends/final）;
-* [All reserved words are configurable](#4---all-reserved-words-are-configurable);
-* [Properties](#5---properties);
-* [Runtime type judgment](#6---runtime-type-judgment)（is）;
-* [Meta-methods and Operator overloading](#7---meta-methods-and-operator-overloading);
-* [Singleton](#8---singleton)（\_\_singleton\_\_）;
-* [Extend or inherit from external classes](#9---extend-or-inherit-from-external-classes) (classes that generate userdata);
-* [Debug and Release run modes](#10---debug-and-release-run-modes);
-* [Simple event dispatch mode](#11---simple-event-dispatch-mode);
-* [Enumeration](#12---enumeration);
-* [Pure virtual functions](#13---pure-virtual-functions);
-* [Lua5.1-Lua5.4 compat](#14---lua51-lua54-compat).
+*   [Basic class construction and destruction](#1---basic-class-construction-and-destruction);
+*   [Single and multiple inheritance of classes](#2---single-and-multiple-inheritance-of-class);
+*   [Access control](#3---access-control)（public/protected/private/static/const/friends/final）;
+*   [All reserved words are configurable](#4---all-reserved-words-are-configurable);
+*   [Properties](#5---properties);
+*   [Runtime type judgment](#6---runtime-type-judgment)（is）;
+*   [Meta-methods and Operator overloading](#7---meta-methods-and-operator-overloading);
+*   [Singleton](#8---singleton)（\_\_singleton\_\_）;
+*   [Extend or inherit from external classes](#9---extend-or-inherit-from-external-classes) (classes that generate userdata);
+*   [Debug and Release run modes](#10---debug-and-release-run-modes);
+*   [Simple event dispatch mode](#11---simple-event-dispatch-mode);
+*   [Enumeration](#12---enumeration);
+*   [Pure virtual functions](#13---pure-virtual-functions);
+*   [Lua5.1-Lua5.4 compat](#14---lua51-lua54-compat).
 
-> planned or to be implemented
+>planned or to be implemented
 
-* Custom qualifiers;
-* New semantics when const qualifies methods.
-* class.default and class.delete。
+*   Custom qualifiers;
+*   New semantics when const qualifies methods.
 
 ---
 ## 1 - Basic class construction and destruction
@@ -493,11 +492,11 @@ print(test.mySecret);
 ```
 
 >Some special modifying rules:
-* Constructors and destructors cannot be modified with static or const;
-* None of the qualifiers can appear more than once at the same time;
-* Pure virtual function qualifier can only be used alone (see later);
-* Property and constant qualifier cannot be used together (see later);
-* Cannot qualify some special methods and members (events/singleton, etc., see later).
+*   Constructors and destructors cannot be modified with static or const;
+*   None of the qualifiers can appear more than once at the same time;
+*   Pure virtual function qualifier can only be used alone (see later);
+*   Property and constant qualifier cannot be used together (see later);
+*   Cannot qualify some special methods and members (events/singleton, etc., see later).
 
 ---
 ## 4 - All reserved words are configurable
@@ -517,11 +516,11 @@ protected = "protected"
 ```
 For example, now:
 
-* **class** renamed to **struct**;
-* **new** renamed to **create**;
-* **delete** renamed to **dispose**;
-* **ctor** renamed to **\_\_init\_\_**;
-* Other reserved words are named in their upper case.
+*   **class** renamed to **struct**;
+*   **new** renamed to **create**;
+*   **delete** renamed to **dispose**;
+*   **ctor** renamed to **\_\_init\_\_**;
+*   Other reserved words are named in their upper case.
 
 The following code will work fine:
 ```lua
@@ -772,10 +771,10 @@ The additional metamethods that can be implemented with Lua version > 5.3 are:
 
 ---
 The following metamethods cannot be implemented at this time:
-* __index
-* __newindex
-* __metatable
-* __mode
+*   __index
+*   __newindex
+*   __metatable
+*   __mode
 
 ---
 ## 8 - Singleton
