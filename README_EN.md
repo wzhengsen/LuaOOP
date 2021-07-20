@@ -491,6 +491,23 @@ print(forceBreak());
 print(test.mySecret);
 ```
 
+>class.delete and class.default：
+```lua
+require("OOP.Class");
+-- If you don't want Test1 to be constructed,
+-- you can assign class.delete to the constructor.
+local Test1 = class();
+Test1.ctor = class.delete;
+local test1 = Test1.new();-- An error was raised, and now the Test1 type cannot be constructed.
+
+-- Classes that inherit from Test1 cannot be constructed either.
+local Test2 = class(Test1);
+local test2 = Test2.new();-- Raise an error, and the Test2 type cannot be constructed too.
+
+-- For class.default, I think it has no use, it is actually an empty function,
+-- it exists only to correspond to the c++ default keyword.
+```
+
 >Some special modifying rules:
 *   Constructors and destructors cannot be modified with static or const;
 *   None of the qualifiers can appear more than once at the same time;

@@ -489,6 +489,23 @@ print(forceBreak());
 print(test.mySecret);
 ```
 
+>class.delete和class.default：
+```lua
+require("OOP.Class");
+-- 如果你不希望Test1被构造，可以将class.delete赋值给构造函数。
+local Test1 = class();
+Test1.ctor = class.delete;
+local test1 = Test1.new();-- 引发错误，现在Test1类型不能被构造。
+
+-- 继承于Test1的类也无法构造。
+local Test2 = class(Test1);
+local test2 = Test2.new();-- 引发错误，Test2类型也不能被构造。
+
+
+-- 对于class.default，个人认为没有任何屁用，实际上是一个空函数，
+-- 它的存在仅仅为了对应c++的default关键字。
+```
+
 >一些特殊的修饰规则：
 *   构造函数和析构函数不能使用static或const修饰；
 *   各个修饰符都不能同时出现一次以上；
