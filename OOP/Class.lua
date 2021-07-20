@@ -24,11 +24,12 @@ local type = type;
 local pcall = pcall;
 local error = error;
 local next = next;
+local select = select;
 
 local Config = require("OOP.Config");
 local Debug = Config.Debug;
 local ctor = Config.ctor;
-local Break = Config.Break;
+local raw = Config.raw;
 
 local i18n = require("OOP.i18n");
 
@@ -110,6 +111,13 @@ end
 ---@return table class
 function class.New(...)
     local args = {...};
+    if Debug then
+        local len = 0;
+        while nil ~= args[len + 1] do
+            len = len + 1;
+        end
+        assert(select("#",...) == len,i18n"You cannot inherit a nil value.");
+    end
     local cls,metas,name = CheckClass(args);
     local all,bases,handlers,members = CreateClassTables(cls);
 
@@ -127,10 +135,10 @@ end
 
 if Debug then
     local BreakFunctionWrapper = require("OOP.BaseFunctions").BreakFunctionWrapper;
-    class[Break] = function (f)
-        assert("function" == type(f),(i18n"%s must wrap a function."):format(Break));
+    class[raw] = function (f)
+        assert("function" == type(f),(i18n"%s must wrap a function."):format(raw));
         return BreakFunctionWrapper(f);
     end
 else
-    class[Break]=function(f)return f;end
+    class[raw]=function(f)return f;end
 end

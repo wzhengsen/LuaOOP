@@ -80,8 +80,8 @@ p1:delete();
 p2:delete();
 print(p1.x);-- nil
 print(p2.x);-- nil
-if not class.IsNull(p1) then
-    -- You can judge a object whether have been destructed by class.Null.
+if not class.null(p1) then
+    -- You can judge a object whether have been destructed by class.null.
     p1:PrintXY();
 end
 -- Raise error.
@@ -469,7 +469,7 @@ local test4 = Test.CreateInstance();
 test4:delete();
 ```
 
->Use class.Break to force a break in access permissions:
+>Use class.raw to force a break in access permissions:
 ```lua
 require("OOP.Class");
 local Test = class();
@@ -481,13 +481,13 @@ end
 
 local test = Test.new();
 
-local forceBreak = class.Break(function()
+local forceBreak = class.raw(function()
     -- Access permissions have now been broken and can access any member.
     return test:GetMyInfo(),test.mySecret;
 end);
 print(forceBreak());
 
--- remains inaccessible outside of class.Break.
+-- remains inaccessible outside of class.raw.
 print(test.mySecret);
 ```
 
@@ -897,7 +897,7 @@ File.close(file);-- Now, the close method can also be accessed through File.
 local Config = require("OOP.Config");
 
 -- ExternalClass.Null function can be implemented to determine whether a userdata class is currently available.
--- Otherwise class.IsNull always returns true for the userdata type.
+-- Otherwise class.null always returns true for the userdata type.
 Config.ExternalClass.Null = function(obj)
     if getmetatable(obj) == getmetatable(io.stdout) then
         return (tostring(obj):find("(closed)")) ~= nil;
@@ -912,9 +912,9 @@ function File.__new__(...)
 end
 
 local file = File.new("D:/test","w");
-print(class.IsNull(file));-- false
+print(class.null(file));-- false
 file:close();
-print(class.IsNull(file));-- true
+print(class.null(file));-- true
 ```
 
 >Destroying the memory of external objects
@@ -928,7 +928,7 @@ local ExtClass = require(...);
 local Config = require("OOP.Config");
 Config.ExternalClass.Null = function(obj)
     if ExtClass.CheckIsExtClass(obj) then
-        return ExtClass.IsNull(obj);
+        return ExtClass.null(obj);
     end
 end
 
@@ -945,10 +945,10 @@ function LuaClass:dtor()
 end
 
 local obj = LuaClass.new();
-print(class.IsNull(obj));-- false
+print(class.null(obj));-- false
 -- The destructor will still be called.
 obj:delete();-- "LuaClass is destructed at here.."
-print(class.IsNull(obj));-- true
+print(class.null(obj));-- true
 ```
 
 ---
@@ -1098,9 +1098,9 @@ print(Number2.Six);--6
 
 -- Enumeration method 3.
 local Number3 = enum {
-    Seven = enum.Auto(7),
-    Eight = enum.Auto(),
-    Nine = enum.Auto()
+    Seven = enum.auto(7),
+    Eight = enum.auto(),
+    Nine = enum.auto()
 };
 print(Number3.Seven);--7
 print(Number3.Eight);--8

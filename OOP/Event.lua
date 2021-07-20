@@ -34,7 +34,7 @@
 ]]
 local Config = require("OOP.Config");
 local class = require("OOP.BaseClass");
-local IsNull = class.IsNull;
+local null = class.null;
 local HoleLimit = Config.HoleLimit;
 local EventPool = {};
 local EventOrder = {};
@@ -111,7 +111,7 @@ local event = setmetatable({},{
 
             for _,info in ipairs(objHandlers) do
                 local obj = info.obj;
-                if IsNull(obj) then
+                if null(obj) then
                     -- Specifies that the number of holes is increased when the object is destroyed.
                     hole = hole + 1;
                     info.obj = false;

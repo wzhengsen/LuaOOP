@@ -19,12 +19,15 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 
+local type = type;
+local rawget = rawget;
+
 require("OOP.Enum");
 local Config = require("OOP.Config");
 local Internal = require("OOP.Variant.Internal");
 local Null = Config.ExternalClass.Null;
 local DeathMarker = Config.DeathMarker;
-local IsNull = Config.IsNull;
+local null = Config.null;
 local final = Config.Qualifiers.final;
 local FinalClasses = Internal.FinalClasses;
 local ClassDefault = Config["class.default"];
@@ -38,7 +41,7 @@ local class = setmetatable({},{
 });
 rawset(_G,Config.class,class);
 
-local _IsNull = Null and function(t)
+local _null = Null and function(t)
     local tt = type(t);
     if tt == "table" then
         return rawget(t,DeathMarker);
@@ -53,7 +56,7 @@ function(t)
     end
     return not t;
 end;
-class[IsNull] = _IsNull;
+class[null] = _null;
 
 class[final] = function (...)
     local cls = class(...);

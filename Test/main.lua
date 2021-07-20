@@ -46,8 +46,8 @@ local simple2 = Simple.new();
 assert(simple1:Say() == "Lua");
 assert(simple2:Say() == "simple");
 simple1:delete()
-assert(class.IsNull(simple1));
-assert(not class.IsNull(simple2));
+assert(class.null(simple1));
+assert(not class.null(simple2));
 
 -- Inherite.
 local Base1 = class();
@@ -257,8 +257,8 @@ assert(a == b);
 local c = Single.Instance;
 Single.Instance = nil;
 local d = Single.Instance;
-assert(class.IsNull(a) and a == c);
-assert(not class.IsNull(d) and d ~= c);
+assert(class.null(a) and a == c);
+assert(not class.null(d) and d ~= c);
 
 -- event and handlers.
 event.NewEvent(3.8,"鹅嘎尔");

@@ -51,7 +51,6 @@ local Begin = R.Begin;
 local delete = Config.delete;
 local DeathMarker = Config.DeathMarker;
 local dtor = Config.dtor;
-local ctor = Config.ctor;
 local IsInherite = Config.ExternalClass.IsInherite;
 
 local new = Config.new;
@@ -71,7 +70,7 @@ local set = Config.set;
 
 local MetaMapName = Config.MetaMapName;
 
-local _IsNull = class.IsNull;
+local null = class.null;
 
 local Functions = Internal;
 local ClassesChildrenByName = Functions.ClassesChildrenByName;
@@ -100,7 +99,7 @@ local ObjectsCls = Functions.ObjectsCls;
 ---
 local function GetSingleton(self,call)
     local s = ClassesSingleton[self];
-    if _IsNull(s) then
+    if null(s) then
         s = call(self);
         ClassesSingleton[self] = s;
     end
@@ -116,7 +115,7 @@ end
 local function DestroySingleton(self,val)
     if nil == val then
         local s = ClassesSingleton[self];
-        if not _IsNull(s) then
+        if not null(s) then
             s:delete();
             ClassesSingleton[self] = nil;
         end
@@ -290,9 +289,12 @@ local function CreateClassObject(cls,...)
     local all = nil;
     if "table" == oType then
         all = obj;
-    elseif nil ~= obj and nil == ObjectsAll[obj] then
-        all = {};
-        ObjectsAll[obj] = all;
+    elseif nil ~= obj then
+        all = ObjectsAll[obj];
+        if nil == all then
+            all = {};
+            ObjectsAll[obj] = all;
+        end
     end
     return obj,all;
 end
@@ -785,7 +787,6 @@ end
 Functions.class = class;
 Functions.GetSingleton = GetSingleton;
 Functions.DestroySingleton = DestroySingleton;
-Functions.IsNull = _IsNull;
 Functions.CheckClass = CheckClass;
 Functions.PushBase = PushBase;
 Functions.CreateClassIs = CreateClassIs;

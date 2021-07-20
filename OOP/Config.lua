@@ -42,10 +42,10 @@ local Config = {
 
     handlers = "handlers",
 
-    IsNull = "IsNull",
-    Break = "Break",
+    null = "null",
+    raw = "raw",
 
-    Auto = "Auto",
+    auto = "auto",
 
     set = "set",
     get = "get",

@@ -28,7 +28,7 @@ local warn = warn or print;
 local Config = require("OOP.Config");
 local i18n = require("OOP.i18n");
 local EnumBehavior = Config.EnumBehavior;
-local Auto = Config.Auto;
+local auto = Config.auto;
 local AllEnumerations = require("OOP.Variant.Internal").AllEnumerations;
 local enum = setmetatable({},{
     __call = function (e,...)
@@ -38,10 +38,10 @@ local enum = setmetatable({},{
 
 local AutoIdx = 0;
 if Config.Debug then
-    enum[Auto] = function(...)
+    enum[auto] = function(...)
         local len = select("#",...)
         if len > 1 then
-            error((i18n"%s function can't receive more than one parameters."):format(Auto));
+            error((i18n"%s function can't receive more than one parameters."):format(auto));
         end
         AutoIdx = len == 0 and AutoIdx + 1 or ...;
         return AutoIdx;
@@ -79,7 +79,7 @@ if Config.Debug then
         });
     end
 else
-    enum[Auto] = function(...)
+    enum[auto] = function(...)
         local len = select("#",...)
         AutoIdx = len == 0 and AutoIdx + 1 or ...;
         return AutoIdx;

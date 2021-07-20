@@ -79,8 +79,8 @@ p1:delete();
 p2:delete();
 print(p1.x);-- nil
 print(p2.x);-- nil
-if not class.IsNull(p1) then
-    -- 可以通过class.IsNull来判断一个对象是否已经被销毁。
+if not class.null(p1) then
+    -- 可以通过class.null来判断一个对象是否已经被销毁。
     p1:PrintXY();
 end
 -- 引发错误。
@@ -467,7 +467,7 @@ local test4 = Test.CreateInstance();
 test4:delete();
 ```
 
->使用class.Break来强行突破访问权限：
+>使用class.raw来强行突破访问权限：
 ```lua
 require("OOP.Class");
 local Test = class();
@@ -479,13 +479,13 @@ end
 
 local test = Test.new();
 
-local forceBreak = class.Break(function()
+local forceBreak = class.raw(function()
     -- 现在已突破访问权，可以访问任意成员。
     return test:GetMyInfo(),test.mySecret;
 end);
 print(forceBreak());
 
--- 在class.Break外仍然不能访问。
+-- 在class.raw外仍然不能访问。
 print(test.mySecret);
 ```
 
@@ -893,7 +893,7 @@ File.close(file);--现在，也可以通过File来访问close方法。
 local Config = require("OOP.Config");
 
 -- 可以实现Config.ExternalClass.Null函数来判断某个userdata类目前是否可用。
--- 否则class.IsNull始终对userdata类型返回true。
+-- 否则class.null始终对userdata类型返回true。
 Config.ExternalClass.Null = function(obj)
     if getmetatable(obj) == getmetatable(io.stdout) then
         return (tostring(obj):find("(closed)")) ~= nil;
@@ -908,9 +908,9 @@ function File.__new__(...)
 end
 
 local file = File.new("D:/test","w");
-print(class.IsNull(file));-- false
+print(class.null(file));-- false
 file:close();
-print(class.IsNull(file));-- true
+print(class.null(file));-- true
 ```
 
 >销毁外部对象的内存
@@ -924,7 +924,7 @@ local ExtClass = require(...);
 local Config = require("OOP.Config");
 Config.ExternalClass.Null = function(obj)
     if ExtClass.CheckIsExtClass(obj) then
-        return ExtClass.IsNull(obj);
+        return ExtClass.null(obj);
     end
 end
 
@@ -941,10 +941,10 @@ function LuaClass:dtor()
 end
 
 local obj = LuaClass.new();
-print(class.IsNull(obj));-- false
+print(class.null(obj));-- false
 -- 析构函数仍然会被调用。
 obj:delete();-- "LuaClass在此处析构。"
-print(class.IsNull(obj));-- true
+print(class.null(obj));-- true
 ```
 
 ---
@@ -1094,9 +1094,9 @@ print(Number2.Six);--6
 
 -- 枚举方式3。
 local Number3 = enum {
-    Seven = enum.Auto(7),
-    Eight = enum.Auto(),
-    Nine = enum.Auto()
+    Seven = enum.auto(7),
+    Eight = enum.auto(),
+    Nine = enum.auto()
 };
 print(Number3.Seven);--7
 print(Number3.Eight);--8
