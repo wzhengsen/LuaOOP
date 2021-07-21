@@ -211,6 +211,18 @@ local function PushBase(cls,bases,base,handlers,members,metas)
             end
         end
     end
+
+    local bmt = getmetatable(base);
+    if bmt then
+        local mt = getmetatable(cls);
+        for key,_ in pairs(Meta) do
+            local meta = bmt[key];
+            if nil == mt[key] and nil ~= meta then
+                mt[key] = meta;
+            end
+        end
+    end
+
     local _new = ClassesNew[base];
     if _new then
         ClassesNew[cls] = _new;

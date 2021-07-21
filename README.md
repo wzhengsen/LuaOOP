@@ -720,16 +720,26 @@ function Point:__tostring__()
     return "x = " .. self.x .. ";y = " .. self.y .. ";";
 end
 
+-- 元方法比较特殊，只能使用static修饰。
+function Point.static:__call__(...)
+    return self.new(3,4);
+end
+
 local p1 = Point.new(1,2);
 local p2 = Point.new(2,3);
+-- 此时调用__add__
+local p3 = p1 + p2;
+-- 此时调用static.__call__
+local p4 = Point(3,4);
 
 -- 此时调用__tostring__
 print(p1);-- x = 1;y = 2;
 print(p2);-- x = 2;y = 3;
-
--- 此时调用__add__
-local p3 = p1 + p2;
 print(p3);-- x = 3;y = 5;
+
+print(p4.is() == Point);-- true
+
+p4();-- 引发错误，__call__被static修饰后只能使用类访问。
 ```
 
 >为什么元方法的命名和Lua标准不同，比如__add被命名为__add__？

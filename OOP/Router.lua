@@ -40,6 +40,7 @@ local AllClasses = Internal.AllClasses;
 local ClassesReadable = Internal.ClassesReadable;
 local ClassesWritable = Internal.ClassesWritable;
 local ClassesStatic = Internal.ClassesStatic;
+local Update2ChildrenClassMeta = BaseFunctions.Update2ChildrenClassMeta;
 
 local new = Config.new;
 local delete = Config.delete;
@@ -96,6 +97,7 @@ local p_virtual = Permission.virtual;
 local p_get = Permission.get;
 local p_final = Permission.final;
 local p_private = Permission.private;
+local p_protected = Permission.p_protected;
 
 local Router = {};
 
@@ -178,7 +180,18 @@ if Debug then
         end
         local meta = MetaMapName[key];
         if meta then
-            error((i18n"You cannot qualify meta-methods. - %s"):format(key));
+            if decor == p_static then
+                -- Meta methods are special and can only accept static qualifiers.
+                local mt = getmetatable(cls);
+                value = FunctionWrapper(cls,value);
+                mt[meta] = value;
+                Update2ChildrenClassMeta(cls,meta,value);
+                decor = 0;
+                cls = nil;
+                return;
+            else
+                error((i18n"You cannot qualify meta-methods. - %s"):format(key));
+            end
         end
         local vcm = VirtualClassesMembers[cls];
         if decor == p_virtual then
@@ -310,14 +323,22 @@ else
                 ClassesStatic[cls][key] = nil;
             end
         end
-        decor = 0;
-        cls = nil;
+
 
         local meta = MetaMapName[key];
         if meta then
-            local metas = ClassesMetas[cls];
-            metas[key] = value;
+            if decor == p_static then
+                -- Meta methods are special and can only accept static qualifiers.
+                local mt = getmetatable(cls);
+                mt[meta] = value;
+                Update2ChildrenClassMeta(cls,meta,value);
+            else
+                local metas = ClassesMetas[cls];
+                metas[key] = value;
+            end
         end
+        decor = 0;
+        cls = nil;
     end
 end
 

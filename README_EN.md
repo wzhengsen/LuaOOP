@@ -722,16 +722,26 @@ function Point:__tostring__()
     return "x = " .. self.x .. ";y = " .. self.y .. ";";
 end
 
+-- Meta methods are special and can only use the static qualifier.
+function Point.static:__call__(...)
+    return self.new(3,4);
+end
+
 local p1 = Point.new(1,2);
 local p2 = Point.new(2,3);
+-- Call __add__
+local p3 = p1 + p2;
+-- Call static.__call__
+local p4 = Point(3,4);
 
 -- Call __tostring__
 print(p1);-- x = 1;y = 2;
 print(p2);-- x = 2;y = 3;
-
--- Call __add__
-local p3 = p1 + p2;
 print(p3);-- x = 3;y = 5;
+
+print(p4.is() == Point);-- true
+
+p4();-- Raise an error, __call__ can only be accessed using class after being modified by static.
 ```
 
 >Why are the metamethods named differently from the Lua standard, for example \_\_add is named \_\_add\_\_?

@@ -49,10 +49,7 @@ local ClassesBanNew = Functions.ClassesBanNew;
 local ClassesMetas = Functions.ClassesMetas;
 local VirtualClassesMembers = Functions.VirtualClassesMembers;
 
-local ClassMeta = {
-    __index = Functions.ClassGet,
-    __newindex = Functions.ClassSet
-};
+
 local ClassCreateLayer = 0;
 local function ObjectInit(obj,cls,all,...)
     -- When there is no constructor of its own, if there are less than 2 base classes,
@@ -118,8 +115,13 @@ function class.New(...)
         end
         assert(select("#",...) == len,i18n"You cannot inherit a nil value.");
     end
+
+
     local cls,metas,name = CheckClass(args);
     local all,bases,handlers,members = CreateClassTables(cls);
+
+    local clsMeta = {};
+    setmetatable(cls,clsMeta);
 
     ClassInherite(cls,args,bases,handlers,members,metas,name);
 
@@ -130,7 +132,9 @@ function class.New(...)
         CreateClassDelete(cls)
     );
 
-    return setmetatable(cls,ClassMeta);
+    clsMeta.__index = Functions.ClassGet;
+    clsMeta.__newindex = Functions.ClassSet;
+    return cls;
 end
 
 if Debug then

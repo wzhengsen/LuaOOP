@@ -26,6 +26,11 @@ local Compat2 = LuaVersion < 5.4 and require("OOP.Version.LowerThan54") or requi
 local Internal = require("OOP.Variant.Internal");
 local ClassesChildren = Internal.ClassesChildren;
 
+local ipairs = ipairs;
+local pairs = pairs;
+local type = type;
+local getmetatable = getmetatable;
+
 ---Maps some value changes to subclasses.
 ---@param cls table
 ---@param keyTable table
@@ -47,6 +52,17 @@ local function Update2ChildrenWithKey(cls,keyTable,key,value)
             t[key] = value;
         end
         Update2ChildrenWithKey(child,keyTable,key,value)
+    end
+end
+
+local function Update2ChildrenClassMeta(cls,key,value)
+    local children = ClassesChildren[cls];
+    for _,child in ipairs(children) do
+        local cmt = getmetatable(child);
+        if cmt and nil == cmt[key]  then
+            cmt[key] = value;
+        end
+        Update2ChildrenClassMeta(child,key,value)
     end
 end
 
@@ -81,5 +97,6 @@ return {
     BreakFunctionWrapper = Compat2.BreakFunctionWrapper,
     Update2Children = Update2Children,
     Update2ChildrenWithKey = Update2ChildrenWithKey,
+    Update2ChildrenClassMeta = Update2ChildrenClassMeta,
     Copy = Copy
 };
