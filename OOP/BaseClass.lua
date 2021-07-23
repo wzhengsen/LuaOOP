@@ -25,6 +25,7 @@ local rawget = rawget;
 require("OOP.Enum");
 local Config = require("OOP.Config");
 local Internal = require("OOP.Variant.Internal");
+local Debug = Config.Debug;
 local Null = Config.ExternalClass.Null;
 local DeathMarker = Config.DeathMarker;
 local null = Config.null;
@@ -58,10 +59,16 @@ function(t)
 end;
 class[null] = _null;
 
-class[final] = function (...)
-    local cls = class(...);
-    FinalClasses[cls] = true;
-    return cls;
+if Debug then
+    class[final] = function (...)
+        local cls = class.New(...);
+        FinalClasses[cls] = true;
+        return cls;
+    end
+else
+    class[final] = function (...)
+        return class.New(...);
+    end
 end
 
 class[ClassDefault] = function ()end;

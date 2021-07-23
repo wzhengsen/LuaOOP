@@ -22,8 +22,10 @@
 local rawset = rawset;
 local error = error;
 local type = type;
+local getmetatable = getmetatable;
+local setmetatable = setmetatable;
 local Config = require("OOP.Config");
-local LuaVersion = Config.LuaVersion;
+
 local i18n = require("OOP.i18n");
 local Internal = require("OOP.Variant.Internal");
 local ClassesMembers = Internal.ClassesMembers;
@@ -40,64 +42,28 @@ local AllClasses = Internal.AllClasses;
 local ClassesReadable = Internal.ClassesReadable;
 local ClassesWritable = Internal.ClassesWritable;
 local ClassesStatic = Internal.ClassesStatic;
+
 local Update2ChildrenClassMeta = BaseFunctions.Update2ChildrenClassMeta;
+
+local BitsMap = Internal.BitsMap;
+local Permission = Internal.Permission;
 
 local new = Config.new;
 local delete = Config.delete;
 
-local public = Config.Qualifiers.public;
-local private = Config.Qualifiers.private;
-local protected = Config.Qualifiers.protected;
 local static = Config.Qualifiers.static;
 local const = Config.Qualifiers.const;
-local final = Config.Qualifiers.final;
-local virtual = Config.Qualifiers.virtual;
 local get = Config.get;
 local set = Config.set;
 
 local class = require("OOP.BaseClass");
 local c_delete = class.delete;
 
-local BitsMap = {
-    [public] = 2 ^ 0,
-    [private] = 2 ^ 1,
-    [protected] = 2 ^ 2,
-    [static] = 2 ^ 3,
-    [const] = 2 ^ 4,
-    [final] = 2 ^ 5,
-    [get] = 2 ^ 6,
-    [set] = 2 ^ 7,
-    [virtual] = 2 ^ 8
-};
-if LuaVersion > 5.2 then
-    BitsMap[public] = math.tointeger(BitsMap[public]);
-    BitsMap[private] = math.tointeger(BitsMap[private]);
-    BitsMap[protected] = math.tointeger(BitsMap[protected]);
-    BitsMap[static] = math.tointeger(BitsMap[static]);
-    BitsMap[const] = math.tointeger(BitsMap[const]);
-    BitsMap[final] = math.tointeger(BitsMap[final]);
-    BitsMap[get] = math.tointeger(BitsMap[get]);
-    BitsMap[set] = math.tointeger(BitsMap[set]);
-    BitsMap[virtual] = math.tointeger(BitsMap[virtual]);
-end
-local Permission = {
-    public = BitsMap[public],
-    private = BitsMap[private],
-    protected = BitsMap[protected],
-    static = BitsMap[static],
-    const = BitsMap[const],
-    final = BitsMap[final],
-    get = BitsMap[get],
-    set = BitsMap[set],
-    virtual = BitsMap[virtual]
-}
-
 local p_static = Permission.static;
 local p_virtual = Permission.virtual;
 local p_get = Permission.get;
 local p_final = Permission.final;
 local p_private = Permission.private;
-local p_protected = Permission.p_protected;
 
 local Router = {};
 
@@ -119,6 +85,7 @@ if Debug then
     local Update2Children = BaseFunctions.Update2Children;
     local Update2ChildrenWithKey = BaseFunctions.Update2ChildrenWithKey;
     local ClassesAll = Internal.ClassesAll;
+    local CheckPermission = BaseFunctions.CheckPermission;
     local FinalClassesMembers = Internal.FinalClassesMembers;
     local ClassesPermisssions = Internal.ClassesPermisssions;
     local VirtualClassesMembers = Internal.VirtualClassesMembers;
@@ -126,6 +93,8 @@ if Debug then
     local ClassesBanDelete = Internal.ClassesBanDelete;
 
     local RouterReservedWord = Internal.RouterReservedWord;
+
+    local bitMax = Internal.BitsMap.max;
     -- It is only under debug that the values need to be routed to the corresponding fields of the types.
     -- To save performance, all qualifiers will be ignored under non-debug.
 
@@ -148,7 +117,7 @@ if Debug then
                 error((i18n"%s,%s,%s cannot be used at the same time."):format(get,set,const));
             else
                 local temp = bor(bit,decor);
-                if band(temp,p_virtual) ~= 0 and band(temp,p_virtual - 1) ~= 0 then
+                if band(temp,p_virtual) ~= 0 and band(temp,bitMax) ~= p_virtual then
                     error(i18n"It is not necessary to use pure virtual functions with other qualifiers.");
                 end
             end
@@ -157,7 +126,7 @@ if Debug then
             local get_set = band(decor,0xc0);
             if get_set ~= 0 then
                 if bor(decor,0xc0) == 0xc0 then
-                    Internal.CheckPermission(cls,key,false);
+                    CheckPermission(cls,key,false);
                     local property = (get_set == p_get and ClassesReadable or ClassesWritable)[cls][key];
                     if property then
                         return property[1];
@@ -186,8 +155,6 @@ if Debug then
                 value = FunctionWrapper(cls,value);
                 mt[meta] = value;
                 Update2ChildrenClassMeta(cls,meta,value);
-                decor = 0;
-                cls = nil;
                 return;
             else
                 error((i18n"You cannot qualify meta-methods. - %s"):format(key));
@@ -200,8 +167,6 @@ if Debug then
             end
             vcm[key] = true;
             Update2ChildrenWithKey(cls,VirtualClassesMembers,key,true);
-            decor = 0;
-            cls = nil;
             return;
         end
         local isStatic = band(decor,p_static) ~= 0;
@@ -227,6 +192,7 @@ if Debug then
         end
         local get_set = band(decor,0xc0);
         local oVal = value;
+        local ca = ClassesAll[cls];
         if isFunction then
             value = FunctionWrapper(cls,value);
         elseif get_set == 0 then
@@ -234,8 +200,8 @@ if Debug then
             -- For non-functional, non-static members,non-class objects,non-enumeration objects,
             -- add to the member table and generate it for each instance.
             if not isStatic and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
-                ClassesMembers[cls][key] = value;
-                Update2ChildrenWithKey(cls,ClassesMembers,key,value);
+                ClassesMembers[cls][key] = ca;
+                Update2ChildrenWithKey(cls,ClassesMembers,key,ca);
             end
         end
 
@@ -248,6 +214,7 @@ if Debug then
                 decor = decor - p_static;
             end
         end
+        local pm = pms[key];
         pms[key] = decor;
         if get_set ~= 0 then
             if not isFunction then
@@ -261,7 +228,25 @@ if Debug then
             -- and index 2 representing whether the property is a static property.
             (get_set == p_get and ClassesReadable or ClassesWritable)[cls][key] = {value,isStatic};
         else
-            (isStatic and ClassesStatic or ClassesAll)[cls][key] = value;
+            local cs = ClassesStatic[cls];
+            if isStatic then
+                if pm and band(pm,p_static) == 0 then
+                    error((i18n"Redefining static member %s is not allowed."):format(key));
+                end
+                local st = cs[key];
+                if not st then
+                    st = {value};
+                    cs[key] = st;
+                else
+                    st[1] = value;
+                end
+            else
+                if cs[key] ~= nil then
+                    error((i18n"Redefining static member %s is not allowed."):format(key));
+                end
+                ca[key] = value;
+            end
+
             if key == ctor then
                 -- Reassign permissions to "new", which are the same as ctor with the static qualifier.
                 pms[new] = bor(decor,0x8);
@@ -278,8 +263,6 @@ if Debug then
             FinalClassesMembers[cls][key] = true;
             Update2ChildrenWithKey(cls,FinalClassesMembers,key,true);
         end
-        decor = 0;
-        cls = nil;
     end
 else
     local ClassesMetas = Internal.ClassesMetas;
@@ -300,8 +283,6 @@ else
     Done = function(_,key,value)
         if band(decor,p_virtual) ~= 0 then
             -- Skip pure virtual functions.
-            decor = 0;
-            cls = nil;
             return;
         end
         local vt = type(value);
@@ -310,17 +291,31 @@ else
         local isStatic = band(decor,p_static) ~= 0;
         local get_set = band(decor,0xc0);
         if not isFunction and not isStatic and get_set == 0 and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
-            ClassesMembers[cls][key] = value;
+            ClassesMembers[cls][key] = cls;
         end
 
         if get_set ~= 0 then
             (get_set == p_get and ClassesReadable or ClassesWritable)[cls][key] = {value,isStatic};
         else
+            local cs = ClassesStatic[cls];
             if isStatic then
-                ClassesStatic[cls][key] = value;
+                if rawget(cls,key) ~= nil then
+                    -- Redefining static member is not allowed.
+                    return;
+                end
+                local st = cs[key];
+                if not st then
+                    st = {value};
+                    cs[key] = st;
+                else
+                    st[1] = value;
+                end
             else
+                if cs[key] then
+                    -- Redefining static member is not allowed.
+                    return;
+                end
                 rawset(cls,key,value);
-                ClassesStatic[cls][key] = nil;
             end
         end
 
@@ -337,8 +332,6 @@ else
                 metas[key] = value;
             end
         end
-        decor = 0;
-        cls = nil;
     end
 end
 

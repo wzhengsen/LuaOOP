@@ -22,6 +22,55 @@ local setmetatable = setmetatable;
 local Config = require("OOP.Config");
 local Debug = Config.Debug;
 local WeakTable = {__mode = "k"};
+local LuaVersion = Config.LuaVersion;
+
+local public = Config.Qualifiers.public;
+local private = Config.Qualifiers.private;
+local protected = Config.Qualifiers.protected;
+local static = Config.Qualifiers.static;
+local const = Config.Qualifiers.const;
+local final = Config.Qualifiers.final;
+local virtual = Config.Qualifiers.virtual;
+local get = Config.get;
+local set = Config.set;
+
+local BitsMap = {
+    [public] = 2 ^ 0,
+    [private] = 2 ^ 1,
+    [protected] = 2 ^ 2,
+    [static] = 2 ^ 3,
+    [const] = 2 ^ 4,
+    [final] = 2 ^ 5,
+    [get] = 2 ^ 6,
+    [set] = 2 ^ 7,
+    [virtual] = 2 ^ 8,
+
+    max = (2 ^ 9) - 1
+};
+if LuaVersion > 5.2 then
+    BitsMap[public] = math.tointeger(BitsMap[public]);
+    BitsMap[private] = math.tointeger(BitsMap[private]);
+    BitsMap[protected] = math.tointeger(BitsMap[protected]);
+    BitsMap[static] = math.tointeger(BitsMap[static]);
+    BitsMap[const] = math.tointeger(BitsMap[const]);
+    BitsMap[final] = math.tointeger(BitsMap[final]);
+    BitsMap[get] = math.tointeger(BitsMap[get]);
+    BitsMap[set] = math.tointeger(BitsMap[set]);
+    BitsMap[virtual] = math.tointeger(BitsMap[virtual]);
+    BitsMap.max = math.tointeger(BitsMap.max);
+end
+local Permission = {
+    public = BitsMap[public],
+    private = BitsMap[private],
+    protected = BitsMap[protected],
+    static = BitsMap[static],
+    const = BitsMap[const],
+    final = BitsMap[final],
+    get = BitsMap[get],
+    set = BitsMap[set],
+    virtual = BitsMap[virtual]
+};
+
 return {
     NamedClasses = {},
     ClassesChildrenByName = {},
@@ -74,5 +123,7 @@ return {
         [Config.handlers] = true,
         [Config.__new__] = true,
         [Config.__delete__] = true
-    };
+    },
+    Permission = Permission,
+    BitsMap = BitsMap
 };

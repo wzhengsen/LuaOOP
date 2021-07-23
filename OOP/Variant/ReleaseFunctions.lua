@@ -40,6 +40,7 @@ local BaseFunctions = require("OOP.BaseFunctions");
 local Copy = BaseFunctions.Copy;
 local Update2Children = BaseFunctions.Update2Children;
 local Update2ChildrenWithKey = BaseFunctions.Update2ChildrenWithKey;
+local ClassBasesIsRecursive = BaseFunctions.ClassBasesIsRecursive;
 
 
 local E_Handlers = require("OOP.Event").handlers;
@@ -51,7 +52,6 @@ local Begin = R.Begin;
 local delete = Config.delete;
 local DeathMarker = Config.DeathMarker;
 local dtor = Config.dtor;
-local IsInherite = Config.ExternalClass.IsInherite;
 
 local new = Config.new;
 local is = Config.is;
@@ -198,8 +198,8 @@ local function PushBase(cls,bases,base,handlers,members,metas)
     end
     found = ClassesMembers[base];
     if found then
-        for key,member in pairs(found) do
-            members[key] = member;
+        for key,save in pairs(found) do
+            members[key] = save;
         end
     end
     found = ClassesMetas[base];
@@ -256,26 +256,12 @@ local function ClassIs(cls,bases,...)
     if baseCls == cls then
         return true;
     end
-    for _,base in ipairs(bases) do
-        if base == baseCls then
-            return true;
-        else
-            local _is = base[is];
-            if _is then
-                if _is(baseCls) then
-                    return true;
-                end
-            elseif IsInherite and IsInherite(base,baseCls) then
-                return true;
-            end
-        end
-    end
-    return false;
+    return ClassBasesIsRecursive(baseCls,bases);
 end
 
-local function CreateClassIs(cls,base)
+local function CreateClassIs(cls,bases)
     return function (...)
-        return ClassIs(cls,base,...);
+        return ClassIs(cls,bases,...);
     end;
 end
 
@@ -332,9 +318,9 @@ local function CascadeGet(cls,key,called,byObject)
     if not byObject then
         local static = ClassesStatic[cls];
         if static then
-            ret = rawget(static,key);
+            ret = static[key];
             if nil ~= ret then
-                return ret;
+                return ret[1];
             end
         end
     end
@@ -354,10 +340,10 @@ local function RegisterHandlersAndMembers(obj,all,handlers,members)
         -- Automatically listens to events.
         E_Handlers.On(key,obj,func);
     end
-    for key,mem in pairs(members) do
+    for key,save in pairs(members) do
         -- Automatically set member of object.
         -- Before the instance can change the meta-table, its members must be set.
-        all[key] = Copy(mem);
+        all[key] = Copy(rawget(save,key));
     end
 end
 
@@ -685,7 +671,7 @@ end
 local function AttachClassFunctions(cls,_is,_new,_delete)
     local static = ClassesStatic[cls];
     cls[is] = _is;
-    static[new] = _new;
+    static[new] = {_new};
     cls[delete] = _delete;
 end
 
@@ -737,10 +723,9 @@ local function ClassGet(cls,key)
         -- Class can't access object's property directly.
         return property[1]()
     end
-    local static = ClassesStatic[cls];
-    local ret = static[key];
+    local ret = ClassesStatic[cls][key];
     if nil ~= ret then
-        return ret;
+        return ret[1];
     end
     for _, base in ipairs(ClassesBases[cls]) do
         ret = CascadeGet(base,key,{});
@@ -778,16 +763,21 @@ local function ClassSet(cls,key,value)
             property[1](value);
             return;
         end
-        local exist = rawget(cls,key);
-        local vt = type(value);
-        local isFunction = "function" == vt;
-        local isTable = "table" == vt;
-        if not exist and not isFunction and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
-            ClassesMembers[cls][key] = value;
-            Update2ChildrenWithKey(cls,ClassesMembers,key,value);
+        local cs = ClassesStatic[cls];
+        local isStatic = cs[key] ~= nil;
+        if not isStatic then
+            local exist = rawget(cls,key);
+            local vt = type(value);
+            local isFunction = "function" == vt;
+            local isTable = "table" == vt;
+            if not exist and not isFunction and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
+                ClassesMembers[cls][key] = cls;
+                Update2ChildrenWithKey(cls,ClassesMembers,key,cls);
+            end
+            rawset(cls,key,value);
+        else
+            cs[key][1] = value;
         end
-        rawset(cls,key,value);
-        ClassesStatic[cls][key] = nil;
     end
     local meta = MetaMapName[key];
     if meta then
@@ -814,5 +804,6 @@ Functions.AttachClassFunctions = AttachClassFunctions;
 Functions.ClassInherite = ClassInherite;
 Functions.ClassGet = ClassGet;
 Functions.ClassSet = ClassSet;
+Functions.CascadeDelete = CascadeDelete;
 
 return Functions;

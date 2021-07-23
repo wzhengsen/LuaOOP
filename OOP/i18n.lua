@@ -67,9 +67,6 @@ local LanguageMap = {
     ["attempt to index a %s value."] = {
         zh = "企图索引一个%s值。"
     },
-    ["Objects cannot access static members of a class. - %s"] = {
-        zh = "对象不能访问类的静态成员。 - %s"
-    },
     ["You cannot change the const value. - %s"] = {
         zh = "你不能修改常量值。 - %s"
     },
@@ -162,6 +159,9 @@ local LanguageMap = {
     },
     ["You cannot inherit a nil value."] = {
         zh = "你不能继承一个nil值。"
+    },
+    ["Redefining static member %s is not allowed."] = {
+        zh = "不允许重定义静态成员%s。"
     }
 };
 

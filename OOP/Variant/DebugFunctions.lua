@@ -38,6 +38,7 @@ local band = bits.band;
 local FunctionWrapper = BaseFunctions.FunctionWrapper;
 local Update2Children = BaseFunctions.Update2Children;
 local Update2ChildrenWithKey = BaseFunctions.Update2ChildrenWithKey;
+local CheckPermission = BaseFunctions.CheckPermission;
 
 local E_Handlers = require("OOP.Event").handlers;
 
@@ -71,7 +72,6 @@ local DeathMarker = Config.DeathMarker;
 local MetaMapName = Config.MetaMapName;
 
 local PropertyBehavior = Config.PropertyBehavior;
-local ConstBehavior = Config.ConstBehavior;
 
 local Functions = require("OOP.Variant.ReleaseFunctions");
 local GetSingleton = Functions.GetSingleton;
@@ -111,101 +111,10 @@ local ReservedWord = Functions.ReservedWord;
 local p_public = Permission.public;
 local p_protected = Permission.protected;
 local p_private = Permission.private;
-local p_const = Permission.const;
 local p_static = Permission.static;
 
 local class = require("OOP.BaseClass");
 local c_delete = class.delete;
-
----Cascade to get permission values up to the top of the base class.
----
----@param self table
----@param key any
----@return table,integer
----
-local function CascadeGetPermission(self,key)
-    local pms = ClassesPermisssions[self];
-    local pm = pms and pms[key] or nil;
-    local cls = self;
-    if nil == pm then
-        local bases = ClassesBases[self];
-        if bases then
-            for _,base in ipairs(bases) do
-                cls,pm = CascadeGetPermission(base,key);
-                if nil ~= pm then
-                    return cls,pm;
-                end
-            end
-        end
-    end
-    return cls,pm;
-end
-
----When a member is accessed directly as a class,
----the members will be checked cascading.
----
----@param self table
----@param key any
----@param byObj boolean
----@param set? boolean
----@return boolean
----
-local function CheckPermission(self,key,byObj,set)
-    local stackCls = AccessStack[#AccessStack];
-    if stackCls == 0 then
-        -- 0 means that any access rights can be broken.
-        return true;
-    end
-    local cls,pm = CascadeGetPermission(self,key);
-    if not pm then
-        return true;
-    end
-
-    if byObj and band(pm,p_static) ~= 0 then
-        error((i18n"Objects cannot access static members of a class. - %s"):format(key));
-    end
-    if set then
-        if band(pm,p_const) ~= 0 then
-            -- Check const.
-            if ConstBehavior ~= 2 then
-                if ConstBehavior == 0 then
-                    warn(("You cannot change the const value. - %s"):format(key));
-                elseif ConstBehavior == 1 then
-                    error((i18n"You cannot change the const value. - %s"):format(key));
-                end
-                return false;
-            end
-        end
-        -- When a class performs a set operation,
-        -- even if the operation is on a private member,
-        -- it is considered to be a redefinition and the operation is not disabled.
-        if not byObj then
-            return true;
-        end
-    end
-
-    if band(pm,p_public) ~= 0 then
-        -- Allow public.
-        return true;
-    end
-    if stackCls == cls then
-        return true;
-    end
-
-    local _friends = ClassesFriends[cls];
-    --Check if it is a friendly class.
-    if not _friends or (not _friends[stackCls] and not _friends[NamedClasses[stackCls]]) then
-        -- Check public,private,protected.
-        if band(pm,p_private) ~= 0 then
-            error((i18n"Attempt to access private members outside the permission. - %s"):format(key));
-        elseif band(pm,p_protected) ~= 0 and (not stackCls or not stackCls.is(cls)) then
-            error((i18n"Attempt to access protected members outside the permission. - %s"):format(key));
-        end
-    end
-    return true;
-end
-
-Functions.CheckPermission = CheckPermission;
 
 ---Cascade to get the value of the corresponding key of a class and its base class
 ---(ignoring metamethods).
@@ -231,12 +140,12 @@ local function CascadeGet(cls,key,called,byObject)
         if nil ~= ret then
             return ret;
         end
-        if byObject then
+        if not byObject then
             ret = ClassesStatic[cls];
             if ret then
                 ret = ret[key];
                 if nil ~= ret then
-                    return ret;
+                    return ret[1];
                 end
             end
         end
@@ -254,7 +163,7 @@ local function CascadeGet(cls,key,called,byObject)
         if ret then
             ret = ret[key];
             if nil ~= ret then
-                return ret;
+                return ret[1];
             end
         end
     end
@@ -543,7 +452,7 @@ local function ClassGet(cls,key)
     end
     ret = ClassesStatic[cls][key];
     if nil ~= ret then
-        return ret;
+        return ret[1];
     end
     for _, base in ipairs(ClassesBases[cls]) do
         ret = CascadeGet(base,key,{});
@@ -656,23 +565,31 @@ local function ClassSet(cls,key,value)
                 end
             end
         end
-        local all = ClassesAll[cls];
-        local exist = all[key];
-        if not exist then
-            local isTable = "table" == vt;
-            if not isFunction and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
-                ClassesMembers[cls][key] = value;
-                Update2ChildrenWithKey(cls,ClassesMembers,key,value);
-            end
-            ClassesPermisssions[cls][key] = p_public;
-        end
+
         if isFunction then
             -- Wrap this function to include control of access permission.
             value = FunctionWrapper(cls,value);
         end
-        all[key] = value;
-        ClassesStatic[cls][key] = nil;
+
+        local cs = ClassesStatic[cls];
+        local isStatic = cs[key] ~= nil;
+        if not isStatic then
+            local all = ClassesAll[cls];
+            local exist = all[key];
+            if not exist then
+                local isTable = "table" == vt;
+                if not isFunction and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
+                    ClassesMembers[cls][key] = all;
+                    Update2ChildrenWithKey(cls,ClassesMembers,key,all);
+                end
+                ClassesPermisssions[cls][key] = p_public;
+            end
+            all[key] = value;
+        else
+            cs[key][1] = value;
+        end
     end
+
     local meta = MetaMapName[key];
     if meta then
         local metas = ClassesMetas[cls];
@@ -864,7 +781,7 @@ function Functions.AttachClassFunctions(cls,_is,_new,_delete)
     all[is] = _is;
     pms[is] = p_public;
     -- In debug mode,the "new" method is public and static.
-    static[new] = FunctionWrapper(cls,_new);
+    static[new] = {FunctionWrapper(cls,_new)};
     -- Use + instead of | to try to keep lua 5.3 or lower compatible.
     pms[new] = p_public + p_static;
 
