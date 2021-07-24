@@ -64,6 +64,7 @@ local p_virtual = Permission.virtual;
 local p_get = Permission.get;
 local p_final = Permission.final;
 local p_private = Permission.private;
+local p_get_set = Permission.get + Permission.set;
 
 local Router = {};
 
@@ -123,9 +124,9 @@ if Debug then
             end
             decor = bor(decor,bit);
         else
-            local get_set = band(decor,0xc0);
+            local get_set = band(decor,p_get_set);
             if get_set ~= 0 then
-                if bor(decor,0xc0) == 0xc0 then
+                if bor(decor,p_get_set) == p_get_set then
                     CheckPermission(cls,key,false);
                     local property = (get_set == p_get and ClassesReadable or ClassesWritable)[cls][key];
                     if property then
@@ -190,7 +191,7 @@ if Debug then
             end
             vcm[key] = nil;
         end
-        local get_set = band(decor,0xc0);
+        local get_set = band(decor,p_get_set);
         local oVal = value;
         local ca = ClassesAll[cls];
         if isFunction then
@@ -230,7 +231,7 @@ if Debug then
         else
             local cs = ClassesStatic[cls];
             if isStatic then
-                if pm and band(pm,p_static) == 0 then
+                if pm and band(pm,p_static) == 0 and band(pm,p_get_set) == 0 then
                     error((i18n"Redefining static member %s is not allowed."):format(key));
                 end
                 local st = cs[key];
@@ -272,7 +273,7 @@ else
         if bit then
             decor = bor(decor,bit);
         else
-            local get_set = band(decor,0xc0);
+            local get_set = band(decor,p_get_set);
             if get_set ~= 0 then
                 local property = (get_set == p_get and ClassesReadable or ClassesWritable)[cls][key];
                 return property and property[1] or nil;
@@ -289,7 +290,7 @@ else
         local isFunction = "function" == vt;
         local isTable = "table" == vt;
         local isStatic = band(decor,p_static) ~= 0;
-        local get_set = band(decor,0xc0);
+        local get_set = band(decor,p_get_set);
         if not isFunction and not isStatic and get_set == 0 and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
             ClassesMembers[cls][key] = cls;
         end
