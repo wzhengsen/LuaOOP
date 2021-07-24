@@ -341,10 +341,11 @@ local p2 = Point.new();
 Point.ShowCount();-- Count = 2
 p1:delete();
 Point.ShowCount();-- Count = 1
--- Raise error,objects can't access static members.
+
+print(p2.Count);-- nil
+
+-- Raise an error, ShowCount will return nil when accessed using the object.
 p2.ShowCount();
--- Raise error,objects can't access static members.
-print(p2.Count);
 ```
 
 ---
@@ -605,7 +606,7 @@ end
 
 local Point3D = class(Point);
 Point3D.private.z = 0;
-Point3D.private._Count = 0;
+Point3D.static.private._Count = 0;
 function Point3D:ctor(x,y,z)
     Point.ctor(self,x,y);
     if z then
@@ -656,8 +657,8 @@ print("Y = " .. xy.y);-- Y = 99
 -- If you need to change this behavior, please change the Config.PropertyBehavior value.
 p3d.XY = {x = 200,y = 300};
 
--- Raise error, static properties cannot be accessed using objects.
-print(p3d.Count);
+print(Point3D.Count);-- 1
+print(p3d.Count);-- nil
 ```
 
 ---
@@ -724,7 +725,12 @@ end
 
 -- Meta methods are special and can only use the static qualifier.
 function Point.static:__call__(...)
-    return self.new(3,4);
+    return self.new(...);
+end
+
+local AnotherPoint = class(Point);
+function AnotherPoint:__call__()
+    return self.x,self.y;
 end
 
 local p1 = Point.new(1,2);
@@ -740,6 +746,13 @@ print(p2);-- x = 2;y = 3;
 print(p3);-- x = 3;y = 5;
 
 print(p4.is() == Point);-- true
+
+-- static.__call__ inherite from Point.
+local ap = AnotherPoint(1000,2000);
+-- __call__ and static.__call__ are independent of each other.
+local x,y = ap();
+print(x);-- 1000
+print(y);-- 2000
 
 p4();-- Raise an error, __call__ can only be accessed using class after being modified by static.
 ```
@@ -879,7 +892,7 @@ function File:MakeContent()
     return "The name of file is " .. self.filename ..",and opening mode is ".. self.mode;
 end
 
-local file = File.new("D:/test","w");
+local file = File.new("./test","w");
 file:write(file:MakeContent());
 
 assert(getmetatable(io.stdout) == getmetatable(file));
@@ -909,10 +922,10 @@ local File = class(io);
 function File.__new__(...)
     return io.open(...);
 end
-local file = File.new("D:/test","w");
+local file = File.new("./test","w");
 file:close();
 
-file = File.new("D:/test","w");
+file = File.new("./test","w");
 File.close(file);-- Now, the close method can also be accessed through File.
 ```
 
@@ -938,7 +951,7 @@ function File.__new__(...)
     return io.open(...);
 end
 
-local file = File.new("D:/test","w");
+local file = File.new("./test","w");
 print(class.null(file));-- false
 file:close();
 print(class.null(file));-- true

@@ -340,10 +340,11 @@ local p2 = Point.new();
 Point.ShowCount();-- Count = 2
 p1:delete();
 Point.ShowCount();-- Count = 1
--- 引发错误，对象不能访问静态成员。
+
+print(p2.Count);-- nil
+
+-- 引发错误，使用对象访问ShowCount时将返回nil。
 p2.ShowCount();
--- 引发错误，对象不能访问静态成员。
-print(p2.Count);
 ```
 
 ---
@@ -603,7 +604,7 @@ end
 
 local Point3D = class(Point);
 Point3D.private.z = 0;
-Point3D.private._Count = 0;
+Point3D.static.private._Count = 0;
 function Point3D:ctor(x,y,z)
     Point.ctor(self,x,y);
     if z then
@@ -654,8 +655,8 @@ print("Y = " .. xy.y);-- Y = 99
 -- 如果需要改变此行为，请修改Config.PropertyBehavior值。
 p3d.XY = {x = 200,y = 300};
 
--- 引发错误，静态属性不能使用对象访问。
-print(p3d.Count);
+print(Point3D.Count);-- 1
+print(p3d.Count);-- nil
 ```
 
 ---
@@ -702,8 +703,8 @@ print(C.is() == C)-- true
 require("OOP.Class");
 local Point = class();
 
-Point.private.x = 0;
-Point.private.y = 0;
+Point.protected.x = 0;
+Point.protected.y = 0;
 
 function Point:ctor(x,y)
     if x and y then
@@ -722,7 +723,12 @@ end
 
 -- 元方法比较特殊，只能使用static修饰。
 function Point.static:__call__(...)
-    return self.new(3,4);
+    return self.new(...);
+end
+
+local AnotherPoint = class(Point);
+function AnotherPoint:__call__()
+    return self.x,self.y;
 end
 
 local p1 = Point.new(1,2);
@@ -738,6 +744,13 @@ print(p2);-- x = 2;y = 3;
 print(p3);-- x = 3;y = 5;
 
 print(p4.is() == Point);-- true
+
+-- static.__call__继承自Point.
+local ap = AnotherPoint(1000,2000);
+-- __call__和static.__call__相互独立。
+local x,y = ap();
+print(x);-- 1000
+print(y);-- 2000
 
 p4();-- 引发错误，__call__被static修饰后只能使用类访问。
 ```
@@ -877,7 +890,7 @@ function File:MakeContent()
     return "The name of file is " .. self.filename ..",and opening mode is ".. self.mode;
 end
 
-local file = File.new("D:/test","w");
+local file = File.new("./test","w");
 file:write(file:MakeContent());
 
 assert(getmetatable(io.stdout) == getmetatable(file));
@@ -905,10 +918,10 @@ local File = class(io);
 function File.__new__(...)
     return io.open(...);
 end
-local file = File.new("D:/test","w");
+local file = File.new("./test","w");
 file:close();
 
-file = File.new("D:/test","w");
+file = File.new("./test","w");
 File.close(file);--现在，也可以通过File来访问close方法。
 ```
 
@@ -934,7 +947,7 @@ function File.__new__(...)
     return io.open(...);
 end
 
-local file = File.new("D:/test","w");
+local file = File.new("/test","w");
 print(class.null(file));-- false
 file:close();
 print(class.null(file));-- true
