@@ -423,6 +423,13 @@ local function ClassGet(cls,key)
     end
     if key == handlers then
         return ClassesHandlers[cls];
+    elseif key == friends then
+        local fri = ClassesFriends[cls];
+        if nil == fri then
+            fri = {};
+            ClassesFriends[cls] = fri;
+        end
+        return fri;
     end
     if not CheckPermission(cls,key,false) then
         return;
@@ -656,6 +663,18 @@ function Functions.PushBase(cls,bases,base,handlers,members,metas)
     if fcm then
         for k,_ in pairs(fcm) do
             fm[k] = true;
+        end
+    end
+
+    local fri = ClassesFriends[base];
+    if fri then
+        local cls_fri = ClassesFriends[cls];
+        if nil == cls_fri then
+            cls_fri = {};
+            ClassesFriends[cls] = cls_fri;
+        end
+        for friend,_ in pairs(fri) do
+            cls_fri[friend] = true;
         end
     end
 

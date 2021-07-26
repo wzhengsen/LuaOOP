@@ -258,10 +258,17 @@ function NotFriend:GetSecret(secret)
     return secret.data;
 end
 
+local Secret1 = class(Secret);
+function Secret1.protected:GetData()
+    return "";
+end
+local s1 = Secret1.new();
+
 local secret = Secret.new();
 local base = Base.new();
 local c2 = C2.new();
 local nFriend = NotFriend.new();
+assert("" == base:GetSecret(s1));
 assert("123" == base:GetSecret(secret));
 assert("123" == c2:GetSecretC2(secret));
 assert("123" == C2.StaticGet(secret));
