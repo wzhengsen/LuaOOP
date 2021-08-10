@@ -75,7 +75,8 @@ if Config.Debug then
                 elseif EnumBehavior == 1 then
                     error(i18n"You can't edit a enumeration.");
                 end
-            end
+            end,
+            __pairs = function()return pairs(e);end
         });
     end
 else

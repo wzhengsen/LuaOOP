@@ -30,6 +30,7 @@ local Config = require("OOP.Config");
 local Debug = Config.Debug;
 local ctor = Config.ctor;
 local raw = Config.raw;
+local del = Config.del;
 
 local i18n = require("OOP.i18n");
 
@@ -96,8 +97,11 @@ local function CreateClassNew(cls,clsAll,handlers,members)
             else
                 setmetatable(obj,ClassesMetas[cls]);
             end
+            ObjectInit(obj,cls,clsAll,...);
+        else
+            ClassCreateLayer = ClassCreateLayer - 1;
         end
-        ObjectInit(obj,cls,clsAll,...);
+
         return obj;
     end;
 end
@@ -139,10 +143,12 @@ end
 
 if Debug then
     local BreakFunctionWrapper = require("OOP.BaseFunctions").BreakFunctionWrapper;
-    class[raw] = function (f)
-        assert("function" == type(f),(i18n"%s must wrap a function."):format(raw));
+    class[raw] = function (f,...)
+        assert(select("#",...) == 0 and "function" == type(f),(i18n"%s must wrap a function."):format(raw));
         return BreakFunctionWrapper(f);
     end
 else
     class[raw]=function(f)return f;end
 end
+
+class[del] = Functions.CallDel;

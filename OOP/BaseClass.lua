@@ -45,7 +45,7 @@ rawset(_G,Config.class,class);
 local _null = Null and function(t)
     local tt = type(t);
     if tt == "table" then
-        return rawget(t,DeathMarker);
+        return rawget(t,DeathMarker) ~= nil;
     elseif tt == "userdata" then
         return Null(t);
     end

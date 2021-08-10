@@ -712,8 +712,11 @@ end
 function Functions.CreateClassObject(...)
     local obj,all = CreateClassObject(...);
     if (nil ~= obj) and (obj == all) then
-        all = {};
-        ObjectsAll[obj] = all;
+        all = ObjectsAll[obj];
+        if nil == all then
+            all = {};
+            ObjectsAll[obj] = all;
+        end
     end
     return obj,all;
 end

@@ -280,7 +280,6 @@ local function CreateClassObject(cls,...)
         -- The object returned by the _new function must be userdata or nil.
         obj = _new(...);
         oType = type(obj);
-        obj = "userdata" == oType and obj or nil;
     else
         obj = {};
     end

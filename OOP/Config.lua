@@ -44,6 +44,7 @@ local Config = {
 
     null = "null",
     raw = "raw",
+    del = "del",
 
     auto = "auto",
 
