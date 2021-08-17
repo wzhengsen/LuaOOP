@@ -609,7 +609,10 @@ Functions.RetrofiteUserDataObjectMeta = RetrofiteUserDataObjectMeta;
 Functions.ClassSet = ClassSet;
 Functions.ClassGet = ClassGet;
 
-local function MakeClassHandlersTable(cls,handlers)
+local function MakeClassHandlersTable(cls,handlers,bases)
+    -- Putting the response function in p for override the response function of the base class
+    -- allows you to use the current class to wrap the response function.
+    local p = {};
     return setmetatable(handlers,{
         __newindex = function(t,key,value)
             if not ("string" == type(key)) then
@@ -618,8 +621,26 @@ local function MakeClassHandlersTable(cls,handlers)
             assert("function" == type(value),i18n"event handler must be a function.");
             -- Ensure that event response functions have access to member variables.
             value = FunctionWrapper(cls,value)
-            rawset(t,key,value);
+            rawset(p,key,value);
             Update2ChildrenWithKey(cls,ClassesHandlers,key,value);
+        end,
+        __index = function (_,key)
+            local ret = p[key];
+            if nil ~= ret then
+                return ret;
+            end
+            for _,base in ipairs(bases) do
+                ret = ClassesHandlers[base];
+                if nil ~= ret then
+                    ret = ret[key];
+                    if nil ~= ret then
+                        return ret;
+                    end
+                end
+            end
+        end,
+        __pairs = function ()
+            return pairs(p);
         end
     });
 end
