@@ -339,10 +339,10 @@ local function RegisterHandlersAndMembers(obj,all,handlers,members)
         -- Automatically listens to events.
         E_Handlers.On(key,obj,func);
     end
-    for key,save in pairs(members) do
+    for key,value in pairs(members) do
         -- Automatically set member of object.
         -- Before the instance can change the meta-table, its members must be set.
-        all[key] = Copy(rawget(save,key));
+        all[key] = Copy(value);
     end
 end
 
@@ -726,6 +726,10 @@ local function ClassGet(cls,key)
     if nil ~= ret then
         return ret[1];
     end
+    ret = ClassesMembers[cls][key];
+    if nil ~= ret then
+        return ret;
+    end
     for _, base in ipairs(ClassesBases[cls]) do
         ret = CascadeGet(base,key,{});
         if nil ~= ret then
@@ -770,10 +774,12 @@ local function ClassSet(cls,key,value)
             local isFunction = "function" == vt;
             local isTable = "table" == vt;
             if not exist and not isFunction and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
-                ClassesMembers[cls][key] = cls;
-                Update2ChildrenWithKey(cls,ClassesMembers,key,cls);
+                ClassesMembers[cls][key] = value;
+                Update2ChildrenWithKey(cls,ClassesMembers,key,value);
             end
-            rawset(cls,key,value);
+            if isFunction then
+                rawset(cls,key,value);
+            end
         else
             cs[key][1] = value;
         end

@@ -111,7 +111,7 @@ local event = setmetatable({},{
 
             for _,info in ipairs(objHandlers) do
                 local obj = info.obj;
-                if null(obj) then
+                if not obj or null(obj) then
                     -- Specifies that the number of holes is increased when the object is destroyed.
                     hole = hole + 1;
                     info.obj = false;

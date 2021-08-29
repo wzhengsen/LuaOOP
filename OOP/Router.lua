@@ -44,6 +44,7 @@ local ClassesWritable = Internal.ClassesWritable;
 local ClassesStatic = Internal.ClassesStatic;
 
 local Update2ChildrenClassMeta = BaseFunctions.Update2ChildrenClassMeta;
+local Update2ChildrenWithKey = BaseFunctions.Update2ChildrenWithKey;
 
 local BitsMap = Internal.BitsMap;
 local Permission = Internal.Permission;
@@ -84,7 +85,6 @@ if Debug then
 
     local FunctionWrapper = BaseFunctions.FunctionWrapper;
     local Update2Children = BaseFunctions.Update2Children;
-    local Update2ChildrenWithKey = BaseFunctions.Update2ChildrenWithKey;
     local ClassesAll = Internal.ClassesAll;
     local CheckPermission = BaseFunctions.CheckPermission;
     local FinalClassesMembers = Internal.FinalClassesMembers;
@@ -193,7 +193,7 @@ if Debug then
         end
         local get_set = band(decor,p_get_set);
         local oVal = value;
-        local ca = ClassesAll[cls];
+
         if isFunction then
             value = FunctionWrapper(cls,value);
         elseif get_set == 0 then
@@ -201,8 +201,8 @@ if Debug then
             -- For non-functional, non-static members,non-class objects,non-enumeration objects,
             -- add to the member table and generate it for each instance.
             if not isStatic and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
-                ClassesMembers[cls][key] = ca;
-                Update2ChildrenWithKey(cls,ClassesMembers,key,ca);
+                ClassesMembers[cls][key] = value;
+                Update2ChildrenWithKey(cls,ClassesMembers,key,value);
             end
         end
 
@@ -245,7 +245,9 @@ if Debug then
                 if cs[key] ~= nil then
                     error((i18n"Redefining static member %s is not allowed."):format(key));
                 end
-                ca[key] = value;
+                if isFunction or isStatic then
+                    ClassesAll[cls][key] = value;
+                end
             end
 
             if key == ctor then
@@ -292,7 +294,8 @@ else
         local isStatic = band(decor,p_static) ~= 0;
         local get_set = band(decor,p_get_set);
         if not isFunction and not isStatic and get_set == 0 and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
-            ClassesMembers[cls][key] = cls;
+            ClassesMembers[cls][key] = value;
+            Update2ChildrenWithKey(cls,ClassesMembers,key,value);
         end
 
         if get_set ~= 0 then
@@ -316,7 +319,9 @@ else
                     -- Redefining static member is not allowed.
                     return;
                 end
-                rawset(cls,key,value);
+                if isFunction or isStatic then
+                    rawset(cls,key,value);
+                end
             end
         end
 

@@ -461,6 +461,10 @@ local function ClassGet(cls,key)
     if nil ~= ret then
         return ret[1];
     end
+    ret = ClassesMembers[cls][key];
+    if nil ~= ret then
+        return ret;
+    end
     for _, base in ipairs(ClassesBases[cls]) do
         ret = CascadeGet(base,key,{});
         if nil ~= ret then
@@ -586,12 +590,14 @@ local function ClassSet(cls,key,value)
             if not exist then
                 local isTable = "table" == vt;
                 if not isFunction and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
-                    ClassesMembers[cls][key] = all;
-                    Update2ChildrenWithKey(cls,ClassesMembers,key,all);
+                    ClassesMembers[cls][key] = value;
+                    Update2ChildrenWithKey(cls,ClassesMembers,key,value);
                 end
                 ClassesPermisssions[cls][key] = p_public;
             end
-            all[key] = value;
+            if isFunction then
+                all[key] = value;
+            end
         else
             cs[key][1] = value;
         end

@@ -40,6 +40,9 @@ assert(x == 1 and y == 2);
 x,y = p2:GetXY();
 assert(x == 0 and y == 0);
 
+assert(p1.data ~= p2.data);
+assert(p1.data.others ~= p2.data.others);
+
 p1:delete();
 p2:delete();
 if Debug then
