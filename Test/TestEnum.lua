@@ -14,9 +14,9 @@ assert(Number2.Five == 5);
 assert(Number2.Six == 6);
 
 local Number3 = enum {
-    Seven = enum.auto(7),
-    Eight = enum.auto(),
-    Nine = enum.auto()
+    Seven = enum(7),
+    Eight = enum(),
+    Nine = enum()
 };
 assert(Number3.Seven == 7);
 assert(Number3.Eight == 8);

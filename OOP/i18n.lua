@@ -109,8 +109,8 @@ local LanguageMap = {
     ["The class/base classes destructor is not accessible."] = {
         zh = "类/基类析构不可访问。"
     },
-    ["Only strings or tables can be used to generate a enumeration."] = {
-        zh = "生成枚举时只能使用字符串或表。"
+    ["Only integers or strings or tables can be used to generate a enumeration."] = {
+        zh = "生成枚举时只能使用整数、字符串或表。"
     },
     ["Excess parameters."] = {
         zh = "多余参数。"

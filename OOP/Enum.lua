@@ -24,33 +24,31 @@ local rawset = rawset;
 local type = type;
 local select = select;
 local warn = warn or print;
+local mType = math.type;
 
 local Config = require("OOP.Config");
 local i18n = require("OOP.i18n");
 local EnumBehavior = Config.EnumBehavior;
-local auto = Config.auto;
+local DefaultEnumIndex = Config.DefaultEnumIndex;
 local AllEnumerations = require("OOP.Variant.Internal").AllEnumerations;
-local enum = setmetatable({},{
-    __call = function (e,...)
-        return e.New(...);
-    end
-});
+local enum = nil;
+local auto = DefaultEnumIndex - 1;
 
-local AutoIdx = 0;
 if Config.Debug then
-    enum[auto] = function(...)
-        local len = select("#",...)
-        if len > 1 then
-            error((i18n"%s function can't receive more than one parameters."):format(auto));
+    function enum(first,...)
+        if nil == first then
+            auto = auto + 1;
+            return auto;
         end
-        AutoIdx = len == 0 and AutoIdx + 1 or ...;
-        return AutoIdx;
-    end;
-
-    function enum.New(first,...)
+        local isInteger = mType(first) == "integer";
+        if isInteger then
+            auto = first;
+            return auto;
+        end
+        auto = DefaultEnumIndex - 1;
         local fT = type(first);
-        local isString = fT == "string"
-        assert(isString or fT == "table",i18n"Only strings or tables can be used to generate a enumeration.")
+        local isString = fT == "string";
+        assert(isString or fT == "table",i18n"Only integers or strings or tables can be used to generate a enumeration.")
         if not isString then
             assert(select("#",...) == 0,i18n"Excess parameters.");
         end
@@ -65,6 +63,7 @@ if Config.Debug then
             AllEnumerations[e] = true;
             return e;
         end
+
         local _enum = {};
         AllEnumerations[_enum] = true;
         return setmetatable(_enum,{
@@ -80,12 +79,17 @@ if Config.Debug then
         });
     end
 else
-    enum[auto] = function(...)
-        local len = select("#",...)
-        AutoIdx = len == 0 and AutoIdx + 1 or ...;
-        return AutoIdx;
-    end;
-    function enum.New(first,...)
+    function enum(first,...)
+        if nil == first then
+            auto = auto + 1;
+            return auto;
+        end
+        local isInteger = mType(first) == "integer";
+        if isInteger then
+            auto = first;
+            return auto;
+        end
+        auto = DefaultEnumIndex - 1;
         local isString = type(first) == "string"
         local e = isString and {} or first;
         if isString then

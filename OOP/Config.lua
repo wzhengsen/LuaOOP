@@ -46,8 +46,6 @@ local Config = {
     raw = "raw",
     del = "del",
 
-    auto = "auto",
-
     set = "set",
     get = "get",
 
@@ -153,6 +151,9 @@ local Config = {
 
     -- Same as PropertyBehavior.
     EnumBehavior = 1,
+
+    -- The default initial index of the enumeration value.
+    DefaultEnumIndex = 1,
 
     -- Used to extend inherited external classes.
     ExternalClass = {

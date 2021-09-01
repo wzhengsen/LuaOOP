@@ -1138,9 +1138,9 @@ print(Number2.Six);--6
 
 -- Enumeration method 3.
 local Number3 = enum {
-    Seven = enum.auto(7),
-    Eight = enum.auto(),
-    Nine = enum.auto()
+    Seven = enum(7),
+    Eight = enum(),
+    Nine = enum()
 };
 print(Number3.Seven);--7
 print(Number3.Eight);--8
