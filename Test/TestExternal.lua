@@ -26,7 +26,7 @@ function File:MakeContent()
     return "The name of file is " .. self.filename ..",and opening mode is ".. self.mode;
 end
 
-local file = File.new("/test","w");
+local file = File.new("./test","w");
 local content = file:MakeContent();
 file:write(content);
 
@@ -37,7 +37,7 @@ assert(not ok);
 
 file:close();
 
-file = File.new("/test","r");
+file = File.new("./test","r");
 assert(content == file:read("a"));
 file:close();
 
@@ -50,8 +50,10 @@ local File = class(io);
 function File.__new__(...)
     return io.open(...);
 end
-local file = File.new("/test","w");
+local file = File.new("./test","w");
 file:close();
 
-file = File.new("/test","w");
+file = File.new("./test","w");
 File.close(file);
+
+os.remove("./test");
