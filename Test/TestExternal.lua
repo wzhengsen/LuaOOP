@@ -1,3 +1,6 @@
+local __file__ = ({...})[2];
+local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
+local __test__ = __dir__ .. "/test";
 local function RestoreFileMeta()
     -- Avoid problems arising from using debug and release at the same time,
     -- unrelated to the test code.
@@ -26,7 +29,7 @@ function File:MakeContent()
     return "The name of file is " .. self.filename ..",and opening mode is ".. self.mode;
 end
 
-local file = File.new("./test","w");
+local file = File.new(__test__,"w");
 local content = file:MakeContent();
 file:write(content);
 
@@ -37,7 +40,7 @@ assert(not ok);
 
 file:close();
 
-file = File.new("./test","r");
+file = File.new(__test__,"r");
 assert(content == file:read("a"));
 file:close();
 
@@ -45,15 +48,17 @@ file:close();
 ok = pcall(function()File.close(file);end);
 assert(not ok);
 
-local File = class(io);
+
+File = class(io);
 
 function File.__new__(...)
     return io.open(...);
 end
-local file = File.new("./test","w");
+
+file = File.new(__test__,"w");
 file:close();
 
-file = File.new("./test","w");
+file = File.new(__test__,"w");
 File.close(file);
 
-os.remove("./test");
+os.remove(__test__);
