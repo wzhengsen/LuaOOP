@@ -870,6 +870,10 @@ In some cases, the Lua C API is used to register classes that can return userdat
 ### 9.1 - Extending external classes only
 ---
 ```lua
+local __file__ = ({...})[2];
+local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
+local __test__ = __dir__ .. "/test";
+--
 require("OOP.Class");
 local File = class();
 
@@ -892,7 +896,7 @@ function File:MakeContent()
     return "The name of file is " .. self.filename ..",and opening mode is ".. self.mode;
 end
 
-local file = File.new("./test","w");
+local file = File.new(__test__,"w");
 file:write(file:MakeContent());
 
 assert(getmetatable(io.stdout) == getmetatable(file));
@@ -913,6 +917,10 @@ File.close(file);-- File cannot access the close method, raising an error.
 ### 9.2 - Inheritance of external classes
 ---
 ```lua
+local __file__ = ({...})[2];
+local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
+local __test__ = __dir__ .. "/test";
+--
 require("OOP.Class");
 -- Unlike direct extensions, the FILE* type is now inherited.
 local File = class(io);
@@ -922,10 +930,10 @@ local File = class(io);
 function File.__new__(...)
     return io.open(...);
 end
-local file = File.new("./test","w");
+local file = File.new(__test__,"w");
 file:close();
 
-file = File.new("./test","w");
+file = File.new(__test__,"w");
 File.close(file);-- Now, the close method can also be accessed through File.
 ```
 
@@ -934,6 +942,10 @@ File.close(file);-- Now, the close method can also be accessed through File.
 ---
 >Determine if an external object is still available
 ```lua
+local __file__ = ({...})[2];
+local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
+local __test__ = __dir__ .. "/test";
+--
 local Config = require("OOP.Config");
 
 -- ExternalClass.Null function can be implemented to determine whether a userdata class is currently available.
@@ -951,7 +963,7 @@ function File.__new__(...)
     return io.open(...);
 end
 
-local file = File.new("./test","w");
+local file = File.new(__test__,"w");
 print(class.null(file));-- false
 file:close();
 print(class.null(file));-- true
@@ -963,22 +975,22 @@ For Lua FILE* types, since their memory is managed by Lua, it is not possible to
 However, for some custom implemented types, which may have T\*\* structure, Lua memory management will not reclaim the contents of what they really point to, except for the T\*\* pointer.\
 Generally, \_\_delete\_\_ is implemented to destroy C/C++ memory:
 ```lua
-local ExtClass = require(...);
+local ExtClass = require("Your external function library");
 
 local Config = require("OOP.Config");
 Config.ExternalClass.Null = function(obj)
     if ExtClass.CheckIsExtClass(obj) then
-        return ExtClass.null(obj);
+        return ExtClass.CheckIsEmpty(obj);
     end
 end
 
 require("OOP.Class");
 local LuaClass = class(ExtClass);
 function LuaClass.__new__(...)
-    return ExtClass.malloc(...);
+    return ExtClass.YourMemoryAllocationFunction(...);
 end
 function LuaClass:__delete__()
-    ExtClass.free(self);
+    ExtClass.YourMemoryReleaseFunction(self);
 end
 function LuaClass:dtor()
     print("LuaClass is destructed at here.")
@@ -987,7 +999,7 @@ end
 local obj = LuaClass.new();
 print(class.null(obj));-- false
 -- The destructor will still be called.
-obj:delete();-- "LuaClass is destructed at here.."
+obj:delete();-- "LuaClass is destructed at here."
 print(class.null(obj));-- true
 ```
 

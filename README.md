@@ -868,6 +868,10 @@ local device = Device.new();
 ### 9.1 - 仅扩展外部类
 ---
 ```lua
+local __file__ = ({...})[2];
+local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
+local __test__ = __dir__ .. "/test";
+--
 require("OOP.Class");
 local File = class();
 
@@ -890,7 +894,7 @@ function File:MakeContent()
     return "The name of file is " .. self.filename ..",and opening mode is ".. self.mode;
 end
 
-local file = File.new("./test","w");
+local file = File.new(__test__,"w");
 file:write(file:MakeContent());
 
 assert(getmetatable(io.stdout) == getmetatable(file));
@@ -909,6 +913,10 @@ File.close(file);-- File无法访问close方法，引发错误。
 ### 9.2 - 继承外部类
 ---
 ```lua
+local __file__ = ({...})[2];
+local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
+local __test__ = __dir__ .. "/test";
+--
 require("OOP.Class");
 -- 不同于直接扩展，现在继承FILE*类型。
 local File = class(io);
@@ -918,10 +926,10 @@ local File = class(io);
 function File.__new__(...)
     return io.open(...);
 end
-local file = File.new("./test","w");
+local file = File.new(__test__,"w");
 file:close();
 
-file = File.new("./test","w");
+file = File.new(__test__,"w");
 File.close(file);--现在，也可以通过File来访问close方法。
 ```
 
@@ -930,6 +938,10 @@ File.close(file);--现在，也可以通过File来访问close方法。
 ---
 >判断外部对象是否仍然可用
 ```lua
+local __file__ = ({...})[2];
+local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
+local __test__ = __dir__ .. "/test";
+--
 local Config = require("OOP.Config");
 
 -- 可以实现Config.ExternalClass.Null函数来判断某个userdata类目前是否可用。
@@ -947,7 +959,7 @@ function File.__new__(...)
     return io.open(...);
 end
 
-local file = File.new("/test","w");
+local file = File.new(__test__,"w");
 print(class.null(file));-- false
 file:close();
 print(class.null(file));-- true
@@ -959,22 +971,22 @@ print(class.null(file));-- true
 但对于某些自定义实现的类型，可能具有T\*\*结构，Lua内存管理除了回收T\*\*指针外，对其真正指向的内容不会回收。\
 一般地，实现__delete__以销毁C/C++内存：
 ```lua
-local ExtClass = require(...);
+local ExtClass = require("你的外部函数库");
 
 local Config = require("OOP.Config");
 Config.ExternalClass.Null = function(obj)
-    if ExtClass.CheckIsExtClass(obj) then
-        return ExtClass.null(obj);
+    if ExtClass.检查该对象属于外部类(obj) then
+        return ExtClass.你的判空函数(obj);
     end
 end
 
 require("OOP.Class");
 local LuaClass = class(ExtClass);
 function LuaClass.__new__(...)
-    return ExtClass.malloc(...);
+    return ExtClass.你的内存分配函数(...);
 end
 function LuaClass:__delete__()
-    ExtClass.free(self);
+    ExtClass.你的内存释放函数(self);
 end
 function LuaClass:dtor()
     print("LuaClass在此处析构。")
