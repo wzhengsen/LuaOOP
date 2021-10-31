@@ -104,6 +104,8 @@ local ClassesStatic = Functions.ClassesStatic;
 local ClassesAll = Functions.ClassesAll;
 local ClassesPermisssions = Functions.ClassesPermisssions;
 local ClassesFriends = Functions.ClassesFriends;
+local ClassesAllFunctions = Functions.ClassesAllFunctions;
+local WeakTables = Functions.WeakTables;
 local AccessStack = Functions.AccessStack;
 
 local ReservedWord = Functions.ReservedWord;
@@ -658,6 +660,7 @@ function Functions.CreateClassTables(cls)
     all = {}
     ClassesAll[cls] = all;
     ClassesPermisssions[cls] = {};
+    ClassesAllFunctions[cls] = setmetatable({},WeakTables);
     FinalClassesMembers[cls] = {};
     VirtualClassesMembers[cls] = {};
 

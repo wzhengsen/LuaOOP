@@ -18,6 +18,7 @@
 -- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
+
 local setmetatable = setmetatable;
 local Config = require("OOP.Config");
 local Debug = Config.Debug;
@@ -101,6 +102,7 @@ return {
     ClassesFriends = Debug and setmetatable({},WeakTable) or nil,
     ClassesBanNew = Debug and setmetatable({},WeakTable) or nil,
     ClassesBanDelete = Debug and setmetatable({},WeakTable) or nil,
+    ClassesAllFunctions = Debug and setmetatable({},WeakTable) or nil,
     AccessStack = Debug and {} or nil,
     ReservedWord = {
         [Config.Qualifiers.public] = true,
@@ -125,5 +127,6 @@ return {
         [Config.__delete__] = true
     },
     Permission = Permission,
-    BitsMap = BitsMap
+    BitsMap = BitsMap,
+    WeakTable = WeakTable
 };

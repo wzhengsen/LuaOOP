@@ -130,9 +130,6 @@ local LanguageMap = {
     ["The nil value needs to be passed in to destory the object."] = {
         zh = "销毁对象时必须传入一个nil值。"
     },
-    ["Illegal operand."] = {
-        zh = "非法操作数。"
-    },
     ["There is no such property. - %s"] = {
         zh = "没有这个属性。 - %s"
     },

@@ -22,30 +22,25 @@
 local Config = require("OOP.Config");
 local LuaVersion = Config.LuaVersion;
 local unpack = LuaVersion < 5.2 and unpack or table.unpack;
-local setmetatable = setmetatable;
 local insert = table.insert;
 local remove = table.remove;
 local pcall = pcall;
 local error = error;
 
-
-local modeK = {__mode = "k"};
-local AllFunctions = setmetatable({},modeK);
-local AccessStack = require("OOP.Variant.Internal").AccessStack;
+local Internal = require("OOP.Variant.Internal");
+local AccessStack = Internal.AccessStack;
+local AllFunctions = Internal.ClassesAllFunctions;
 
 ---
 ---Wrapping the given function so that it handles the push and pop of the access stack correctly anyway,
 ---to avoid the access stack being corrupted by an error being thrown in one of the callbacks.
 ---@param cls table
 ---@param f function
+---@param clsFunctions? table
 ---@return function
 ---
-local function FunctionWrapper(cls,f)
-    local clsFunctions = AllFunctions[cls];
-    if not clsFunctions then
-        clsFunctions = setmetatable({},modeK);
-        AllFunctions[cls] = clsFunctions;
-    end
+local function FunctionWrapper(cls,f,clsFunctions)
+    clsFunctions = clsFunctions or AllFunctions[cls];
     local newF = clsFunctions[f];
     if nil == newF then
         newF = function(...)
@@ -63,9 +58,10 @@ local function FunctionWrapper(cls,f)
     return newF;
 end
 
+local BreakFunctions = setmetatable({},Internal.WeakTable);
 local function BreakFunctionWrapper(f)
     -- 0 means that any access permissions can be broken.
-    return FunctionWrapper(0,f);
+    return FunctionWrapper(0,f,BreakFunctions);
 end
 
 return {

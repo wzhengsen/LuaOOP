@@ -23,9 +23,9 @@ local setmetatable = setmetatable;
 local insert = table.insert;
 local remove = table.remove;
 
-local modeK = {__mode = "k"};
-local AllFunctions = setmetatable({},modeK);
-local AccessStack = require("OOP.Variant.Internal").AccessStack;
+local Internal = require("OOP.Variant.Internal");
+local AccessStack = Internal.AccessStack;
+local AllFunctions = Internal.ClassesAllFunctions;
 local RAII = setmetatable({},{
     __close = function ()
         remove(AccessStack);
@@ -36,30 +36,28 @@ local RAII = setmetatable({},{
 ---to avoid the access stack being corrupted by an error being thrown in one of the callbacks.
 ---@param cls table
 ---@param f function
+---@param clsFunctions? table
 ---@return function
 ---
-local function FunctionWrapper(cls,f)
-    local clsFunctions = AllFunctions[cls];
-    if not clsFunctions then
-        clsFunctions = setmetatable({},modeK);
-        AllFunctions[cls] = clsFunctions;
-    end
+local function FunctionWrapper(cls,f,clsFunctions)
+    clsFunctions = clsFunctions or AllFunctions[cls];
     local newF = clsFunctions[f];
     if nil == newF then
         newF = function(...)
             insert(AccessStack,cls);
             local _<close> = RAII;
             return f(...);
-        end
+        end;
         clsFunctions[newF] = newF;
         clsFunctions[f] = newF;
     end
     return newF;
 end
 
+local BreakFunctions = setmetatable({},Internal.WeakTable);
 local function BreakFunctionWrapper(f)
     -- 0 means that any access permissions can be broken.
-    return FunctionWrapper(0,f);
+    return FunctionWrapper(0,f,BreakFunctions);
 end
 
 return {
