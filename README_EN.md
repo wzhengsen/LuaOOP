@@ -510,10 +510,9 @@ local test2 = Test2.new();-- Raise an error, and the Test2 type cannot be constr
 ```
 
 >Some special modifying rules:
-*   Constructors and destructors cannot be modified with static or const;
+*   Constructors and destructors cannot be modified with static;
 *   None of the qualifiers can appear more than once at the same time;
 *   Pure virtual function qualifier can only be used alone (see later);
-*   Property and constant qualifier cannot be used together (see later);
 *   Cannot qualify some special methods and members (events/singleton, etc., see later).
 
 ---
