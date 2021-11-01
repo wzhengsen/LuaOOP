@@ -49,16 +49,16 @@ ok = pcall(function()File.close(file);end);
 assert(not ok);
 
 
-File = class(io);
+local FileIO = class(io);
 
-function File.__new__(...)
+function FileIO.__new__(...)
     return io.open(...);
 end
 
-file = File.new(__test__,"w");
+file = FileIO.new(__test__,"w");
 file:close();
 
-file = File.new(__test__,"w");
-File.close(file);
+file = FileIO.new(__test__,"w");
+FileIO.close(file);
 
 os.remove(__test__);
