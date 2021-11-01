@@ -25,7 +25,11 @@ assert(Number3.Nine == 9);
 local ok = pcall(function ()
     Number3.Nine = 10;
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 
 
 local Test = class();

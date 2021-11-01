@@ -870,7 +870,7 @@ In some cases, the Lua C API is used to register classes that can return userdat
 ### 9.1 - Extending external classes only
 ---
 ```lua
-local __file__ = ({...})[2];
+local __file__ = (arg or {...})[arg and 0 or 2];
 local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
 local __test__ = __dir__ .. "/test";
 --
@@ -917,7 +917,7 @@ File.close(file);-- File cannot access the close method, raising an error.
 ### 9.2 - Inheritance of external classes
 ---
 ```lua
-local __file__ = ({...})[2];
+local __file__ = (arg or {...})[arg and 0 or 2];
 local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
 local __test__ = __dir__ .. "/test";
 --
@@ -942,7 +942,7 @@ File.close(file);-- Now, the close method can also be accessed through File.
 ---
 >Determine if an external object is still available
 ```lua
-local __file__ = ({...})[2];
+local __file__ = (arg or {...})[arg and 0 or 2];
 local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
 local __test__ = __dir__ .. "/test";
 --

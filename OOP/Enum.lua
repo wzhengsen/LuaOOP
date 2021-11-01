@@ -19,14 +19,16 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 
+local Config = require("OOP.Config");
+
 local require = require;
 local rawset = rawset;
 local type = type;
 local select = select;
 local warn = warn or print;
-local mType = math.type;
+local mType = Config.LuaVersion > 5.2 and math.type or type;
+local integer = Config.LuaVersion > 5.2 and "integer" or "number";
 
-local Config = require("OOP.Config");
 local i18n = require("OOP.i18n");
 local EnumBehavior = Config.EnumBehavior;
 local DefaultEnumIndex = Config.DefaultEnumIndex;
@@ -40,7 +42,7 @@ if Config.Debug then
             auto = auto + 1;
             return auto;
         end
-        local isInteger = mType(first) == "integer";
+        local isInteger = mType(first) == integer;
         if isInteger then
             auto = first;
             return auto;
@@ -84,7 +86,7 @@ else
             auto = auto + 1;
             return auto;
         end
-        local isInteger = mType(first) == "integer";
+        local isInteger = mType(first) == integer;
         if isInteger then
             auto = first;
             return auto;

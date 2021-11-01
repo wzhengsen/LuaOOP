@@ -119,14 +119,16 @@ end
 local CheckPermission = nil;
 
 if Debug then
-    local ClassesPermisssions = Internal.ClassesPermisssions;
+    local ClassesPermissions = Internal.ClassesPermissions;
     local AccessStack = Internal.AccessStack;
+    local ConstStack = Internal.ConstStack;
     local band = Compat1.bits.band;
     local ConstBehavior = Config.ConstBehavior;
     local p_const = Permission.const;
     local p_public = Permission.public;
     local p_protected = Permission.protected;
     local p_private = Permission.private;
+    local p_internalConstMethod = Internal.BitsMap.__InternalConstMethod;
 
     ---Cascade to get permission values up to the top of the base class.
     ---
@@ -135,7 +137,7 @@ if Debug then
     ---@return table,integer
     ---
     local function CascadeGetPermission(self,key)
-        local pms = ClassesPermisssions[self];
+        local pms = ClassesPermissions[self];
         local pm = pms and pms[key] or nil;
         local cls = self;
         if nil == pm then
@@ -157,23 +159,22 @@ if Debug then
     ---
     ---@param self table
     ---@param key any
-    ---@param byObj boolean
     ---@param set? boolean
     ---@return boolean
     ---
-    CheckPermission = function(self,key,byObj,set)
+    CheckPermission = function(self,key,set)
         local stackCls = AccessStack[#AccessStack];
         if stackCls == 0 then
             -- 0 means that any access rights can be broken.
             return true;
         end
         local cls,pm = CascadeGetPermission(self,key);
-        if not pm then
-            return true;
-        end
 
-        if set then
-            if band(pm,p_const) ~= 0 then
+        local constMethod = pm and band(pm,p_internalConstMethod) ~= 0 or false;
+        if set and not constMethod then
+            -- Const methods have unique semantics, rather than representing constants.
+            -- Therefore, const methods are allowed to be reassigned.
+            if pm and band(pm,p_const) ~= 0 or (ConstStack[#ConstStack] and self.is(stackCls)) then
                 -- Check const.
                 if ConstBehavior ~= 2 then
                     if ConstBehavior == 0 then
@@ -184,12 +185,10 @@ if Debug then
                     return false;
                 end
             end
-            -- When a class performs a set operation,
-            -- even if the operation is on a private member,
-            -- it is considered to be a redefinition and the operation is not disabled.
-            if not byObj then
-                return true;
-            end
+        end
+
+        if not pm then
+            return true;
         end
 
         if band(pm,p_public) ~= 0 then

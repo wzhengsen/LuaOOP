@@ -59,7 +59,11 @@ p:SetX(999);
 local ok = pcall(function ()
     return p.X;
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 
 p.Y = 888;
 assert(p.Y == 888);
@@ -78,7 +82,11 @@ assert(xy.x == 100 and xy.y == 99);
 ok = pcall(function ()
     p3d.XY = {x = 200,y = 300};
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 
 assert(Point3D.Count == 1);
 assert(p3d.Count == nil);

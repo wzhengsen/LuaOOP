@@ -102,7 +102,7 @@ local CreateClassTables = Functions.CreateClassTables;
 local ClassesStatic = Functions.ClassesStatic;
 
 local ClassesAll = Functions.ClassesAll;
-local ClassesPermisssions = Functions.ClassesPermisssions;
+local ClassesPermissions = Functions.ClassesPermissions;
 local ClassesFriends = Functions.ClassesFriends;
 local ClassesAllFunctions = Functions.ClassesAllFunctions;
 local WeakTables = Functions.WeakTables;
@@ -209,7 +209,7 @@ local function GetAndCheck(cls,key,sender,metas)
     else
         cCls = cls;
     end
-    if not CheckPermission(cCls,key,true) then
+    if not CheckPermission(cCls,key) then
         return nil;
     end
     -- Check self __all__ first.
@@ -286,7 +286,7 @@ function Functions.MakeInternalObjectMeta(cls,metas)
         if ReservedWord[key] then
             error((i18n"%s is a reserved word and you can't set it."):format(key));
         end
-        if not CheckPermission(cCls,key,true,true) then
+        if not CheckPermission(cCls,key,true) then
             return;
         end
         local property = ClassesWritable[cCls][key];
@@ -370,7 +370,7 @@ local function RetrofiteUserDataObjectMetaExternal(obj,meta,cls)
             if ReservedWord[key] then
                 error((i18n"%s is a reserved word and you can't set it."):format(key));
             end
-            if not CheckPermission(cls,key,true,true) then
+            if not CheckPermission(cls,key,true) then
                 return;
             end
             local property = ClassesWritable[cls][key];
@@ -433,7 +433,7 @@ local function ClassGet(cls,key)
         end
         return fri;
     end
-    if not CheckPermission(cls,key,false) then
+    if not CheckPermission(cls,key) then
         return;
     end
     -- Check the properties first.
@@ -522,7 +522,7 @@ local function ClassSet(cls,key,value)
             DestroySingleton(cls,val)
         end;
         -- Once register "__singleton__" for a class,set permission of "new","delete" method to protected.
-        local pms = ClassesPermisssions[cls];
+        local pms = ClassesPermissions[cls];
         local pm = pms[new];
         if band(pm,p_private) == 0 then
             pms[new] = p_static + p_protected;
@@ -555,7 +555,7 @@ local function ClassSet(cls,key,value)
             vcm[key] = nil;
             Update2ChildrenWithKey(cls,VirtualClassesMembers,key,nil);
         else
-            if not CheckPermission(cls,key,false,true) then
+            if not CheckPermission(cls,key,true) then
                 return;
             end
             local property = ClassesWritable[cls][key];
@@ -595,7 +595,7 @@ local function ClassSet(cls,key,value)
                     ClassesMembers[cls][key] = value;
                     Update2ChildrenWithKey(cls,ClassesMembers,key,value);
                 end
-                ClassesPermisssions[cls][key] = p_public;
+                ClassesPermissions[cls][key] = p_public;
             end
             if isFunction then
                 all[key] = value;
@@ -659,7 +659,7 @@ function Functions.CreateClassTables(cls)
     MakeClassHandlersTable(cls,handlers);
     all = {}
     ClassesAll[cls] = all;
-    ClassesPermisssions[cls] = {};
+    ClassesPermissions[cls] = {};
     ClassesAllFunctions[cls] = setmetatable({},WeakTables);
     FinalClassesMembers[cls] = {};
     VirtualClassesMembers[cls] = {};
@@ -671,7 +671,7 @@ function Functions.PushBase(cls,bases,base,handlers,members,metas)
     PushBase(cls,bases,base,handlers,members,metas);
     local fm = FinalClassesMembers[cls];
     local vm = VirtualClassesMembers[cls];
-    local pms = ClassesPermisssions[base];
+    local pms = ClassesPermissions[base];
     if ClassesBanNew[base] then
         ClassesBanNew[cls] = true;
     elseif pms then
@@ -772,7 +772,7 @@ local function CascadeDelete(obj,cls,called)
         return;
     end
 
-    local pm = ClassesPermisssions[cls][dtor];
+    local pm = ClassesPermissions[cls][dtor];
     if pm then
         local aCls = AccessStack[#AccessStack];
         local _friends = ClassesFriends[cls];
@@ -829,7 +829,7 @@ end
 function Functions.AttachClassFunctions(cls,_is,_new,_delete)
     local all = ClassesAll[cls];
     local static = ClassesStatic[cls];
-    local pms = ClassesPermisssions[cls];
+    local pms = ClassesPermissions[cls];
     all[is] = _is;
     pms[is] = p_public;
     -- In debug mode,the "new" method is public and static.

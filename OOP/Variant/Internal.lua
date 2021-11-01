@@ -46,19 +46,16 @@ local BitsMap = {
     [set] = 2 ^ 7,
     [virtual] = 2 ^ 8,
 
-    max = (2 ^ 9) - 1
+    -- Used to instruct const methods internally,
+    -- external code doesn't need to care about this.
+    __InternalConstMethod = 2 ^ 9,
+
+    max = (2 ^ 10) - 1
 };
 if LuaVersion > 5.2 then
-    BitsMap[public] = math.tointeger(BitsMap[public]);
-    BitsMap[private] = math.tointeger(BitsMap[private]);
-    BitsMap[protected] = math.tointeger(BitsMap[protected]);
-    BitsMap[static] = math.tointeger(BitsMap[static]);
-    BitsMap[const] = math.tointeger(BitsMap[const]);
-    BitsMap[final] = math.tointeger(BitsMap[final]);
-    BitsMap[get] = math.tointeger(BitsMap[get]);
-    BitsMap[set] = math.tointeger(BitsMap[set]);
-    BitsMap[virtual] = math.tointeger(BitsMap[virtual]);
-    BitsMap.max = math.tointeger(BitsMap.max);
+    for k, v in pairs(BitsMap) do
+        BitsMap[k] = math.tointeger(v);
+    end
 end
 local Permission = {
     public = BitsMap[public],
@@ -94,7 +91,7 @@ return {
     ObjectsCls = setmetatable({},WeakTable),
     ClassesStaticProperties = setmetatable({},WeakTable),
     ClassesStatic = setmetatable({},WeakTable),
-    ClassesPermisssions = Debug and setmetatable({},WeakTable) or nil,
+    ClassesPermissions = Debug and setmetatable({},WeakTable) or nil,
     FinalClasses = Debug and setmetatable({},WeakTable) or nil,
     ClassesAll = Debug and setmetatable({},WeakTable) or nil,
     FinalClassesMembers = Debug and setmetatable({},WeakTable) or nil,
@@ -104,6 +101,7 @@ return {
     ClassesBanDelete = Debug and setmetatable({},WeakTable) or nil,
     ClassesAllFunctions = Debug and setmetatable({},WeakTable) or nil,
     AccessStack = Debug and {} or nil,
+    ConstStack = Debug and {} or nil,
     ReservedWord = {
         [Config.Qualifiers.public] = true,
         [Config.Qualifiers.protected] = true,

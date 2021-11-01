@@ -30,6 +30,7 @@ local error = error;
 local Internal = require("OOP.Variant.Internal");
 local AccessStack = Internal.AccessStack;
 local AllFunctions = Internal.ClassesAllFunctions;
+local ConstStack = Internal.ConstStack;
 
 ---
 ---Wrapping the given function so that it handles the push and pop of the access stack correctly anyway,
@@ -37,16 +38,19 @@ local AllFunctions = Internal.ClassesAllFunctions;
 ---@param cls table
 ---@param f function
 ---@param clsFunctions? table
+---@param const? boolean
 ---@return function
 ---
-local function FunctionWrapper(cls,f,clsFunctions)
+local function FunctionWrapper(cls,f,clsFunctions,const)
     clsFunctions = clsFunctions or AllFunctions[cls];
     local newF = clsFunctions[f];
     if nil == newF then
         newF = function(...)
             insert(AccessStack,cls);
+            insert(ConstStack,const or false);
             local ret = {pcall(f,...)};
             remove(AccessStack);
+            remove(ConstStack);
             if not ret[1] then
                 error(ret[2]);
             end

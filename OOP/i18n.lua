@@ -34,8 +34,8 @@ local LanguageMap = {
     ["The %s qualifier cannot be used in conjunction with other access qualifiers."] = {
         zh = "修饰符%s不能与其它访问修饰符一起使用。"
     },
-    ["%s,%s,%s cannot be used at the same time."] = {
-        zh = "%s、%s和%s不能同时使用。"
+    ["%s,%s cannot be used at the same time."] = {
+        zh = "%s和%s不能同时使用。"
     },
     ["There is no such qualifier. - %s"] = {
         zh = "没有这个修饰符。 - %s"

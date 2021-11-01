@@ -9,7 +9,11 @@ end
 local ok = pcall(function ()
     local test1 = Test1.new();
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 
 local Test2 = class(Test1);
 function Test2:DoSomething2()

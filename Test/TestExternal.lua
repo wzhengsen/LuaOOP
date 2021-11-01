@@ -1,4 +1,4 @@
-local __file__ = ({...})[2];
+local __file__ = (arg or {...})[arg and 0 or 2];
 local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
 local __test__ = __dir__ .. "/test";
 local function RestoreFileMeta()
@@ -41,7 +41,7 @@ assert(not ok);
 file:close();
 
 file = File.new(__test__,"r");
-assert(content == file:read("a"));
+assert(content == file:read("*a"));
 file:close();
 
 

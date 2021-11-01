@@ -29,4 +29,8 @@ assert(inst1 ~= inst2);
 local ok = pcall(function ()
     local device = Device.new();
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end

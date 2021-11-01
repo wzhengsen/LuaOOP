@@ -868,7 +868,7 @@ local device = Device.new();
 ### 9.1 - 仅扩展外部类
 ---
 ```lua
-local __file__ = ({...})[2];
+local __file__ = (arg or {...})[arg and 0 or 2];
 local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
 local __test__ = __dir__ .. "/test";
 --
@@ -913,7 +913,7 @@ File.close(file);-- File无法访问close方法，引发错误。
 ### 9.2 - 继承外部类
 ---
 ```lua
-local __file__ = ({...})[2];
+local __file__ = (arg or {...})[arg and 0 or 2];
 local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
 local __test__ = __dir__ .. "/test";
 --
@@ -938,7 +938,7 @@ File.close(file);--现在，也可以通过File来访问close方法。
 ---
 >判断外部对象是否仍然可用
 ```lua
-local __file__ = ({...})[2];
+local __file__ = (arg or {...})[arg and 0 or 2];
 local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
 local __test__ = __dir__ .. "/test";
 --

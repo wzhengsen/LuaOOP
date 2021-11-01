@@ -25,10 +25,12 @@ local remove = table.remove;
 
 local Internal = require("OOP.Variant.Internal");
 local AccessStack = Internal.AccessStack;
+local ConstStack = Internal.ConstStack;
 local AllFunctions = Internal.ClassesAllFunctions;
 local RAII = setmetatable({},{
     __close = function ()
         remove(AccessStack);
+        remove(ConstStack);
     end
 });
 ---
@@ -37,14 +39,16 @@ local RAII = setmetatable({},{
 ---@param cls table
 ---@param f function
 ---@param clsFunctions? table
+---@param const? boolean
 ---@return function
 ---
-local function FunctionWrapper(cls,f,clsFunctions)
+local function FunctionWrapper(cls,f,clsFunctions,const)
     clsFunctions = clsFunctions or AllFunctions[cls];
     local newF = clsFunctions[f];
     if nil == newF then
         newF = function(...)
             insert(AccessStack,cls);
+            insert(ConstStack,const or false);
             local _<close> = RAII;
             return f(...);
         end;

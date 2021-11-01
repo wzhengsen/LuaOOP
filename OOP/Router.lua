@@ -88,13 +88,15 @@ if Debug then
     local ClassesAll = Internal.ClassesAll;
     local CheckPermission = BaseFunctions.CheckPermission;
     local FinalClassesMembers = Internal.FinalClassesMembers;
-    local ClassesPermisssions = Internal.ClassesPermisssions;
+    local ClassesPermissions = Internal.ClassesPermissions;
     local VirtualClassesMembers = Internal.VirtualClassesMembers;
     local ClassesBanNew = Internal.ClassesBanNew;
     local ClassesBanDelete = Internal.ClassesBanDelete;
 
     local RouterReservedWord = Internal.RouterReservedWord;
 
+    local p_const = Permission.const;
+    local p_internalConstMethod = Internal.BitsMap.__InternalConstMethod;
     local bitMax = Internal.BitsMap.max;
     -- It is only under debug that the values need to be routed to the corresponding fields of the types.
     -- To save performance, all qualifiers will be ignored under non-debug.
@@ -113,9 +115,9 @@ if Debug then
             elseif band(decor,0x7) ~= 0 and band(bit,0x7) ~= 0 then
                 -- Check public,private,protected,they are 0x7
                 error((i18n"The %s qualifier cannot be used in conjunction with other access qualifiers."):format(key));
-            elseif band(decor,0xd0) ~= 0 and band(bit,0xd0) ~= 0 then
-                -- Check set,get,const,they are 0xd0
-                error((i18n"%s,%s,%s cannot be used at the same time."):format(get,set,const));
+            elseif band(decor,0xc0) ~= 0 and band(bit,0xc0) ~= 0 then
+                -- Check set,get,they are 0xc0
+                error((i18n"%s,%s cannot be used at the same time."):format(get,set));
             else
                 local temp = bor(bit,decor);
                 if band(temp,p_virtual) ~= 0 and band(temp,bitMax) ~= p_virtual then
@@ -127,7 +129,7 @@ if Debug then
             local get_set = band(decor,p_get_set);
             if get_set ~= 0 then
                 if bor(decor,p_get_set) == p_get_set then
-                    CheckPermission(cls,key,false);
+                    CheckPermission(cls,key);
                     local property = (get_set == p_get and ClassesReadable or ClassesWritable)[cls][key];
                     if property then
                         return property[1];
@@ -195,7 +197,12 @@ if Debug then
         local oVal = value;
 
         if isFunction then
-            value = FunctionWrapper(cls,value);
+            local isConst = band(decor,p_const) ~= 0;
+            value = FunctionWrapper(cls,value,nil,isConst);
+            if isConst then
+                -- Indicates that it is an internal const method.
+                decor = bor(decor,p_internalConstMethod);
+            end
         elseif get_set == 0 then
             local isTable = "table" == vt;
             -- For non-functional, non-static members,non-class objects,non-enumeration objects,
@@ -206,7 +213,7 @@ if Debug then
             end
         end
 
-        local pms = ClassesPermisssions[cls];
+        local pms = ClassesPermissions[cls];
         -- Instead of identifying the property with static,
         -- attach static to the property to avoid static checks occurring before taking the property
         -- (the property can have the same name as the static member).

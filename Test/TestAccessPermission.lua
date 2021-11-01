@@ -69,12 +69,20 @@ assert(protected.data2.field2 == Test.data1);
 local ok = pcall(function ()
     protected:GetData1();
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 
 ok = pcall(function ()
     protected:SetField2(100);
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 
 local VisitProtected = class(Protected);
 function VisitProtected:TestProtected()
@@ -113,15 +121,27 @@ function VisitPrivate.TestPrivate()
     local ok = pcall(function ()
         vp:SetData("222");
     end);
-    assert(Debug and not ok or ok);
+    if Debug then
+        assert(not ok);
+    else
+        assert(ok);
+    end
     ok = pcall(function ()
         return Private.new();
     end);
-    assert(Debug and not ok or ok);
+    if Debug then
+        assert(not ok);
+    else
+        assert(ok);
+    end
     ok = pcall(function ()
         return vp.pData;
     end);
-    assert(Debug and not ok or ok);
+    if Debug then
+        assert(not ok);
+    else
+        assert(ok);
+    end
 end
 VisitPrivate.TestPrivate();
 
@@ -135,7 +155,11 @@ ok = pcall(function ()
     function StaticTest.static:ctor()
     end
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 
 function StaticTest:ctor()
     StaticTest.Count = StaticTest.Count + 1;
@@ -157,35 +181,69 @@ assert(2 == FromStatic.Count);
 -- const
 local ConstTest = class();
 ConstTest.const.data = "123";
+ConstTest.variable = "change me";
 
 local ct = ConstTest.new();
 ok = pcall(function ()
     ct.data = "321";
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 
 ok = pcall(function ()
     ConstTest.data = "321";
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
+
+function ConstTest.const:ThrowConstError()
+    self.variable = "changed";
+end
+
+ok = pcall(function ()
+    ct:ThrowConstError();
+end);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 
 local ConstTest1 = class(ConstTest);
 ct = ConstTest1.new();
 ok = pcall(function ()
     ct.data = "321";
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 ok = pcall(function ()
     ConstTest1.data = "321";
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 
 -- final
 local FinalClass = class.final();
 ok = pcall(function ()
     local ErrorClass = class(FinalClass);
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 
 local Base = class();
 Base.final.member1 = "1";
@@ -197,16 +255,28 @@ local ErrorClass = class(Base);
 ok = pcall(function ()
     ErrorClass.member1 = 1;
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 ok = pcall(function ()
     ErrorClass.member2 = 1;
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 ok = pcall(function ()
     function ErrorClass:FinalFunc()
     end
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 
 ErrorClass.normalMember = 1;
 
@@ -223,13 +293,21 @@ end
 ok = pcall(function ()
     ErrorClass1.member1 = 2;
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 
 ok = pcall(function ()
     function ErrorClass1:FinalFunc()
     end
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 
 -- friends
 local Base = class();
@@ -275,7 +353,11 @@ assert("123" == C2.StaticGet(secret));
 ok = pcall(function ()
     assert("123" == nFriend:GetSecret(secret));
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 
 
 -- other
@@ -301,7 +383,11 @@ Test.DestroyInstance(test1);
 ok = pcall(function ()
     local test2 = Test.new();
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 
 local test3 = Test.CreateInstance(1,2);
 local copyTest = nil;
@@ -314,7 +400,11 @@ local test4 = Test.CreateInstance();
 ok = pcall(function ()
     test4:delete();
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 
 local Test = class();
 Test.private.mySecret = "123";
@@ -334,7 +424,11 @@ assert(s == "123" and i == "abc");
 ok = pcall(function ()
     return test.mySecret;
 end);
-assert(Debug and not ok or ok);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
 
 
 
