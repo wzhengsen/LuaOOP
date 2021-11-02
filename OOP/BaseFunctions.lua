@@ -38,6 +38,7 @@ local ipairs = ipairs;
 local pairs = pairs;
 local type = type;
 local getmetatable = getmetatable;
+local rawequal = rawequal;
 
 ---Maps some value changes to subclasses.
 ---@param cls table
@@ -102,7 +103,7 @@ end
 
 local function ClassBasesIsRecursive(baseCls,bases)
     for _,base in ipairs(bases) do
-        if base == baseCls then
+        if rawequal(base,baseCls) then
             return true;
         else
             local bBases = ClassesBases[base];
@@ -174,7 +175,9 @@ if Debug then
         if set and not constMethod then
             -- Const methods have unique semantics, rather than representing constants.
             -- Therefore, const methods are allowed to be reassigned.
-            if pm and band(pm,p_const) ~= 0 or (ConstStack[#ConstStack] and self.is(stackCls)) then
+            if pm and
+            band(pm,p_const) ~= 0 or
+            (ConstStack[#ConstStack] and (rawequal(stackCls,self) or ClassBasesIsRecursive(stackCls,ClassesBases[self]))) then
                 -- Check const.
                 if ConstBehavior ~= 2 then
                     if ConstBehavior == 0 then
@@ -195,7 +198,7 @@ if Debug then
             -- Allow public.
             return true;
         end
-        if stackCls == cls then
+        if rawequal(stackCls,cls) then
             return true;
         end
 

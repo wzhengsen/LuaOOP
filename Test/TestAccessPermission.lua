@@ -202,12 +202,28 @@ else
     assert(ok);
 end
 
-function ConstTest.const:ThrowConstError()
+function ConstTest:Test()
+end
+
+function ConstTest.const:ThrowConstError1()
     self.variable = "changed";
 end
 
+function ConstTest.const:ThrowConstError2()
+    self:Test();
+end
+
 ok = pcall(function ()
-    ct:ThrowConstError();
+    ct:ThrowConstError1();
+end);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
+
+ok = pcall(function ()
+    ct:ThrowConstError2();
 end);
 if Debug then
     assert(not ok);

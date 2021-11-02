@@ -27,6 +27,7 @@ local remove = table.remove;
 local pcall = pcall;
 local error = error;
 
+local i18n = require("OOP.i18n");
 local Internal = require("OOP.Variant.Internal");
 local AccessStack = Internal.AccessStack;
 local AllFunctions = Internal.ClassesAllFunctions;
@@ -48,6 +49,16 @@ local function FunctionWrapper(cls,f,clsFunctions,const)
         newF = function(...)
             insert(AccessStack,cls);
             insert(ConstStack,const or false);
+            local len = #ConstStack;
+            if len > 1 and ConstStack[len - 1] and not const then
+                local lastCls = AccessStack[len - 1];
+                if lastCls ~= 0 and cls ~= 0 and lastCls.is(cls) then
+                    remove(AccessStack);
+                    remove(ConstStack);
+                    error(i18n"Cannot call a non-const method on a const method.");
+                    return;
+                end
+            end
             local ret = {pcall(f,...)};
             remove(AccessStack);
             remove(ConstStack);
