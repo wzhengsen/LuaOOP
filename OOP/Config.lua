@@ -29,7 +29,7 @@ local Config = {
 
     --****************Rename fields start****************
     -- If you need to rename some of the LuaOOP names to suit specific needs,
-    -- please qualify the following mapping.
+    -- please modify the following mapping.
 
     class = "class",
 
