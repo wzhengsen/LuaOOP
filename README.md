@@ -352,12 +352,33 @@ p2.ShowCount();
 ---
 ```lua
 require("OOP.Class");
-local Test = class();
+local Other = class();
+function Other:DoSomething()
+end
+
+local TestBase = class();
+function TestBase:DoBase()
+end
+
+local Test = class(TestBase);
 -- 现在，被const修饰的data已声明为常量，不可再修改。
 Test.const.data = "123";
+Test.change = "change";
 
 local test = Test.new();
 print(test.data);-- "123"
+function Test.const:ConstFunc()
+end
+function Test:NonConstFunc()
+end
+function Test.const:ChangeValue()
+    Other.new():DoSomething();-- 允许调用其它类的非const方法。
+    self:ConstFunc();-- 允许调用const方法。
+    self:NonConstFunc();-- 引发错误，不允许调用非const方法。
+    self:DoBase();-- 引发错误，也不允许调用基类非const方法。
+    self.change = "xxx";-- 引发错误，const方法内部不能修改成员。
+end
+test:ChangeValue();
 -- 引发错误，常量不可修改。
 test.data = "321";
 -- 引发错误，常量不可修改。
@@ -511,6 +532,7 @@ local test2 = Test2.new();-- 引发错误，Test2类型也不能被构造。
 *   构造函数和析构函数不能使用static修饰；
 *   各个修饰符都不能同时出现一次以上；
 *   纯虚函数的修饰只能单独使用（见后文）；
+*   元方法**目前**只能使用static修饰（见后文）；
 *   不能修饰一些特殊的方法和成员（事件/单例等，见后文）。
 
 ---

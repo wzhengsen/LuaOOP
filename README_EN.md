@@ -353,12 +353,33 @@ p2.ShowCount();
 ---
 ```lua
 require("OOP.Class");
-local Test = class();
+local Other = class();
+function Other:DoSomething()
+end
+
+local TestBase = class();
+function TestBase:DoBase()
+end
+
+local Test = class(TestBase);
 -- The data modified by const is now declared as a constant and can't be changed.
 Test.const.data = "123";
+Test.change = "change";
 
 local test = Test.new();
 print(test.data);-- "123"
+function Test.const:ConstFunc()
+end
+function Test:NonConstFunc()
+end
+function Test.const:ChangeValue()
+    Other.new():DoSomething();-- Allows calling non-const methods of other classes.
+    self:ConstFunc();-- Allows calling const methods.
+    self:NonConstFunc();-- Raise an error and do not allow calling non-const methods.
+    self:DoBase();-- Raising errors and not allowing calls to base class non-const methods.
+    self.change = "xxx";-- Raise an error, const methods cannot modify members internally.
+end
+test:ChangeValue();
 -- Raise error,constants can't be changed.
 test.data = "321";
 -- Raise error,constants can't be changed.
@@ -513,6 +534,7 @@ local test2 = Test2.new();-- Raise an error, and the Test2 type cannot be constr
 *   Constructors and destructors cannot be modified with static;
 *   None of the qualifiers can appear more than once at the same time;
 *   Pure virtual function qualifier can only be used alone (see later);
+*   Meta methods can **currently** only be modified with static (see later)
 *   Cannot qualify some special methods and members (events/singleton, etc., see later).
 
 ---
