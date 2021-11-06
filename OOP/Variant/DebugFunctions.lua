@@ -181,15 +181,21 @@ local HandlersControl = setmetatable({},{
             error((i18n"The key of the object's %s must be a string"):format(handlers));
         end
         local vt = type(value);
-        if value ~= nil and "number" ~= vt then
-            error((i18n"The object's %s can only accpet number or nil."):format(handlers));
-        end
         if nil == value then
             -- If value is nil,we remove the response of this event name.
             E_Handlers.Remove(key,HandlersControlObj);
-        else
+        elseif value == false or value == true then
+            -- If value is a boolean,we enable/disable it.
+            E_Handlers.Enabled(key,HandlersControlObj,value);
+        elseif vt == "function" then
+            -- If value is a function,we reset the response of this event name.
+            E_Handlers.Remove(key,HandlersControlObj);
+            E_Handlers.On(key,HandlersControlObj,FunctionWrapper(HandlersControlObj.is(),value));
+        elseif vt == "number" then
             -- If value is a number,we sort it.
             E_Handlers.Order(key,HandlersControlObj,math.floor(value));
+        else
+            error((i18n"The object's %s can only accpet number/function/boolean/nil."):format(handlers));
         end
     end
 });

@@ -59,7 +59,7 @@ local LanguageMap = {
         zh = "%s和%s不能被用作属性。"
     },
     ["You cannot use this name \"%s\", which is already used by other class."] = {
-        zh = [[你不能使用%s这个名字，它已经被其它类所使用。]]
+        zh = "你不能使用\"%s\"这个名字，它已经被其它类所使用。"
     },
     ["This meta method is not implemented. - %s"] = {
         zh = "该元方法未被实现。 - %s"
@@ -79,8 +79,8 @@ local LanguageMap = {
     ["The key of the object's %s must be a string"] = {
         zh = "对象的%s的键必须是一个字符串。"
     },
-    ["The object's %s can only accpet number or nil."] = {
-        zh = "对象的%s只能接受数字或nil值。"
+    ["The object's %s can only accpet number/function/boolean/nil."] = {
+        zh = "对象的%s只能接受数字/函数/布尔/空。"
     },
     ["You can't read a write-only property. - %s"] = {
         zh = "你不能读取只写属性。 - %s"

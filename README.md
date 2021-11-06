@@ -1118,7 +1118,7 @@ a.handlers.Any = -1;
 event.Any();
 ```
 
->移除事件响应：
+>停用/启用/移除事件响应：
 ```lua
 require("OOP.Class");
 local Listener = class();
@@ -1129,6 +1129,16 @@ end
 local a = Listener.new();
 -- a-响应Any事件。
 event.Any();
+
+-- 赋值为false以停用事件响应。
+a.handlers.Any = false;
+event.Any();-- 没有任何行为。
+
+-- 赋值为true以启用事件响应。
+a.handlers.Any = true;
+-- a-响应Any事件。
+event.Any();
+
 -- 赋值为nil以移除事件响应。
 a.handlers.Any = nil;
 event.Any();-- 没有任何行为。
@@ -1139,6 +1149,26 @@ event.Any();
 -- b在析构后，也不再响应事件。
 b:delete();
 event.Any();-- 没有任何行为。
+```
+
+>重置事件响应：
+```lua
+require("OOP.Class");
+local Listener = class();
+function Listener.handlers:Any()
+    print("响应Any事件->",self);
+end
+
+local a = Listener.new();
+local b = Listener.new();
+
+a.handlers.Any = function(self)
+    print("a重置了Any事件的响应->",self);
+end;
+
+event.Any();
+-- 响应Any事件->table: xxxxxxxxxx
+-- a重置了Any事件的响应->table: xxxxxxxxxx
 ```
 
 ---

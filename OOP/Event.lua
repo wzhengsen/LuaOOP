@@ -38,35 +38,33 @@ local null = class.null;
 local HoleLimit = Config.HoleLimit;
 local EventPool = {};
 local EventOrder = {};
+local WeakTable = {__mode = "v"};
 
 local ipairs = ipairs;
 local setmetatable = setmetatable;
 local insert = table.insert;
 local remove = table.remove;
 local pcall = pcall;
+local rawequal = rawequal;
 
 local function RemakeObjList(pool,lvl,hole)
     -- Rearrange the list of objects
     -- if the number of holes reaches the limit.
     if lvl == 1 and hole > HoleLimit then
-        local newObjHandlers = {};
         local idx = 1;
-        for _,info in ipairs(lvl) do
+        for key,info in ipairs(pool) do
             if info.obj then
-                newObjHandlers[idx] = info;
                 idx = idx + 1;
             end
+            pool[key] = nil;
+            pool[idx] = info;
         end
-        pool.objHandlers = newObjHandlers;
     end
 end
 
 local event = setmetatable({},{
     __index = function(t,k)
-        local pool = {
-            enabled = true,
-            objHandlers = {}
-        };
+        local pool = {};
         local order = {};
 
         EventPool[k] = pool;
@@ -74,22 +72,17 @@ local event = setmetatable({},{
         local EventCallLvl = 0;
 
         local e = function(...)
-            if not pool.enabled then
-                return;
-            end
-
             local hole = 0;
-            local objHandlers = pool.objHandlers;
 
             EventCallLvl = EventCallLvl + 1;
 
             -- Rearrange the obj list if the current calling level is 1
             -- and there is a need to rearrange it.
             if EventCallLvl == 1 and #order > 0 then
-                local handlerLen = #objHandlers;
+                local handlerLen = #pool;
                 for _,o in ipairs(order) do
-                    for i,info in ipairs(objHandlers) do
-                        if info.obj == o.obj then
+                    for i,info in ipairs(pool) do
+                        if rawequal(info.obj,o.obj) then
                             local idx = o.index;
                             if idx == 0 then
                                 idx = 1;
@@ -99,24 +92,25 @@ local event = setmetatable({},{
                                 local newIdx = idx + 1 + handlerLen;
                                 idx = newIdx <= 0 and 1 or newIdx;
                             end
-                            insert(objHandlers,idx,remove(objHandlers,i));
+                            insert(pool,idx,remove(pool,i));
                             break;
                         end
                     end
                 end
-                for k,_ in pairs(order) do
-                    order[k] = nil;
+                for key,_ in pairs(order) do
+                    order[key] = nil;
                 end
             end
 
-            for _,info in ipairs(objHandlers) do
+            for _,info in ipairs(pool) do
                 local obj = info.obj;
+                local handler = info.handler;
                 if not obj or null(obj) then
                     -- Specifies that the number of holes is increased when the object is destroyed.
                     hole = hole + 1;
                     info.obj = false;
-                elseif info.enabled then
-                    local ok,ret = pcall(info.handler,obj,...);
+                elseif info.enabled and handler then
+                    local ok,ret = pcall(handler,obj,...);
                     if not ok then
                         RemakeObjList(pool,EventCallLvl,hole);
                         EventCallLvl = EventCallLvl - 1;
@@ -158,11 +152,11 @@ local handlers = {};
 function handlers.On(eventName,obj,handler)
     -- Check or define the event name.
     local _ = event[eventName];
-    insert(EventPool[eventName].objHandlers,{
+    insert(EventPool[eventName],setmetatable({
         obj = obj,
         enabled = true,
         handler = handler
-    });
+    },WeakTable));
 end
 
 ---Removes the response of an object to an event.
@@ -173,11 +167,26 @@ end
 function handlers.Remove(eventName,obj)
     -- Check or define the event name.
     local _ = event[eventName];
-    local objHandlers = EventPool[eventName].objHandlers;
-    for _,info in ipairs(objHandlers) do
-        if info.obj == obj then
+    for _,info in ipairs(EventPool[eventName]) do
+        if rawequal(info.obj,obj) then
             -- Don't remove at here,remove it on event loop.
             info.obj = false;
+            break;
+        end
+    end
+end
+
+---Set whether an event is available for an object.
+---
+---@param eventName string
+---@param enabled boolean
+---
+function handlers.Enabled(eventName,obj,enabled)
+    -- Check or define the event name.
+    local _ = event[eventName];
+    for _,info in ipairs(EventPool[eventName]) do
+        if rawequal(info.obj,obj) then
+            info.enabled = enabled;
             break;
         end
     end

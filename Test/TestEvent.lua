@@ -35,6 +35,22 @@ local c = Listener.new("c",false);
 event.Email("a","a");
 event.Email("b","123");
 event.Email("c",false);
+local assertError = false;
+c.handlers.Email = function(self,name,content)
+    if name == self.name then
+        assertError = content;
+    end
+end;
+event.Email("c",true);
+assert(assertError == true);
+
+c.handlers.Email = false;
+event.Email("c",false);
+assert(assertError == true);
+
+c.handlers.Email = true;
+event.Email("c",false);
+assert(assertError == false);
 
 b.handlers.Sort = 1;
 a.handlers.Sort = -1;

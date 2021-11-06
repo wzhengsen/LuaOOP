@@ -352,6 +352,13 @@ local HandlersControl = setmetatable({},{
         if nil == value then
             -- If value is nil,we remove the response of this event name.
             E_Handlers.Remove(key,HandlersControlObj);
+        elseif value == false or value == true then
+            -- If value is a boolean,we enable/disable it.
+            E_Handlers.Enabled(key,HandlersControlObj,value);
+        elseif type(value) == "function" then
+            -- If value is a function,we reset the response of this event name.
+            E_Handlers.Remove(key,HandlersControlObj);
+            E_Handlers.On(key,HandlersControlObj,value);
         else
             -- If value is a number,we sort it.
             E_Handlers.Order(key,HandlersControlObj,math.floor(value));

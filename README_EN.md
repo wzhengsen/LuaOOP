@@ -1122,27 +1122,57 @@ a.handlers.Any = -1;
 event.Any();
 ```
 
->Remove event response:
+>Disable/Enable/Remove event response:
 ```lua
 require("OOP.Class");
 local Listener = class();
 function Listener.handlers:Any()
-    print("Responsing Any event.");
+    print("Responsing 'Any' event.");
 end
 
 local a = Listener.new();
--- a-Responsing Any event.
+-- a-Responsing 'Any' event.
 event.Any();
--- Assign a value of nil to remove the event response..
+
+-- Assign false to disable the event response.
+a.handlers.Any = false;
+event.Any();-- There is no behavior.
+
+-- Assign true to enable the event response.
+a.handlers.Any = true;
+-- a-Responsing 'Any' event.
+event.Any();
+
+-- Assign nil to remove the event response.
 a.handlers.Any = nil;
 event.Any();-- There is no behavior.
 
 local b = Listener.new();
--- b-Responsing Any event.
+-- b-Responsing 'Any' event.
 event.Any();
 -- b also stops responding to events after destructuring.
 b:delete();
 event.Any();-- There is no behavior.
+```
+
+>Reset event response:
+```lua
+require("OOP.Class");
+local Listener = class();
+function Listener.handlers:Any()
+    print("Responsing 'Any' event->",self);
+end
+
+local a = Listener.new();
+local b = Listener.new();
+
+a.handlers.Any = function(self)
+    print("'a' resets the response to the 'Any' event->",self);
+end;
+
+event.Any();
+-- Responsing 'Any' event->table: xxxxxxxxxx
+-- 'a' resets the response to the 'Any' event->table: xxxxxxxxxx
 ```
 
 ---
