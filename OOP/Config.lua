@@ -155,6 +155,9 @@ local Config = {
     -- The default initial index of the enumeration value.
     DefaultEnumIndex = 1,
 
+    -- "get" property will be qualified with const if this is true.
+    GetPropertyAutoConst = false,
+
     -- Used to extend inherited external classes.
     ExternalClass = {
         ---Function to determine if userdata is empty.

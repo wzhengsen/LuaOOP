@@ -594,6 +594,7 @@ For more renameable fields, see the [Config.lua](OOP/Config.lua) file.
 ---
 ## 5 - Properties
 ---
+>General form of use of properties:
 ```lua
 require("OOP.Class");
 local Point = class();
@@ -680,6 +681,30 @@ p3d.XY = {x = 200,y = 300};
 
 print(Point3D.Count);-- 1
 print(p3d.Count);-- nil
+```
+
+>Special rules for the use of properties:
+```lua
+-- Sometimes, for "get" qualified properties,
+-- we want it to imply the "const" qualification as well，
+-- Then you can turn on the GetPropertyAutoConst switch to control this behavior.
+require("OOP.Config").GetPropertyAutoConst = true;
+require("OOP.Class");
+local Point = class();
+Point.x = 100;
+Point.y = 200;
+
+function Point.get:X()
+    self.x = self.y;-- Raise an error.The X property was automatically added with the const qualifier.
+    return self.x;
+end
+
+-- You can also add the const qualifier manually,
+-- which has the same effect as adding it automatically.
+function Point.get.const:Y()
+    self.y = self.x;-- Raise an error.
+    return self.y;
+end
 ```
 
 ---

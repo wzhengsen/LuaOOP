@@ -592,6 +592,7 @@ test:dispose();
 ---
 ## 5 - 属性
 ---
+>属性的一般使用形式：
 ```lua
 require("OOP.Class");
 local Point = class();
@@ -678,6 +679,28 @@ p3d.XY = {x = 200,y = 300};
 
 print(Point3D.Count);-- 1
 print(p3d.Count);-- nil
+```
+
+>属性的特殊使用规则：
+```lua
+-- 有时，对于get修饰的属性，我们希望它也能暗示地表示const修饰，
+-- 那么可以打开GetPropertyAutoConst开关来控制这一行为。
+require("OOP.Config").GetPropertyAutoConst = true;
+require("OOP.Class");
+local Point = class();
+Point.x = 100;
+Point.y = 200;
+
+function Point.get:X()
+    self.x = self.y;-- 引发错误。X属性被自动添加了const修饰。
+    return self.x;
+end
+
+-- 也可以手动添加const修饰，和自动添加的效果相同。
+function Point.get.const:Y()
+    self.y = self.x;-- 引发错误。
+    return self.y;
+end
 ```
 
 ---

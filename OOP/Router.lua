@@ -53,9 +53,9 @@ local new = Config.new;
 local delete = Config.delete;
 
 local static = Config.Qualifiers.static;
-local const = Config.Qualifiers.const;
 local get = Config.get;
 local set = Config.set;
+local GetPropertyAutoConst = Config.GetPropertyAutoConst;
 
 local class = require("OOP.BaseClass");
 local c_delete = class.delete;
@@ -194,7 +194,12 @@ if Debug then
             vcm[key] = nil;
         end
         local get_set = band(decor,p_get_set);
+        local isGet = get_set == p_get;
         local oVal = value;
+
+        if isGet and GetPropertyAutoConst then
+            decor = bor(decor,p_const);
+        end
 
         if isFunction then
             local isConst = band(decor,p_const) ~= 0;
@@ -234,7 +239,8 @@ if Debug then
             -- The property is set to a special table
             -- with index 1 representing the function assigned to the property
             -- and index 2 representing whether the property is a static property.
-            (get_set == p_get and ClassesReadable or ClassesWritable)[cls][key] = {value,isStatic};
+
+            (isGet and ClassesReadable or ClassesWritable)[cls][key] = {value,isStatic};
         else
             local cs = ClassesStatic[cls];
             if isStatic then
