@@ -19,10 +19,13 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 
+local Config = require("OOP.Config");
 local setmetatable = setmetatable;
 local insert = table.insert;
 local remove = table.remove;
 local error = error;
+
+local is = Config.is;
 
 local i18n = require("OOP.i18n");
 local Internal = require("OOP.Variant.Internal");
@@ -55,7 +58,7 @@ local function FunctionWrapper(cls,f,clsFunctions,const)
             local len = #ConstStack;
             if len > 1 and ConstStack[len - 1] and not const then
                 local lastCls = AccessStack[len - 1];
-                if lastCls ~= 0 and cls ~= 0 and lastCls.is(cls) then
+                if lastCls ~= 0 and cls ~= 0 and lastCls[is](cls) then
                     error(i18n"Cannot call a non-const method on a const method.");
                 end
             end

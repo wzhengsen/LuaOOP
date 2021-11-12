@@ -72,6 +72,7 @@ local Permission = {
 return {
     NamedClasses = {},
     ClassesChildrenByName = {},
+    DeathMark = setmetatable({},WeakTable),
     AllClasses = setmetatable({},WeakTable),
     AllEnumerations = setmetatable({},WeakTable),
     ClassesReadable = setmetatable({},WeakTable),

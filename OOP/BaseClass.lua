@@ -27,10 +27,10 @@ local Config = require("OOP.Config");
 local Internal = require("OOP.Variant.Internal");
 local Debug = Config.Debug;
 local Null = Config.ExternalClass.Null;
-local DeathMarker = Config.DeathMarker;
 local null = Config.null;
 local final = Config.Qualifiers.final;
 local FinalClasses = Internal.FinalClasses;
+local DeathMark = Internal.DeathMark;
 local ClassDefault = Config["class.default"];
 local ClassDelete = Config["class.delete"];
 local i18n = require("OOP.i18n");
@@ -45,15 +45,16 @@ rawset(_G,Config.class,class);
 local _null = Null and function(t)
     local tt = type(t);
     if tt == "table" then
-        return rawget(t,DeathMarker) ~= nil;
+        return DeathMark[t] == true;
     elseif tt == "userdata" then
         return Null(t);
     end
     return not t;
 end or
 function(t)
-    if type(t) == "table" then
-        return rawget(t,DeathMarker);
+    local tt = type(t);
+    if tt == "table" or tt == "userdata" then
+        return DeathMark[t] == true;
     end
     return not t;
 end;

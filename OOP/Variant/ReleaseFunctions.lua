@@ -50,7 +50,6 @@ local BitsMap = R.BitsMap;
 local Begin = R.Begin;
 
 local delete = Config.delete;
-local DeathMarker = Config.DeathMarker;
 local dtor = Config.dtor;
 
 local new = Config.new;
@@ -90,6 +89,7 @@ local ClassesSingleton = Functions.ClassesSingleton;
 local ClassesStatic = Functions.ClassesStatic;
 local ObjectsAll = Functions.ObjectsAll;
 local ObjectsCls = Functions.ObjectsCls;
+local DeathMark = Functions.DeathMark;
 
 ---Get the single instance, where it is automatically judged empty
 ---and does not require the user to care.
@@ -619,23 +619,20 @@ end
 
 local function CallDel(self)
     CascadeDelete(self,self[is](),{});
+    DeathMark[self] = true;
     ObjectsAll[self] = nil;
 end
 
 local function CreateClassDelete(cls)
     return function (self)
-        Functions.CascadeDelete(self,cls,{});
+        CascadeDelete(self,cls,{});
         local d = ClassesDelete[cls];
         if d then
             d(self);
         else
-            if "userdata" == type(self) then
-                d_setmetatable(self,nil);
-            else
-                setmetatable(self,nil);
-                self[DeathMarker] = true;
-            end
+            ("userdata" == type(self) and d_setmetatable or setmetatable)(self,nil);
         end
+        DeathMark[self] = true;
         ObjectsAll[self] = nil;
     end
 end

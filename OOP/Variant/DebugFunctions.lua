@@ -67,8 +67,6 @@ local Instance = Config.Instance;
 local handlers = Config.handlers;
 local Meta = Config.Meta;
 
-local DeathMarker = Config.DeathMarker;
-
 local MetaMapName = Config.MetaMapName;
 
 local PropertyBehavior = Config.PropertyBehavior;
@@ -107,6 +105,7 @@ local ClassesFriends = Functions.ClassesFriends;
 local ClassesAllFunctions = Functions.ClassesAllFunctions;
 local WeakTables = Functions.WeakTables;
 local AccessStack = Functions.AccessStack;
+local DeathMark = Functions.DeathMark;
 
 local ReservedWord = Functions.ReservedWord;
 
@@ -190,7 +189,7 @@ local HandlersControl = setmetatable({},{
         elseif vt == "function" then
             -- If value is a function,we reset the response of this event name.
             E_Handlers.Remove(key,HandlersControlObj);
-            E_Handlers.On(key,HandlersControlObj,FunctionWrapper(HandlersControlObj.is(),value));
+            E_Handlers.On(key,HandlersControlObj,FunctionWrapper(HandlersControlObj[is](),value));
         elseif vt == "number" then
             -- If value is a number,we sort it.
             E_Handlers.Order(key,HandlersControlObj,math.floor(value));
@@ -808,6 +807,7 @@ end
 
 function Functions.CallDel(self)
     CascadeDelete(self,self[is](),{});
+    DeathMark[self] = true;
     ObjectsAll[self] = nil;
 end
 
@@ -821,13 +821,9 @@ function Functions.CreateClassDelete(cls)
         if d then
             d(self);
         else
-            if "userdata" == type(self) then
-                d_setmetatable(self,nil);
-            else
-                setmetatable(self,nil);
-                self[DeathMarker] = true;
-            end
+            ("userdata" == type(self) and d_setmetatable or setmetatable)(self,nil);
         end
+        DeathMark[self] = true;
         ObjectsAll[self] = nil;
     end
 end

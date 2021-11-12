@@ -120,9 +120,6 @@ local Config = {
     -- this property will be generated automatically.
     Instance = "Instance",
 
-    -- If a table has this key,means that the table is dead.
-    DeathMarker = {},
-
     --****************Rename fields end****************
 
 

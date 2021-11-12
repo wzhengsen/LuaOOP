@@ -592,7 +592,7 @@ test:dispose();
 ---
 ## 5 - 属性
 ---
->属性的一般使用形式：
+>属性的一般使用形式
 ```lua
 require("OOP.Class");
 local Point = class();
@@ -681,7 +681,7 @@ print(Point3D.Count);-- 1
 print(p3d.Count);-- nil
 ```
 
->属性的特殊使用规则：
+>属性的特殊使用规则
 ```lua
 -- 有时，对于get修饰的属性，我们希望它也能暗示地表示const修饰，
 -- 那么可以打开GetPropertyAutoConst开关来控制这一行为。
@@ -988,8 +988,8 @@ local __test__ = __dir__ .. "/test";
 --
 local Config = require("OOP.Config");
 
--- 可以实现Config.ExternalClass.Null函数来判断某个userdata类目前是否可用。
--- 否则class.null始终对userdata类型返回true。
+-- 一般来说直接使用class.null即可，
+-- 如果有特殊需求，可以自定义Config.ExternalClass.Null函数来判断某个userdata类目前是否可用。
 Config.ExternalClass.Null = function(obj)
     if getmetatable(obj) == getmetatable(io.stdout) then
         return (tostring(obj):find("(closed)")) ~= nil;
@@ -1016,14 +1016,6 @@ print(class.null(file));-- true
 一般地，实现__delete__以销毁C/C++内存：
 ```lua
 local ExtClass = require("你的外部函数库");
-
-local Config = require("OOP.Config");
-Config.ExternalClass.Null = function(obj)
-    if ExtClass.检查该对象属于外部类(obj) then
-        return ExtClass.你的判空函数(obj);
-    end
-end
-
 require("OOP.Class");
 local LuaClass = class(ExtClass);
 function LuaClass.__new__(...)

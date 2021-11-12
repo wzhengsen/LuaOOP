@@ -594,7 +594,7 @@ For more renameable fields, see the [Config.lua](OOP/Config.lua) file.
 ---
 ## 5 - Properties
 ---
->General form of use of properties:
+>General form of use of properties
 ```lua
 require("OOP.Class");
 local Point = class();
@@ -683,7 +683,7 @@ print(Point3D.Count);-- 1
 print(p3d.Count);-- nil
 ```
 
->Special rules for the use of properties:
+>Special rules for the use of properties
 ```lua
 -- Sometimes, for "get" qualified properties,
 -- we want it to imply the "const" qualification as well，
@@ -994,8 +994,9 @@ local __test__ = __dir__ .. "/test";
 --
 local Config = require("OOP.Config");
 
--- ExternalClass.Null function can be implemented to determine whether a userdata class is currently available.
--- Otherwise class.null always returns true for the userdata type.
+-- In general it is sufficient to use class.null directly.
+-- If there are special needs,
+-- You can customize the Config.ExternalClass.Null function to determine if a certain userdata class is currently available.
 Config.ExternalClass.Null = function(obj)
     if getmetatable(obj) == getmetatable(io.stdout) then
         return (tostring(obj):find("(closed)")) ~= nil;
@@ -1022,14 +1023,6 @@ However, for some custom implemented types, which may have T\*\* structure, Lua 
 Generally, \_\_delete\_\_ is implemented to destroy C/C++ memory:
 ```lua
 local ExtClass = require("Your external function library");
-
-local Config = require("OOP.Config");
-Config.ExternalClass.Null = function(obj)
-    if ExtClass.CheckIsExtClass(obj) then
-        return ExtClass.CheckIsEmpty(obj);
-    end
-end
-
 require("OOP.Class");
 local LuaClass = class(ExtClass);
 function LuaClass.__new__(...)
