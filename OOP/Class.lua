@@ -143,8 +143,9 @@ end
 
 if Debug then
     local BreakFunctionWrapper = require("OOP.BaseFunctions").BreakFunctionWrapper;
+    local errorWords = (i18n"%s must wrap a function."):format(raw);
     class[raw] = function (f,...)
-        assert(select("#",...) == 0 and "function" == type(f),(i18n"%s must wrap a function."):format(raw));
+        assert(select("#",...) == 0 and "function" == type(f),errorWords);
         return BreakFunctionWrapper(f);
     end
 else

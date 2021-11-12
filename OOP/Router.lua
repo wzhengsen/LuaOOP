@@ -53,6 +53,8 @@ local new = Config.new;
 local delete = Config.delete;
 
 local static = Config.Qualifiers.static;
+local final = Config.Qualifiers.final;
+local virtual = Config.Qualifiers.virtual;
 local get = Config.get;
 local set = Config.set;
 local GetPropertyAutoConst = Config.GetPropertyAutoConst;
@@ -60,6 +62,7 @@ local GetPropertyAutoConst = Config.GetPropertyAutoConst;
 local class = require("OOP.BaseClass");
 local c_delete = class.delete;
 
+local p_public = Permission.public;
 local p_static = Permission.static;
 local p_virtual = Permission.virtual;
 local p_get = Permission.get;
@@ -97,7 +100,6 @@ if Debug then
 
     local p_const = Permission.const;
     local p_internalConstMethod = Internal.BitsMap.__InternalConstMethod;
-    local bitMax = Internal.BitsMap.max;
     -- It is only under debug that the values need to be routed to the corresponding fields of the types.
     -- To save performance, all qualifiers will be ignored under non-debug.
 
@@ -106,7 +108,8 @@ if Debug then
     -- 2 - public/private/protected cannot be used together;
     -- 3 - static cannot qualify constructors and destructors;
     -- 4 - Can't use qualifiers that don't exist;
-    -- 5 - Reserved words cannot be modified (__singleton__/friends/handlers).
+    -- 5 - Reserved words cannot be modified (__singleton__/friends/handlers);
+    -- 6 - (get/set) and (virtual/final) cannot be used together.
     Pass = function(self,key)
         local bit = BitsMap[key];
         if bit then
@@ -118,11 +121,9 @@ if Debug then
             elseif band(decor,0xc0) ~= 0 and band(bit,0xc0) ~= 0 then
                 -- Check set,get,they are 0xc0
                 error((i18n"%s,%s cannot be used at the same time."):format(get,set));
-            else
-                local temp = bor(bit,decor);
-                if band(temp,p_virtual) ~= 0 and band(temp,bitMax) ~= p_virtual then
-                    error(i18n"It is not necessary to use pure virtual functions with other qualifiers.");
-                end
+            elseif band(decor,0x120) ~= 0 and band(bit,0x120) ~= 0 then
+                -- Check virtual,final,they are 0x120
+                error((i18n"%s,%s cannot be used at the same time."):format(final,virtual));
             end
             decor = bor(decor,bit);
         else
@@ -146,10 +147,12 @@ if Debug then
         if FinalClassesMembers[cls][key] then
             error((i18n"You cannot define final members again. - %s"):format(key));
         end
+
         local bit = BitsMap[key] or RouterReservedWord[key];
         if bit then
             error((i18n"The name is unavailable. - %s"):format(key));
         end
+
         local meta = MetaMapName[key];
         if meta then
             if decor == p_static then
@@ -163,24 +166,30 @@ if Debug then
                 error((i18n"You cannot qualify meta-methods. - %s"):format(key));
             end
         end
+
+        local isStatic = band(decor,p_static) ~= 0;
+        if isStatic and (key == ctor or key == dtor) then
+            error((i18n"%s qualifier cannot qualify %s method."):format(static,key));
+        end
+
+        if band(decor,0x7) == 0 then
+            -- Without the public qualifier, public is added by default.
+            decor = bor(decor,p_public);
+        end
+
         local vcm = VirtualClassesMembers[cls];
-        if decor == p_virtual then
+        if band(decor,p_virtual) ~= 0 then
             if value ~= 0 then
                 error((i18n"The pure virtual function %s must be assigned a value of 0."):format(key));
             end
-            vcm[key] = true;
-            Update2ChildrenWithKey(cls,VirtualClassesMembers,key,true);
+            if isStatic then
+                error((i18n"The pure virtual function %s cannot be defined as a static function."):format(key));
+            end
+            vcm[key] = decor;
+            Update2ChildrenWithKey(cls,VirtualClassesMembers,key,decor);
             return;
         end
-        local isStatic = band(decor,p_static) ~= 0;
-        if isStatic and
-        (key == ctor or key == dtor) then
-            error((i18n"%s qualifier cannot qualify %s method."):format(static,key));
-        end
-        if band(decor,0x7) == 0 then
-            -- Without the public qualifier, public is added by default.
-            decor = bor(decor,0x1);
-        end
+
         local vt = type(value);
         local isFunction = "function" == vt;
         if vcm[key] then
@@ -188,11 +197,9 @@ if Debug then
             if not isFunction then
                 error((i18n"%s must be overridden as a function."):format(key));
             end
-            if isStatic then
-                error((i18n"The pure virtual function %s cannot be overridden as a static function."):format(key));
-            end
             vcm[key] = nil;
         end
+
         local get_set = band(decor,p_get_set);
         local isGet = get_set == p_get;
         local oVal = value;

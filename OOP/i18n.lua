@@ -142,14 +142,11 @@ local LanguageMap = {
     ["The pure virtual function %s must be assigned a value of 0."] = {
         zh = "纯虚函数%s必须分配为0值。"
     },
-    ["It is not necessary to use pure virtual functions with other qualifiers."] = {
-        zh = "纯虚函数不必和其它修饰符一同使用。"
-    },
-    ["The pure virtual function %s cannot be overridden as a static function."] = {
-        zh = "纯虚函数%s不能被重写为一个静态函数。"
+    ["The pure virtual function %s cannot be defined as a static function."] = {
+        zh = "纯虚函数%s不能被定义为一个静态函数。"
     },
     ["%s must wrap a function."] = {
-        zh = "%必须包装一个函数。"
+        zh = "%s必须包装一个函数。"
     },
     ["This is the function that has been deleted."] = {
         zh = "这是已删除的函数。"

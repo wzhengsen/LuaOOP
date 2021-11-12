@@ -715,8 +715,8 @@ function Functions.PushBase(cls,bases,base,handlers,members,metas)
 
     local vcm = VirtualClassesMembers[base];
     if vcm then
-        for k,_ in pairs(vcm) do
-            vm[k] = true;
+        for k,v in pairs(vcm) do
+            vm[k] = v;
         end
     end
 end
