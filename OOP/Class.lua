@@ -109,7 +109,7 @@ end
 ---Create a class, passing in parameters to inherit from other classes.
 ---
 ---@vararg string|table
----@return table class
+---@return table @class
 function class.New(...)
     local args = {...};
     if Debug then

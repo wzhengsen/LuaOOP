@@ -154,9 +154,9 @@ local registry = debug.getregistry();
 ---Check the class and return the meta-table for the class object.
 ---
 ---@param args table
----@return table cls
----@return table metas
----@return string? name
+---@return table @cls
+---@return table @metas
+---@return string? @name
 ---
 local function CheckClass(args)
     local metas = nil;
@@ -640,12 +640,12 @@ end
 ---Create a class table with base info.
 ---
 ---@param cls table
----@return table all
----@return table bases
----@return table handlers
----@return table members
----@return table r
----@return table w
+---@return table @all
+---@return table @bases
+---@return table @handlers
+---@return table @members
+---@return table @r
+---@return table @w
 ---
 local function CreateClassTables(cls)
     local bases = {};
