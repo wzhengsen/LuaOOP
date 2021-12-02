@@ -22,8 +22,6 @@
 local Config = require("OOP.Config");
 local LuaVersion = Config.LuaVersion;
 local unpack = LuaVersion < 5.2 and unpack or table.unpack;
-local insert = table.insert;
-local remove = table.remove;
 local pcall = pcall;
 local error = error;
 
@@ -34,6 +32,8 @@ local Internal = require("OOP.Variant.Internal");
 local AccessStack = Internal.AccessStack;
 local AllFunctions = Internal.ClassesAllFunctions;
 local ConstStack = Internal.ConstStack;
+local AccessStackLen = AccessStack and #AccessStack or nil;
+local ConstStackLen = ConstStack and #ConstStack or nil;
 
 ---
 ---Wrapping the given function so that it handles the push and pop of the access stack correctly anyway,
@@ -49,21 +49,28 @@ local function FunctionWrapper(cls,f,clsFunctions,const)
     local newF = clsFunctions[f];
     if nil == newF then
         newF = function(...)
-            insert(AccessStack,cls);
-            insert(ConstStack,const or false);
-            local len = #ConstStack;
-            if len > 1 and ConstStack[len - 1] and not const then
-                local lastCls = AccessStack[len - 1];
+            AccessStackLen = AccessStackLen + 1;
+            AccessStack[AccessStackLen] = cls;
+            ConstStackLen = ConstStackLen + 1;
+            ConstStack[ConstStackLen] = const or false;
+
+
+            if ConstStackLen > 1 and ConstStack[ConstStackLen - 1] and not const then
+                local lastCls = AccessStack[ConstStackLen - 1];
                 if lastCls ~= 0 and cls ~= 0 and lastCls[is](cls) then
-                    remove(AccessStack);
-                    remove(ConstStack);
+                    AccessStack[AccessStackLen] = nil;
+                    AccessStackLen = AccessStackLen - 1;
+                    ConstStack[ConstStackLen] = nil;
+                    ConstStackLen = ConstStackLen - 1;
                     error(i18n"Cannot call a non-const method on a const method.");
                     return;
                 end
             end
             local ret = {pcall(f,...)};
-            remove(AccessStack);
-            remove(ConstStack);
+            AccessStack[AccessStackLen] = nil;
+            AccessStackLen = AccessStackLen - 1;
+            ConstStack[ConstStackLen] = nil;
+            ConstStackLen = ConstStackLen - 1;
             if not ret[1] then
                 error(ret[2]);
             end

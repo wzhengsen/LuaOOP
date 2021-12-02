@@ -21,8 +21,6 @@
 
 local Config = require("OOP.Config");
 local setmetatable = setmetatable;
-local insert = table.insert;
-local remove = table.remove;
 local error = error;
 
 local is = Config.is;
@@ -32,10 +30,14 @@ local Internal = require("OOP.Variant.Internal");
 local AccessStack = Internal.AccessStack;
 local ConstStack = Internal.ConstStack;
 local AllFunctions = Internal.ClassesAllFunctions;
+local AccessStackLen = AccessStack and #AccessStack or nil;
+local ConstStackLen = ConstStack and #ConstStack or nil;
 local RAII = setmetatable({},{
     __close = function ()
-        remove(AccessStack);
-        remove(ConstStack);
+        AccessStack[AccessStackLen] = nil;
+        AccessStackLen = AccessStackLen - 1;
+        ConstStack[ConstStackLen] = nil;
+        ConstStackLen = ConstStackLen - 1;
     end
 });
 ---
@@ -52,12 +54,14 @@ local function FunctionWrapper(cls,f,clsFunctions,const)
     local newF = clsFunctions[f];
     if nil == newF then
         newF = function(...)
-            insert(AccessStack,cls);
-            insert(ConstStack,const or false);
+            AccessStackLen = AccessStackLen + 1;
+            AccessStack[AccessStackLen] = cls;
+            ConstStackLen = ConstStackLen + 1;
+            ConstStack[ConstStackLen] = const or false;
+
             local _<close> = RAII;
-            local len = #ConstStack;
-            if len > 1 and ConstStack[len - 1] and not const then
-                local lastCls = AccessStack[len - 1];
+            if ConstStackLen > 1 and ConstStack[ConstStackLen - 1] and not const then
+                local lastCls = AccessStack[ConstStackLen - 1];
                 if lastCls ~= 0 and cls ~= 0 and lastCls[is](cls) then
                     error(i18n"Cannot call a non-const method on a const method.");
                 end
