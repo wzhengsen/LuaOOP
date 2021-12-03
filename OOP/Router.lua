@@ -93,6 +93,7 @@ if Debug then
     local FinalClassesMembers = Internal.FinalClassesMembers;
     local ClassesPermissions = Internal.ClassesPermissions;
     local VirtualClassesMembers = Internal.VirtualClassesMembers;
+    local VirtualClassesPermissons = Internal.VirtualClassesPermissons;
     local ClassesBanNew = Internal.ClassesBanNew;
     local ClassesBanDelete = Internal.ClassesBanDelete;
 
@@ -178,6 +179,7 @@ if Debug then
         end
 
         local vcm = VirtualClassesMembers[cls];
+        local vcp = VirtualClassesPermissons[cls];
         if band(decor,p_virtual) ~= 0 then
             if value ~= 0 then
                 error((i18n"The pure virtual function %s must be assigned a value of 0."):format(key));
@@ -185,19 +187,31 @@ if Debug then
             if isStatic then
                 error((i18n"The pure virtual function %s cannot be defined as a static function."):format(key));
             end
-            vcm[key] = decor;
-            Update2ChildrenWithKey(cls,VirtualClassesMembers,key,decor);
+            local vPermisson = vcp[key];
+            -- Always update the permission of the virtual function.
+            vcp[key] = bor(decor,p_virtual) - p_virtual;
+            Update2ChildrenWithKey(cls,VirtualClassesPermissons,key,decor,true);
+            if nil == vPermisson or nil ~= vcm[key] then
+                -- But only update the member of virtual function if it is not nil,
+                -- nil means that the virtual function is defined.
+                vcm[key] = true;
+                Update2ChildrenWithKey(cls,VirtualClassesMembers,key,true);
+            end
             return;
         end
 
         local vt = type(value);
         local isFunction = "function" == vt;
-        if vcm[key] then
+        local vPermisson = vcp[key];
+        if vPermisson then
             -- Check pure virtual functions.
             if not isFunction then
                 error((i18n"%s must be overridden as a function."):format(key));
+            elseif bor(decor,p_final) - p_final ~= vPermisson then
+                error((i18n"A different access qualifier is used when you override pure virtual functions. - %s"):format(key));
             end
             vcm[key] = nil;
+            Update2ChildrenWithKey(cls,VirtualClassesMembers,key,nil,true);
         end
 
         local get_set = band(decor,p_get_set);

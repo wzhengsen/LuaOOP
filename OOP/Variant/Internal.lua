@@ -96,7 +96,10 @@ return {
     FinalClasses = Debug and setmetatable({},WeakTable) or nil,
     ClassesAll = Debug and setmetatable({},WeakTable) or nil,
     FinalClassesMembers = Debug and setmetatable({},WeakTable) or nil,
+    -- This table only holds all unimplemented pure virtual functions.
     VirtualClassesMembers = Debug and setmetatable({},WeakTable) or nil,
+    -- This table holds all the pure virtual functions.
+    VirtualClassesPermissons = Debug and setmetatable({},WeakTable) or nil,
     ClassesFriends = Debug and setmetatable({},WeakTable) or nil,
     ClassesBanNew = Debug and setmetatable({},WeakTable) or nil,
     ClassesBanDelete = Debug and setmetatable({},WeakTable) or nil,

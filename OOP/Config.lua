@@ -173,7 +173,7 @@ local Config = {
 
     -- The language configuration, with a nil value, means that English is used by default.
     -- Currently only English and Chinese are available, use "zh" for Chinese.
-    Language = "zh",
+    Language = nil,
 
     --****************Functional fields end****************
 

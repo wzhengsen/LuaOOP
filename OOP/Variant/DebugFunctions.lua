@@ -80,6 +80,7 @@ local PushBase = Functions.PushBase;
 local CreateClassObject = Functions.CreateClassObject;
 local FinalClassesMembers = Functions.FinalClassesMembers;
 local VirtualClassesMembers = Functions.VirtualClassesMembers;
+local VirtualClassesPermissons = Functions.VirtualClassesPermissons;
 local NamedClasses = Functions.NamedClasses;
 local AllClasses = Functions.AllClasses;
 local AllEnumerations = Functions.AllEnumerations;
@@ -551,14 +552,16 @@ local function ClassSet(cls,key,value)
         Update2Children(cls,ClassesDelete,value);
         return;
     else
-        local vcm = VirtualClassesMembers[cls];
-        if vcm[key] then
+        local vPermisson = VirtualClassesPermissons[cls][key];
+        if vPermisson then
             -- Check pure virtual functions.
             if not isFunction then
                 error((i18n"%s must be overridden as a function."):format(key));
+            elseif vPermisson ~= p_public then
+                error((i18n"A different access qualifier is used when you override pure virtual functions. - %s"):format(key));
             end
-            vcm[key] = nil;
-            Update2ChildrenWithKey(cls,VirtualClassesMembers,key,nil);
+            VirtualClassesMembers[cls][key] = nil;
+            Update2ChildrenWithKey(cls,VirtualClassesMembers,key,nil,true);
         else
             if not CheckPermission(cls,key,true) then
                 return;
@@ -668,6 +671,7 @@ function Functions.CreateClassTables(cls)
     ClassesAllFunctions[cls] = setmetatable({},WeakTables);
     FinalClassesMembers[cls] = {};
     VirtualClassesMembers[cls] = {};
+    VirtualClassesPermissons[cls] = {};
 
     return all,bases,handlers,members,r,w;
 end
@@ -676,6 +680,7 @@ function Functions.PushBase(cls,bases,base,handlers,members,metas)
     PushBase(cls,bases,base,handlers,members,metas);
     local fm = FinalClassesMembers[cls];
     local vm = VirtualClassesMembers[cls];
+    local vp = VirtualClassesPermissons[cls];
     local pms = ClassesPermissions[base];
     if ClassesBanNew[base] then
         ClassesBanNew[cls] = true;
@@ -717,6 +722,15 @@ function Functions.PushBase(cls,bases,base,handlers,members,metas)
     if vcm then
         for k,v in pairs(vcm) do
             vm[k] = v;
+        end
+    end
+
+    local vcp = VirtualClassesPermissons[base];
+    if vcp then
+        for k,v in pairs(vcp) do
+            if nil == vp[k] then
+                vp[k] = v;
+            end
         end
     end
 end

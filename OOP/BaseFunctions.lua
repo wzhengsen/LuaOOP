@@ -50,17 +50,18 @@ local function Update2Children(cls,keyTable,value)
         if nil == keyTable[child] then
             keyTable[child] = value;
         end
-        Update2Children(child,keyTable,value)
+        Update2Children(child,keyTable,value);
     end
 end
-local function Update2ChildrenWithKey(cls,keyTable,key,value)
+
+local function Update2ChildrenWithKey(cls,keyTable,key,value,force)
     local children = ClassesChildren[cls];
     for _,child in ipairs(children) do
         local t = keyTable[child];
-        if t and nil == t[key]  then
+        if t and force or nil == t[key] then
             t[key] = value;
         end
-        Update2ChildrenWithKey(child,keyTable,key,value)
+        Update2ChildrenWithKey(child,keyTable,key,value);
     end
 end
 
@@ -71,7 +72,7 @@ local function Update2ChildrenClassMeta(cls,key,value)
         if cmt and nil == cmt[key]  then
             cmt[key] = value;
         end
-        Update2ChildrenClassMeta(child,key,value)
+        Update2ChildrenClassMeta(child,key,value);
     end
 end
 

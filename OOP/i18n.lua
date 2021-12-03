@@ -159,6 +159,9 @@ local LanguageMap = {
     },
     ["Cannot call a non-const method on a const method."] = {
         zh = "不能在const方法中调用非const方法。"
+    },
+    ["A different access qualifier is used when you override pure virtual functions. - %s"] = {
+        zh = "在你重写纯虚函数时使用了不同的访问修饰符。- %s"
     }
 };
 
