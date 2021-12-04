@@ -24,6 +24,7 @@ local error = error;
 local type = type;
 local getmetatable = getmetatable;
 local setmetatable = setmetatable;
+local tostring = tostring;
 local Config = require("OOP.Config");
 
 local i18n = require("OOP.i18n");
@@ -145,7 +146,19 @@ if Debug then
         return self;
     end
     Done = function(_,key,value)
-        if FinalClassesMembers[cls][key] then
+        local get_set = band(decor,p_get_set);
+        local isGet = get_set == p_get;
+        local tKey = tostring(key);
+        if get_set == 0 then
+            -- 'n.' means the function is a normal one.
+            tKey = "n."..tKey;
+        elseif isGet then
+            -- 'g.' means the function is a getter.
+            -- 's.' means the function is a setter.
+            tKey = (isGet and "g." or "s.") ..tKey;
+        end
+
+        if FinalClassesMembers[cls][tKey] then
             error((i18n"You cannot define final members again. - %s"):format(key));
         end
 
@@ -187,22 +200,22 @@ if Debug then
             if isStatic then
                 error((i18n"The pure virtual function %s cannot be defined as a static function."):format(key));
             end
-            local vPermisson = vcp[key];
+            local vPermisson = vcp[tKey];
             -- Always update the permission of the virtual function.
-            vcp[key] = bor(decor,p_virtual) - p_virtual;
-            Update2ChildrenWithKey(cls,VirtualClassesPermissons,key,decor,true);
-            if nil == vPermisson or nil ~= vcm[key] then
+            vcp[tKey] = bor(decor,p_virtual) - p_virtual;
+            Update2ChildrenWithKey(cls,VirtualClassesPermissons,tKey,decor,true);
+            if nil == vPermisson or nil ~= vcm[tKey] then
                 -- But only update the member of virtual function if it is not nil,
                 -- nil means that the virtual function is defined.
-                vcm[key] = true;
-                Update2ChildrenWithKey(cls,VirtualClassesMembers,key,true);
+                vcm[tKey] = true;
+                Update2ChildrenWithKey(cls,VirtualClassesMembers,tKey,true);
             end
             return;
         end
 
         local vt = type(value);
         local isFunction = "function" == vt;
-        local vPermisson = vcp[key];
+        local vPermisson = vcp[tKey];
         if vPermisson then
             -- Check pure virtual functions.
             if not isFunction then
@@ -210,12 +223,10 @@ if Debug then
             elseif bor(decor,p_final) - p_final ~= vPermisson then
                 error((i18n"A different access qualifier is used when you override pure virtual functions. - %s"):format(key));
             end
-            vcm[key] = nil;
-            Update2ChildrenWithKey(cls,VirtualClassesMembers,key,nil,true);
+            vcm[tKey] = nil;
+            Update2ChildrenWithKey(cls,VirtualClassesMembers,tKey,nil,true);
         end
 
-        local get_set = band(decor,p_get_set);
-        local isGet = get_set == p_get;
         local oVal = value;
 
         if isGet and GetPropertyAutoConst then
@@ -297,8 +308,8 @@ if Debug then
         end
 
         if band(decor,p_final) ~= 0 then
-            FinalClassesMembers[cls][key] = true;
-            Update2ChildrenWithKey(cls,FinalClassesMembers,key,true);
+            FinalClassesMembers[cls][tKey] = true;
+            Update2ChildrenWithKey(cls,FinalClassesMembers,tKey,true);
         end
     end
 else

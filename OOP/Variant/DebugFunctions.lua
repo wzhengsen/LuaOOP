@@ -28,6 +28,7 @@ local type = type;
 local pairs = pairs;
 local ipairs = ipairs;
 local warn = warn or print;
+local tostring = tostring;
 
 local Config = require("OOP.Config");
 local i18n = require("OOP.i18n");
@@ -486,7 +487,7 @@ local function ClassSet(cls,key,value)
     if ReservedWord[key] then
         error((i18n"%s is a reserved word and you can't set it."):format(key));
     end
-    if FinalClassesMembers[cls][key] then
+    if FinalClassesMembers[cls]["n." .. tostring(key)] then
         error((i18n"You cannot define final members again. - %s"):format(key));
     end
 
@@ -552,7 +553,8 @@ local function ClassSet(cls,key,value)
         Update2Children(cls,ClassesDelete,value);
         return;
     else
-        local vPermisson = VirtualClassesPermissons[cls][key];
+        local vKey = "n." .. tostring(key);
+        local vPermisson = VirtualClassesPermissons[cls][vKey];
         if vPermisson then
             -- Check pure virtual functions.
             if not isFunction then
@@ -560,8 +562,8 @@ local function ClassSet(cls,key,value)
             elseif vPermisson ~= p_public then
                 error((i18n"A different access qualifier is used when you override pure virtual functions. - %s"):format(key));
             end
-            VirtualClassesMembers[cls][key] = nil;
-            Update2ChildrenWithKey(cls,VirtualClassesMembers,key,nil,true);
+            VirtualClassesMembers[cls][vKey] = nil;
+            Update2ChildrenWithKey(cls,VirtualClassesMembers,vKey,nil,true);
         else
             if not CheckPermission(cls,key,true) then
                 return;
