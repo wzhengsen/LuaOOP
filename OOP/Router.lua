@@ -106,18 +106,15 @@ if Debug then
     -- To save performance, all qualifiers will be ignored under non-debug.
 
     -- Rules:
-    -- 1 - There can be no duplicate qualifiers;
-    -- 2 - public/private/protected cannot be used together;
-    -- 3 - static cannot qualify constructors and destructors;
-    -- 4 - Can't use qualifiers that don't exist;
-    -- 5 - Reserved words cannot be modified (__singleton__/friends/handlers);
-    -- 6 - (get/set) and (virtual/final) cannot be used together.
+    -- 1 - public/private/protected cannot be used together;
+    -- 2 - static cannot qualify constructors and destructors;
+    -- 3 - Can't use qualifiers that don't exist;
+    -- 4 - Reserved words cannot be modified (__singleton__/friends/handlers);
+    -- 5 - (get/set) and (virtual/final) cannot be used together.
     Pass = function(self,key)
         local bit = BitsMap[key];
         if bit then
-            if band(decor,bit) ~= 0 then
-                error((i18n"The %s qualifier is not reusable."):format(key));
-            elseif band(decor,0x7) ~= 0 and band(bit,0x7) ~= 0 then
+            if band(decor,0x7) ~= 0 and band(bit,0x7) ~= 0 then
                 -- Check public,private,protected,they are 0x7
                 error((i18n"The %s qualifier cannot be used in conjunction with other access qualifiers."):format(key));
             elseif band(decor,0xc0) ~= 0 and band(bit,0xc0) ~= 0 then
@@ -186,6 +183,10 @@ if Debug then
             error((i18n"%s qualifier cannot qualify %s method."):format(static,key));
         end
 
+        if isGet and GetPropertyAutoConst then
+            decor = bor(decor,p_const);
+        end
+
         if band(decor,0x7) == 0 then
             -- Without the public qualifier, public is added by default.
             decor = bor(decor,p_public);
@@ -228,10 +229,6 @@ if Debug then
         end
 
         local oVal = value;
-
-        if isGet and GetPropertyAutoConst then
-            decor = bor(decor,p_const);
-        end
 
         if isFunction then
             local isConst = band(decor,p_const) ~= 0;

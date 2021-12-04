@@ -28,9 +28,6 @@ local LanguageMap = {
     ["You can't edit a enumeration."] = {
         zh = "你不能编辑枚举。"
     },
-    ["The %s qualifier is not reusable."] = {
-        zh = "修饰符%s不能多次使用。"
-    },
     ["The %s qualifier cannot be used in conjunction with other access qualifiers."] = {
         zh = "修饰符%s不能与其它访问修饰符一起使用。"
     },
