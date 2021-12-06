@@ -69,7 +69,9 @@ local p_virtual = Permission.virtual;
 local p_get = Permission.get;
 local p_final = Permission.final;
 local p_private = Permission.private;
-local p_get_set = Permission.get + Permission.set;
+local p_gs = Permission.get + Permission.set;
+local p_vf = Permission.virtual + Permission.final;
+local p_3p = Permission.public + Permission.private + Permission.protected;
 
 local Router = {};
 
@@ -114,21 +116,21 @@ if Debug then
     Pass = function(self,key)
         local bit = BitsMap[key];
         if bit then
-            if band(decor,0x7) ~= 0 and band(bit,0x7) ~= 0 then
-                -- Check public,private,protected,they are 0x7
+            if band(decor,p_3p) ~= 0 and band(bit,p_3p) ~= 0 then
+                -- Check public,private,protected,they are p_3p
                 error((i18n"The %s qualifier cannot be used in conjunction with other access qualifiers."):format(key));
-            elseif band(decor,0xc0) ~= 0 and band(bit,0xc0) ~= 0 then
-                -- Check set,get,they are 0xc0
+            elseif band(decor,p_gs) ~= 0 and band(bit,p_gs) ~= 0 then
+                -- Check set,get,they are p_gs
                 error((i18n"%s,%s cannot be used at the same time."):format(get,set));
-            elseif band(decor,0x120) ~= 0 and band(bit,0x120) ~= 0 then
-                -- Check virtual,final,they are 0x120
+            elseif band(decor,p_vf) ~= 0 and band(bit,p_vf) ~= 0 then
+                -- Check virtual,final,they are p_vf
                 error((i18n"%s,%s cannot be used at the same time."):format(final,virtual));
             end
             decor = bor(decor,bit);
         else
-            local get_set = band(decor,p_get_set);
+            local get_set = band(decor,p_gs);
             if get_set ~= 0 then
-                if bor(decor,p_get_set) == p_get_set then
+                if bor(decor,p_gs) == p_gs then
                     CheckPermission(cls,key);
                     local property = (get_set == p_get and ClassesReadable or ClassesWritable)[cls][key];
                     if property then
@@ -143,7 +145,7 @@ if Debug then
         return self;
     end
     Done = function(_,key,value)
-        local get_set = band(decor,p_get_set);
+        local get_set = band(decor,p_gs);
         local isGet = get_set == p_get;
         local tKey = tostring(key);
         if get_set == 0 then
@@ -187,7 +189,7 @@ if Debug then
             decor = bor(decor,p_const);
         end
 
-        if band(decor,0x7) == 0 then
+        if band(decor,p_3p) == 0 then
             -- Without the public qualifier, public is added by default.
             decor = bor(decor,p_public);
         end
@@ -273,7 +275,7 @@ if Debug then
         else
             local cs = ClassesStatic[cls];
             if isStatic then
-                if pm and band(pm,p_static) == 0 and band(pm,p_get_set) == 0 then
+                if pm and band(pm,p_static) == 0 and band(pm,p_gs) == 0 then
                     error((i18n"Redefining static member %s is not allowed."):format(key));
                 end
                 local st = cs[key];
@@ -294,7 +296,7 @@ if Debug then
 
             if key == ctor then
                 -- Reassign permissions to "new", which are the same as ctor with the static qualifier.
-                pms[new] = bor(decor,0x8);
+                pms[new] = bor(decor,p_static);
                 local ban = band(decor,p_private) ~= 0 or oVal == c_delete;
                 Update2Children(cls,ClassesBanNew,ban);
             elseif key == dtor then
@@ -317,7 +319,7 @@ else
         if bit then
             decor = bor(decor,bit);
         else
-            local get_set = band(decor,p_get_set);
+            local get_set = band(decor,p_gs);
             if get_set ~= 0 then
                 local property = (get_set == p_get and ClassesReadable or ClassesWritable)[cls][key];
                 return property and property[1] or nil;
@@ -334,7 +336,7 @@ else
         local isFunction = "function" == vt;
         local isTable = "table" == vt;
         local isStatic = band(decor,p_static) ~= 0;
-        local get_set = band(decor,p_get_set);
+        local get_set = band(decor,p_gs);
         if not isFunction and not isStatic and get_set == 0 and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
             ClassesMembers[cls][key] = value;
             Update2ChildrenWithKey(cls,ClassesMembers,key,value);
