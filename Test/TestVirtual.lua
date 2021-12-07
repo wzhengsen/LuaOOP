@@ -19,7 +19,7 @@ else
 end
 
 ok = pcall(function ()
-function Test1.get.const.final:Data()
+function Test1.get.private.final:Data()
     return self.data;
 end
 end);

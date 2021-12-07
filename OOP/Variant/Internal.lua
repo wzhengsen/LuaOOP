@@ -126,7 +126,8 @@ return {
         [Config.is] = true,
         [Config.handlers] = true,
         [Config.__new__] = true,
-        [Config.__delete__] = true
+        [Config.__delete__] = true,
+        [Config.__singleton__] = true
     },
     Permission = Permission,
     BitsMap = BitsMap,

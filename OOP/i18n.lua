@@ -43,8 +43,8 @@ local LanguageMap = {
     ["The name is unavailable. - %s"] = {
         zh = "该名称不可用。 - %s"
     },
-    ["You cannot qualify meta-methods. - %s"] = {
-        zh = "你不能修饰元方法。 - %s"
+    ["You cannot qualify meta-methods with %s."] = {
+        zh = "你不能使用%s修饰元方法"
     },
     ["%s qualifier cannot qualify %s method."] = {
         zh = "修饰符%s不能修饰%s方法。"

@@ -53,6 +53,9 @@ local Permission = Internal.Permission;
 local new = Config.new;
 local delete = Config.delete;
 
+local public = Config.Qualifiers.public;
+local private = Config.Qualifiers.private;
+local protected = Config.Qualifiers.protected;
 local static = Config.Qualifiers.static;
 local final = Config.Qualifiers.final;
 local virtual = Config.Qualifiers.virtual;
@@ -64,14 +67,16 @@ local class = require("OOP.BaseClass");
 local c_delete = class.delete;
 
 local p_public = Permission.public;
+local p_private = Permission.private;
+local p_protected = Permission.protected;
 local p_static = Permission.static;
 local p_virtual = Permission.virtual;
 local p_get = Permission.get;
 local p_final = Permission.final;
-local p_private = Permission.private;
 local p_gs = Permission.get + Permission.set;
 local p_vf = Permission.virtual + Permission.final;
 local p_3p = Permission.public + Permission.private + Permission.protected;
+local p_gs_2p = p_gs + Permission.private + Permission.protected;
 
 local Router = {};
 
@@ -116,48 +121,77 @@ if Debug then
     Pass = function(self,key)
         local bit = BitsMap[key];
         if bit then
-            if band(decor,p_3p) ~= 0 and band(bit,p_3p) ~= 0 then
-                -- Check public,private,protected,they are p_3p
-                error((i18n"The %s qualifier cannot be used in conjunction with other access qualifiers."):format(key));
-            elseif band(decor,p_gs) ~= 0 and band(bit,p_gs) ~= 0 then
-                -- Check set,get,they are p_gs
-                error((i18n"%s,%s cannot be used at the same time."):format(get,set));
-            elseif band(decor,p_vf) ~= 0 and band(bit,p_vf) ~= 0 then
-                -- Check virtual,final,they are p_vf
-                error((i18n"%s,%s cannot be used at the same time."):format(final,virtual));
-            end
             decor = bor(decor,bit);
         else
-            local get_set = band(decor,p_gs);
-            if get_set ~= 0 then
+            local gs = band(decor,p_gs);
+            if gs ~= 0 then
                 if bor(decor,p_gs) == p_gs then
                     CheckPermission(cls,key);
-                    local property = (get_set == p_get and ClassesReadable or ClassesWritable)[cls][key];
+                    local property = (gs == p_get and ClassesReadable or ClassesWritable)[cls][key];
                     if property then
                         return property[1];
-                    else
-                        error((i18n"There is no such property. - %s"):format(key));
                     end
+                    error((i18n"There is no such property. - %s"):format(key));
                 end
             end
             error((i18n"There is no such qualifier. - %s"):format(key));
         end
         return self;
     end
+
+    local function DoneMeta(meta,key,value)
+    end
+
     Done = function(_,key,value)
-        local get_set = band(decor,p_gs);
-        local isGet = get_set == p_get;
-        local tKey = tostring(key);
-        if get_set == 0 then
+        if band(decor,p_gs) == p_gs then
+            -- Check set,get,they are p_gs
+            error((i18n"%s,%s cannot be used at the same time."):format(get,set));
+        elseif band(decor,p_vf) == p_vf then
+            -- Check virtual,final,they are p_vf
+            error((i18n"%s,%s cannot be used at the same time."):format(final,virtual));
+        end
+
+        local ppp_flag = band(decor,p_3p);
+        if ppp_flag == 0 then
+            -- Without the public qualifier, public is added by default.
+            decor = bor(decor,p_public);
+        elseif ppp_flag ~= p_public and ppp_flag ~= p_private and ppp_flag ~= p_protected then
+            -- Check public,private,protected,they are p_3p
+            error((i18n"The %s qualifier cannot be used in conjunction with other access qualifiers."):format(key));
+        end
+
+        local isStatic = band(decor,p_static) ~= 0;
+        local isVirtual = band(decor,p_virtual) ~= 0;
+        if isVirtual then
+            if value ~= 0 then
+                error((i18n"The pure virtual function %s must be assigned a value of 0."):format(key));
+            elseif isStatic then
+                error((i18n"The pure virtual function %s cannot be defined as a static function."):format(key));
+            end
+        end
+
+        local meta = MetaMapName[key];
+        if meta and band(decor,p_gs_2p) ~= 0 then
+            error((i18n"You cannot qualify meta-methods with %s."):format(
+                private .. "," .. protected .. "," .. get .. "," .. set
+            ));
+        end
+
+        local gs = band(decor,p_gs);
+        local vt = type(value);
+        local isFunction = "function" == vt;
+        local isGet = gs == p_get;
+        local gsKey = key;
+        if gs == 0 then
             -- 'n.' means the function is a normal one.
-            tKey = "n."..tKey;
+            gsKey = "n."..gsKey;
         elseif isGet then
             -- 'g.' means the function is a getter.
             -- 's.' means the function is a setter.
-            tKey = (isGet and "g." or "s.") ..tKey;
+            gsKey = (isGet and "g." or "s.") ..gsKey;
         end
 
-        if FinalClassesMembers[cls][tKey] then
+        if FinalClassesMembers[cls][gsKey] then
             error((i18n"You cannot define final members again. - %s"):format(key));
         end
 
@@ -166,21 +200,7 @@ if Debug then
             error((i18n"The name is unavailable. - %s"):format(key));
         end
 
-        local meta = MetaMapName[key];
-        if meta then
-            if decor == p_static then
-                -- Meta methods are special and can only accept static qualifiers.
-                local mt = getmetatable(cls);
-                value = FunctionWrapper(cls,value);
-                mt[meta] = value;
-                Update2ChildrenClassMeta(cls,meta,value);
-                return;
-            else
-                error((i18n"You cannot qualify meta-methods. - %s"):format(key));
-            end
-        end
 
-        local isStatic = band(decor,p_static) ~= 0;
         if isStatic and (key == ctor or key == dtor) then
             error((i18n"%s qualifier cannot qualify %s method."):format(static,key));
         end
@@ -189,126 +209,122 @@ if Debug then
             decor = bor(decor,p_const);
         end
 
-        if band(decor,p_3p) == 0 then
-            -- Without the public qualifier, public is added by default.
-            decor = bor(decor,p_public);
-        end
-
-        local vcm = VirtualClassesMembers[cls];
         local vcp = VirtualClassesPermissons[cls];
-        if band(decor,p_virtual) ~= 0 then
-            if value ~= 0 then
-                error((i18n"The pure virtual function %s must be assigned a value of 0."):format(key));
-            end
-            if isStatic then
-                error((i18n"The pure virtual function %s cannot be defined as a static function."):format(key));
-            end
-            local vPermisson = vcp[tKey];
+        if isVirtual then
+            local vcm = VirtualClassesMembers[cls];
+            local vPermisson = vcp[gsKey];
             -- Always update the permission of the virtual function.
-            vcp[tKey] = bor(decor,p_virtual) - p_virtual;
-            Update2ChildrenWithKey(cls,VirtualClassesPermissons,tKey,decor,true);
-            if nil == vPermisson or nil ~= vcm[tKey] then
+            local vp = bor(decor,p_virtual) - p_virtual;
+            vcp[gsKey] = vp;
+            Update2ChildrenWithKey(cls,VirtualClassesPermissons,gsKey,vp,true);
+            if nil == vPermisson or nil ~= vcm[gsKey] then
                 -- But only update the member of virtual function if it is not nil,
                 -- nil means that the virtual function is defined.
-                vcm[tKey] = true;
-                Update2ChildrenWithKey(cls,VirtualClassesMembers,tKey,true);
+                vcm[gsKey] = true;
+                Update2ChildrenWithKey(cls,VirtualClassesMembers,gsKey,true);
             end
             return;
         end
 
-        local vt = type(value);
-        local isFunction = "function" == vt;
-        local vPermisson = vcp[tKey];
+        if gs ~= 0 then
+            if not isFunction then
+                error((i18n"A function must be assigned to the property %s."):format(key));
+            elseif key == ctor or key == dtor then
+                error((i18n"%s and %s can't be used as property."):format(ctor,dtor));
+            end
+        end
+
+        local vPermisson = vcp[gsKey];
         if vPermisson then
+            local vcm = VirtualClassesMembers[cls];
             -- Check pure virtual functions.
             if not isFunction then
                 error((i18n"%s must be overridden as a function."):format(key));
             elseif bor(decor,p_final) - p_final ~= vPermisson then
                 error((i18n"A different access qualifier is used when you override pure virtual functions. - %s"):format(key));
             end
-            vcm[tKey] = nil;
-            Update2ChildrenWithKey(cls,VirtualClassesMembers,tKey,nil,true);
+            vcm[gsKey] = nil;
+            Update2ChildrenWithKey(cls,VirtualClassesMembers,gsKey,nil,true);
         end
 
         local oVal = value;
+        local isConst = band(decor,p_const) ~= 0;
+        local pms = ClassesPermissions[cls];
 
         if isFunction then
-            local isConst = band(decor,p_const) ~= 0;
             value = FunctionWrapper(cls,value,nil,isConst);
             if isConst then
                 -- Indicates that it is an internal const method.
                 decor = bor(decor,p_internalConstMethod);
             end
-        elseif get_set == 0 then
-            local isTable = "table" == vt;
+        end
+
+        if meta and isStatic then
+            local mt = getmetatable(cls);
+            mt[meta] = value;
+            Update2ChildrenClassMeta(cls,meta,value);
+            pms[key] = decor;
+        else
             -- For non-functional, non-static members,non-class objects,non-enumeration objects,
             -- add to the member table and generate it for each instance.
-            if not isStatic and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
+            if not isFunction and not isStatic and ("table" ~= vt or (not AllEnumerations[value] and not AllClasses[value])) then
                 ClassesMembers[cls][key] = value;
                 Update2ChildrenWithKey(cls,ClassesMembers,key,value);
             end
-        end
 
-        local pms = ClassesPermissions[cls];
-        -- Instead of identifying the property with static,
-        -- attach static to the property to avoid static checks occurring before taking the property
-        -- (the property can have the same name as the static member).
-        if isStatic then
-            if get_set ~= 0 or ClassesReadable[cls][key] or ClassesWritable[cls][key] then
-                decor = decor - p_static;
-            end
-        end
-        local pm = pms[key];
-        pms[key] = decor;
-        if get_set ~= 0 then
-            if not isFunction then
-                error((i18n"A function must be assigned to the property %s."):format(key));
-            end
-            if key == ctor or key == dtor then
-                error((i18n"%s and %s can't be used as property."):format(ctor,dtor));
-            end
-            -- The property is set to a special table
-            -- with index 1 representing the function assigned to the property
-            -- and index 2 representing whether the property is a static property.
-
-            (isGet and ClassesReadable or ClassesWritable)[cls][key] = {value,isStatic};
-        else
-            local cs = ClassesStatic[cls];
-            if isStatic then
-                if pm and band(pm,p_static) == 0 and band(pm,p_gs) == 0 then
-                    error((i18n"Redefining static member %s is not allowed."):format(key));
-                end
-                local st = cs[key];
-                if not st then
-                    st = {value};
-                    cs[key] = st;
-                else
-                    st[1] = value;
-                end
+            local pm = pms[key];
+            if gs ~= 0 then
+                -- The property is set to a special table
+                -- with index 1 representing the function assigned to the property
+                -- and index 2 representing whether the property is a static property.
+                (isGet and ClassesReadable or ClassesWritable)[cls][key] = {value,isStatic};
             else
-                if cs[key] ~= nil then
-                    error((i18n"Redefining static member %s is not allowed."):format(key));
+                local cs = ClassesStatic[cls];
+                if isStatic then
+                    -- Consider the following case:
+                    -- local T = class();
+                    -- function T.get:x()
+                    -- end
+                    -- T.static.x = 2;-- allowed,Because the property can have the same name as the static member.
+                    -- function T:y()
+                    -- end
+                    -- T.static.y = 2;-- error
+                    if pm and band(pm,p_static) == 0 and band(pm,p_gs) == 0 then
+                        error((i18n"Redefining static member %s is not allowed."):format(key));
+                    end
+                    local st = cs[key];
+                    if not st then
+                        st = {value};
+                        cs[key] = st;
+                    else
+                        st[1] = value;
+                    end
+                else
+                    if cs[key] ~= nil then
+                        error((i18n"Redefining static member %s is not allowed."):format(key));
+                    end
+                    if isFunction then
+                        ClassesAll[cls][key] = value;
+                    end
                 end
-                if isFunction or isStatic then
-                    ClassesAll[cls][key] = value;
-                end
-            end
 
-            if key == ctor then
-                -- Reassign permissions to "new", which are the same as ctor with the static qualifier.
-                pms[new] = bor(decor,p_static);
-                local ban = band(decor,p_private) ~= 0 or oVal == c_delete;
-                Update2Children(cls,ClassesBanNew,ban);
-            elseif key == dtor then
-                pms[delete] = decor;
-                local ban = band(decor,p_private) ~= 0 or oVal == c_delete;
-                Update2Children(cls,ClassesBanDelete,ban);
+                if key == ctor then
+                    -- Reassign permissions to "new", which are the same as ctor with the static qualifier.
+                    pms[new] = bor(decor,p_static);
+                    local ban = band(decor,p_private) ~= 0 or oVal == c_delete;
+                    Update2Children(cls,ClassesBanNew,ban);
+                elseif key == dtor then
+                    pms[delete] = decor;
+                    local ban = band(decor,p_private) ~= 0 or oVal == c_delete;
+                    Update2Children(cls,ClassesBanDelete,ban);
+                end
             end
+            pms[key] = decor;
         end
 
         if band(decor,p_final) ~= 0 then
-            FinalClassesMembers[cls][tKey] = true;
-            Update2ChildrenWithKey(cls,FinalClassesMembers,tKey,true);
+            FinalClassesMembers[cls][gsKey] = true;
+            Update2ChildrenWithKey(cls,FinalClassesMembers,gsKey,true);
         end
     end
 else
