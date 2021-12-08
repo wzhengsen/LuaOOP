@@ -52,9 +52,13 @@ local Begin = R.Begin;
 local __cls__ = Config.__cls__;
 local new = Config.new;
 local delete = Config.delete;
+local nNew = "n" .. new;
+local nDelete = "n" .. delete;
 local is = Config.is;
 local ctor = Config.ctor;
 local dtor = Config.dtor;
+local nCtor = "n" .. ctor;
+local nDtor = "n" .. dtor;
 local __new__ = Config.__new__;
 local __delete__ = Config.__delete__;
 
@@ -216,7 +220,14 @@ local function GetAndCheck(cls,key,sender,metas)
     else
         cCls = cls;
     end
-    if not CheckPermission(cCls,key) then
+    -- Check the properties of current class.
+    local pre = "n";
+    local property = ClassesReadable[cCls][key];
+    if property and not property[2] then
+        pre = "g";
+    end
+
+    if not CheckPermission(cCls,pre .. key) then
         return nil;
     end
     -- Check self __all__ first.
@@ -234,9 +245,8 @@ local function GetAndCheck(cls,key,sender,metas)
     if nil ~= ret then
         return ret;
     end
-    -- Check the properties of current class.
-    local property = ClassesReadable[cCls][key];
-    if property and not property[2] then
+
+    if pre == "g" then
         return property[1](sender);
     else
         property = ClassesWritable[cCls][key];
@@ -293,11 +303,15 @@ function Functions.MakeInternalObjectMeta(cls,metas)
         if ReservedWord[key] then
             error((i18n"%s is a reserved word and you can't set it."):format(key));
         end
-        if not CheckPermission(cCls,key,true) then
-            return;
-        end
+        local pre = "n";
         local property = ClassesWritable[cCls][key];
         if property and not property[2] then
+            pre = "s";
+        end
+        if not CheckPermission(cCls,pre .. key,true) then
+            return;
+        end
+        if pre == "s" then
             property[1](sender,value);
             return;
         else
@@ -377,11 +391,15 @@ local function RetrofiteUserDataObjectMetaExternal(obj,meta,cls)
             if ReservedWord[key] then
                 error((i18n"%s is a reserved word and you can't set it."):format(key));
             end
-            if not CheckPermission(cls,key,true) then
-                return;
-            end
+            local pre = "n";
             local property = ClassesWritable[cls][key];
             if property and not property[2] then
+                pre = "s";
+            end
+            if not CheckPermission(cls,pre .. key,true) then
+                return;
+            end
+            if pre == "s" then
                 property[1](sender,value);
                 return;
             else
@@ -440,11 +458,12 @@ local function ClassGet(cls,key)
         end
         return fri;
     end
-    if not CheckPermission(cls,key) then
-        return;
-    end
     -- Check the properties first.
     local property = ClassesReadable[cls][key];
+    if not CheckPermission(cls,(property and "g" or "n") .. key) then
+        return;
+    end
+
     if property then
         if property[2] then
             return property[1]();
@@ -487,7 +506,8 @@ local function ClassSet(cls,key,value)
     if ReservedWord[key] then
         error((i18n"%s is a reserved word and you can't set it."):format(key));
     end
-    if FinalClassesMembers[cls]["n." .. tostring(key)] then
+    local vKey = "n" .. key;
+    if FinalClassesMembers[cls][vKey] then
         error((i18n"You cannot define final members again. - %s"):format(key));
     end
 
@@ -530,11 +550,11 @@ local function ClassSet(cls,key,value)
         end;
         -- Once register "__singleton__" for a class,set permission of "new","delete" method to protected.
         local pms = ClassesPermissions[cls];
-        local pm = pms[new];
+        local pm = pms[nNew];
         if band(pm,p_private) == 0 then
-            pms[new] = p_static + p_protected;
+            pms[nNew] = p_static + p_protected;
         end
-        pms[delete] = p_protected;
+        pms[nDelete] = p_protected;
         return;
     elseif key == __new__ then
         if not isFunction then
@@ -553,7 +573,6 @@ local function ClassSet(cls,key,value)
         Update2Children(cls,ClassesDelete,value);
         return;
     else
-        local vKey = "n." .. tostring(key);
         local vPermisson = VirtualClassesPermissons[cls][vKey];
         if vPermisson then
             -- Check pure virtual functions.
@@ -565,10 +584,10 @@ local function ClassSet(cls,key,value)
             VirtualClassesMembers[cls][vKey] = nil;
             Update2ChildrenWithKey(cls,VirtualClassesMembers,vKey,nil,true);
         else
-            if not CheckPermission(cls,key,true) then
+            local property = ClassesWritable[cls][key];
+            if not CheckPermission(cls,(property and "s" or "n") .. key,true) then
                 return;
             end
-            local property = ClassesWritable[cls][key];
             if property then
                 if property[2] then
                     property[1](value);
@@ -605,7 +624,7 @@ local function ClassSet(cls,key,value)
                     ClassesMembers[cls][key] = value;
                     Update2ChildrenWithKey(cls,ClassesMembers,key,value);
                 end
-                ClassesPermissions[cls][key] = p_public;
+                ClassesPermissions[cls][vKey] = p_public;
             end
             if isFunction then
                 all[key] = value;
@@ -687,7 +706,7 @@ function Functions.PushBase(cls,bases,base,handlers,members,metas)
     if ClassesBanNew[base] then
         ClassesBanNew[cls] = true;
     elseif pms then
-        local pm = pms[ctor];
+        local pm = pms[nCtor];
         if pm and band(pm,p_private) ~= 0 then
             ClassesBanNew[cls] = true;
         end
@@ -696,7 +715,7 @@ function Functions.PushBase(cls,bases,base,handlers,members,metas)
     if ClassesBanDelete[base] then
         ClassesBanDelete[cls] = true;
     elseif pms then
-        local pm = pms[dtor];
+        local pm = pms[nDtor];
         if pm and band(pm,p_private) ~= 0 then
             ClassesBanDelete[cls] = true;
         end
@@ -793,7 +812,7 @@ local function CascadeDelete(obj,cls,called)
         return;
     end
 
-    local pm = ClassesPermissions[cls][dtor];
+    local pm = ClassesPermissions[cls][nDtor];
     if pm then
         local aCls = AccessStack[#AccessStack];
         local _friends = ClassesFriends[cls];
@@ -853,10 +872,10 @@ function Functions.AttachClassFunctions(cls,_is,_new,_delete)
     -- In debug mode,the "new" method is public and static.
     static[new] = {FunctionWrapper(cls,_new)};
     -- Use + instead of | to try to keep lua 5.3 or lower compatible.
-    pms[new] = p_public + p_static;
+    pms[nNew] = p_public + p_static;
 
     all[delete] = FunctionWrapper(cls,_delete);
-    pms[delete] = p_public;
+    pms[nDelete] = p_public;
 end
 
 return Functions;

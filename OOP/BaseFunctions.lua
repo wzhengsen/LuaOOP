@@ -182,9 +182,9 @@ if Debug then
                 -- Check const.
                 if ConstBehavior ~= 2 then
                     if ConstBehavior == 0 then
-                        warn(("You cannot change the const value. - %s"):format(key));
+                        warn(("You cannot change the const value. - %s"):format(key:sub(2)));
                     elseif ConstBehavior == 1 then
-                        error((i18n"You cannot change the const value. - %s"):format(key));
+                        error((i18n"You cannot change the const value. - %s"):format(key:sub(2)));
                     end
                     return false;
                 end
@@ -222,7 +222,7 @@ if Debug then
         if not _friends or (not _friends[stackCls] and not _friends[NamedClasses[stackCls]]) then
             -- Check public,private,protected.
             if band(pm,p_private) ~= 0 then
-                error((i18n"Attempt to access private members outside the permission. - %s"):format(key));
+                error((i18n"Attempt to access private members outside the permission. - %s"):format(key:sub(2)));
             elseif band(pm,p_protected) ~= 0 then
                 if stackCls then
                     bases = ClassesBases[stackCls];
@@ -230,7 +230,7 @@ if Debug then
                         return true;
                     end
                 end
-                error((i18n"Attempt to access protected members outside the permission. - %s"):format(key));
+                error((i18n"Attempt to access protected members outside the permission. - %s"):format(key:sub(2)));
             end
         end
         return true;

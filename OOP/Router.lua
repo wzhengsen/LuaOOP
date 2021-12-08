@@ -52,8 +52,9 @@ local Permission = Internal.Permission;
 
 local new = Config.new;
 local delete = Config.delete;
+local nNew = "n" .. new;
+local nDelete = "n" .. delete;
 
-local public = Config.Qualifiers.public;
 local private = Config.Qualifiers.private;
 local protected = Config.Qualifiers.protected;
 local static = Config.Qualifiers.static;
@@ -125,22 +126,17 @@ if Debug then
         else
             local gs = band(decor,p_gs);
             if gs ~= 0 then
-                if bor(decor,p_gs) == p_gs then
-                    CheckPermission(cls,key);
-                    local property = (gs == p_get and ClassesReadable or ClassesWritable)[cls][key];
-                    if property then
-                        return property[1];
-                    end
-                    error((i18n"There is no such property. - %s"):format(key));
+                local isGet = gs == p_get;
+                CheckPermission(cls,(isGet and "g" or "s") .. key);
+                local property = (gs == p_get and ClassesReadable or ClassesWritable)[cls][key];
+                if property then
+                    return property[1];
                 end
             end
             error((i18n"There is no such qualifier. - %s"):format(key));
         end
         return self;
-    end
-
-    local function DoneMeta(meta,key,value)
-    end
+    end;
 
     Done = function(_,key,value)
         if band(decor,p_gs) == p_gs then
@@ -171,27 +167,28 @@ if Debug then
         end
 
         local meta = MetaMapName[key];
-        if meta and band(decor,p_gs_2p) ~= 0 then
-            error((i18n"You cannot qualify meta-methods with %s."):format(
-                private .. "," .. protected .. "," .. get .. "," .. set
-            ));
-        end
-
         local gs = band(decor,p_gs);
-        local vt = type(value);
-        local isFunction = "function" == vt;
         local isGet = gs == p_get;
-        local gsKey = key;
+        local disKey = key;
         if gs == 0 then
-            -- 'n.' means the function is a normal one.
-            gsKey = "n."..gsKey;
-        elseif isGet then
-            -- 'g.' means the function is a getter.
-            -- 's.' means the function is a setter.
-            gsKey = (isGet and "g." or "s.") ..gsKey;
+            if meta and isStatic then
+                -- 'M' means the function is a static meta-method.
+                -- Why do I need to distinguish static metamethods from normal metamethods?
+                -- Similar to the distinction between static members and get/set methods,
+                -- static metamethods can use the same name as normal metamethods and can take effect at the same time,
+                -- without affecting each other.
+                disKey = "M".. disKey;
+            else
+                -- 'n' means the function is a normal one.
+                disKey = "n".. disKey;
+            end
+        else
+            -- 'g' means the function is a getter.
+            -- 's' means the function is a setter.
+            disKey = (isGet and "g" or "s") .. disKey;
         end
 
-        if FinalClassesMembers[cls][gsKey] then
+        if FinalClassesMembers[cls][disKey] then
             error((i18n"You cannot define final members again. - %s"):format(key));
         end
 
@@ -200,9 +197,29 @@ if Debug then
             error((i18n"The name is unavailable. - %s"):format(key));
         end
 
-
         if isStatic and (key == ctor or key == dtor) then
             error((i18n"%s qualifier cannot qualify %s method."):format(static,key));
+        end
+
+        local vt = type(value);
+        local isFunction = "function" == vt;
+
+        if meta then
+            if band(decor,p_gs_2p) ~= 0 then
+                error((i18n"You cannot qualify meta-methods with %s."):format(
+                    private .. "," .. protected .. "," .. get .. "," .. set
+                ));
+            elseif not isFunction then
+                error((i18n"A function must be assigned to the meta-method. - %s"):format(key));
+            end
+        end
+
+        if gs ~= 0 then
+            if not isFunction and not isVirtual then
+                error((i18n"A function must be assigned to the property %s."):format(key));
+            elseif key == ctor or key == dtor then
+                error((i18n"%s and %s can't be used as property."):format(ctor,dtor));
+            end
         end
 
         if isGet and GetPropertyAutoConst then
@@ -212,29 +229,21 @@ if Debug then
         local vcp = VirtualClassesPermissons[cls];
         if isVirtual then
             local vcm = VirtualClassesMembers[cls];
-            local vPermisson = vcp[gsKey];
+            local vPermisson = vcp[disKey];
             -- Always update the permission of the virtual function.
             local vp = bor(decor,p_virtual) - p_virtual;
-            vcp[gsKey] = vp;
-            Update2ChildrenWithKey(cls,VirtualClassesPermissons,gsKey,vp,true);
-            if nil == vPermisson or nil ~= vcm[gsKey] then
+            vcp[disKey] = vp;
+            Update2ChildrenWithKey(cls,VirtualClassesPermissons,disKey,vp,true);
+            if nil == vPermisson or nil ~= vcm[disKey] then
                 -- But only update the member of virtual function if it is not nil,
                 -- nil means that the virtual function is defined.
-                vcm[gsKey] = true;
-                Update2ChildrenWithKey(cls,VirtualClassesMembers,gsKey,true);
+                vcm[disKey] = true;
+                Update2ChildrenWithKey(cls,VirtualClassesMembers,disKey,true);
             end
             return;
         end
 
-        if gs ~= 0 then
-            if not isFunction then
-                error((i18n"A function must be assigned to the property %s."):format(key));
-            elseif key == ctor or key == dtor then
-                error((i18n"%s and %s can't be used as property."):format(ctor,dtor));
-            end
-        end
-
-        local vPermisson = vcp[gsKey];
+        local vPermisson = vcp[disKey];
         if vPermisson then
             local vcm = VirtualClassesMembers[cls];
             -- Check pure virtual functions.
@@ -243,14 +252,13 @@ if Debug then
             elseif bor(decor,p_final) - p_final ~= vPermisson then
                 error((i18n"A different access qualifier is used when you override pure virtual functions. - %s"):format(key));
             end
-            vcm[gsKey] = nil;
-            Update2ChildrenWithKey(cls,VirtualClassesMembers,gsKey,nil,true);
+            vcm[disKey] = nil;
+            Update2ChildrenWithKey(cls,VirtualClassesMembers,disKey,nil,true);
         end
 
         local oVal = value;
-        local isConst = band(decor,p_const) ~= 0;
         local pms = ClassesPermissions[cls];
-
+        local isConst = band(decor,p_const) ~= 0;
         if isFunction then
             value = FunctionWrapper(cls,value,nil,isConst);
             if isConst then
@@ -263,35 +271,22 @@ if Debug then
             local mt = getmetatable(cls);
             mt[meta] = value;
             Update2ChildrenClassMeta(cls,meta,value);
-            pms[key] = decor;
+            pms[disKey] = decor;
         else
-            -- For non-functional, non-static members,non-class objects,non-enumeration objects,
-            -- add to the member table and generate it for each instance.
-            if not isFunction and not isStatic and ("table" ~= vt or (not AllEnumerations[value] and not AllClasses[value])) then
-                ClassesMembers[cls][key] = value;
-                Update2ChildrenWithKey(cls,ClassesMembers,key,value);
-            end
-
-            local pm = pms[key];
-            if gs ~= 0 then
-                -- The property is set to a special table
-                -- with index 1 representing the function assigned to the property
-                -- and index 2 representing whether the property is a static property.
-                (isGet and ClassesReadable or ClassesWritable)[cls][key] = {value,isStatic};
-            else
-                local cs = ClassesStatic[cls];
-                if isStatic then
-                    -- Consider the following case:
-                    -- local T = class();
-                    -- function T.get:x()
-                    -- end
-                    -- T.static.x = 2;-- allowed,Because the property can have the same name as the static member.
-                    -- function T:y()
-                    -- end
-                    -- T.static.y = 2;-- error
-                    if pm and band(pm,p_static) == 0 and band(pm,p_gs) == 0 then
-                        error((i18n"Redefining static member %s is not allowed."):format(key));
-                    end
+            if gs ~= 0 or isStatic then
+                local cms = ClassesMembers[cls];
+                local cm = cms[key];
+                if cm ~= nil then
+                    cms[key] = nil;
+                    Update2ChildrenWithKey(cls,ClassesMembers,key,nil,true);
+                end
+                if gs ~= 0 then
+                    -- The property is set to a special table
+                    -- with index 1 representing the function assigned to the property
+                    -- and index 2 representing whether the property is a static property.
+                    (isGet and ClassesReadable or ClassesWritable)[cls][key] = {value,isStatic};
+                else
+                    local cs = ClassesStatic[cls];
                     local st = cs[key];
                     if not st then
                         st = {value};
@@ -299,34 +294,41 @@ if Debug then
                     else
                         st[1] = value;
                     end
-                else
-                    if cs[key] ~= nil then
-                        error((i18n"Redefining static member %s is not allowed."):format(key));
-                    end
-                    if isFunction then
-                        ClassesAll[cls][key] = value;
-                    end
+                end
+            else
+                local cs = ClassesStatic[cls];
+                cs[key] = nil;
+                ClassesReadable[cls][key] = nil;
+                ClassesWritable[cls][key] = nil;
+                if isFunction then
+                    ClassesAll[cls][key] = value;
+                elseif "table" ~= vt or (not AllEnumerations[value] and not AllClasses[value]) then
+                    -- For non-functional, non-static members,non-class objects,non-enumeration objects,
+                    -- add to the member table and generate it for each instance.
+                    ClassesMembers[cls][key] = value;
+                    Update2ChildrenWithKey(cls,ClassesMembers,key,value);
                 end
 
                 if key == ctor then
                     -- Reassign permissions to "new", which are the same as ctor with the static qualifier.
-                    pms[new] = bor(decor,p_static);
+                    pms[nNew] = bor(decor,p_static);
                     local ban = band(decor,p_private) ~= 0 or oVal == c_delete;
                     Update2Children(cls,ClassesBanNew,ban);
                 elseif key == dtor then
-                    pms[delete] = decor;
+                    pms[nDelete] = decor;
                     local ban = band(decor,p_private) ~= 0 or oVal == c_delete;
                     Update2Children(cls,ClassesBanDelete,ban);
                 end
             end
-            pms[key] = decor;
+
+            pms[disKey] = decor;
         end
 
         if band(decor,p_final) ~= 0 then
-            FinalClassesMembers[cls][gsKey] = true;
-            Update2ChildrenWithKey(cls,FinalClassesMembers,gsKey,true);
+            FinalClassesMembers[cls][disKey] = true;
+            Update2ChildrenWithKey(cls,FinalClassesMembers,disKey,true);
         end
-    end
+    end;
 else
     local ClassesMetas = Internal.ClassesMetas;
     -- In non-debug mode, no attention is paid to any qualifiers other than static.
@@ -342,31 +344,37 @@ else
             end
         end
         return self;
-    end
+    end;
+
     Done = function(_,key,value)
         if band(decor,p_virtual) ~= 0 then
             -- Skip pure virtual functions.
             return;
         end
-        local vt = type(value);
-        local isFunction = "function" == vt;
-        local isTable = "table" == vt;
         local isStatic = band(decor,p_static) ~= 0;
-        local get_set = band(decor,p_gs);
-        if not isFunction and not isStatic and get_set == 0 and (not isTable or (not AllEnumerations[value] and not AllClasses[value])) then
-            ClassesMembers[cls][key] = value;
-            Update2ChildrenWithKey(cls,ClassesMembers,key,value);
+        local meta = MetaMapName[key];
+        if meta and isStatic then
+            -- Meta methods are special and can only accept static qualifiers.
+            local mt = getmetatable(cls);
+            mt[meta] = value;
+            Update2ChildrenClassMeta(cls,meta,value);
+            return;
         end
 
-        if get_set ~= 0 then
-            (get_set == p_get and ClassesReadable or ClassesWritable)[cls][key] = {value,isStatic};
-        else
-            local cs = ClassesStatic[cls];
-            if isStatic then
-                if rawget(cls,key) ~= nil then
-                    -- Redefining static member is not allowed.
-                    return;
-                end
+        local vt = type(value);
+        local gs = band(decor,p_gs);
+
+        if gs ~= 0 or isStatic then
+            local cms = ClassesMembers[cls];
+            local cm = cms[key];
+            if cm ~= nil then
+                cms[key] = nil;
+                Update2ChildrenWithKey(cls,ClassesMembers,key,nil,true);
+            end
+            if gs ~= 0 then
+                (gs == p_get and ClassesReadable or ClassesWritable)[cls][key] = {value,isStatic};
+            else
+                local cs = ClassesStatic[cls];
                 local st = cs[key];
                 if not st then
                     st = {value};
@@ -374,31 +382,25 @@ else
                 else
                     st[1] = value;
                 end
-            else
-                if cs[key] then
-                    -- Redefining static member is not allowed.
-                    return;
-                end
-                if isFunction or isStatic then
-                    rawset(cls,key,value);
-                end
+            end
+        else
+            local isFunction = "function" == vt;
+            ClassesStatic[cls][key] = nil;
+            ClassesReadable[cls][key] = nil;
+            ClassesWritable[cls][key] = nil;
+            if isFunction then
+                rawset(cls,key,value);
+            elseif "table" ~= vt or (not AllEnumerations[value] and not AllClasses[value]) then
+                ClassesMembers[cls][key] = value;
+                Update2ChildrenWithKey(cls,ClassesMembers,key,value);
             end
         end
 
-
-        local meta = MetaMapName[key];
         if meta then
-            if decor == p_static then
-                -- Meta methods are special and can only accept static qualifiers.
-                local mt = getmetatable(cls);
-                mt[meta] = value;
-                Update2ChildrenClassMeta(cls,meta,value);
-            else
-                local metas = ClassesMetas[cls];
-                metas[key] = value;
-            end
+            local metas = ClassesMetas[cls];
+            metas[key] = value;
         end
-    end
+    end;
 end
 
 setmetatable(Router,{

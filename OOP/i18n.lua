@@ -151,9 +151,6 @@ local LanguageMap = {
     ["You cannot inherit a nil value."] = {
         zh = "你不能继承一个nil值。"
     },
-    ["Redefining static member %s is not allowed."] = {
-        zh = "不允许重定义静态成员%s。"
-    },
     ["Cannot call a non-const method on a const method."] = {
         zh = "不能在const方法中调用非const方法。"
     },
