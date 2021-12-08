@@ -20,7 +20,6 @@
 -- THE SOFTWARE.
 
 local type = type;
-local rawget = rawget;
 
 require("OOP.Enum");
 local Config = require("OOP.Config");

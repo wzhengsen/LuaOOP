@@ -770,6 +770,12 @@ local function ClassSet(cls,key,value)
             property[1](value);
             return;
         end
+        local meta = MetaMapName[key];
+        if meta then
+            ClassesMetas[cls][meta] = value;
+            Update2ChildrenWithKey(cls,ClassesMetas,meta,value);
+            return;
+        end
         local cs = ClassesStatic[cls];
         local isStatic = cs[key] ~= nil;
         if not isStatic then
@@ -787,11 +793,6 @@ local function ClassSet(cls,key,value)
         else
             cs[key][1] = value;
         end
-    end
-    local meta = MetaMapName[key];
-    if meta then
-        ClassesMetas[cls][meta] = value;
-        Update2ChildrenWithKey(cls,ClassesMetas,meta,value);
     end
 end
 

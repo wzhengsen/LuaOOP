@@ -109,6 +109,7 @@ local ClassesAll = Functions.ClassesAll;
 local ClassesPermissions = Functions.ClassesPermissions;
 local ClassesFriends = Functions.ClassesFriends;
 local ClassesAllFunctions = Functions.ClassesAllFunctions;
+local ClassesAllMetaFunctions = Functions.ClassesAllMetaFunctions;
 local WeakTables = Functions.WeakTables;
 local AccessStack = Functions.AccessStack;
 local DeathMark = Functions.DeathMark;
@@ -613,6 +614,14 @@ local function ClassSet(cls,key,value)
             value = FunctionWrapper(cls,value);
         end
 
+        local meta = MetaMapName[key];
+        if meta then
+            local metas = ClassesMetas[cls];
+            metas[meta] = value;
+            Update2ChildrenWithKey(cls,ClassesMetas,meta,value);
+            ClassesPermissions[cls][vKey] = p_public;
+            return;
+        end
         local cs = ClassesStatic[cls];
         local isStatic = cs[key] ~= nil;
         if not isStatic then
@@ -632,13 +641,6 @@ local function ClassSet(cls,key,value)
         else
             cs[key][1] = value;
         end
-    end
-
-    local meta = MetaMapName[key];
-    if meta then
-        local metas = ClassesMetas[cls];
-        metas[meta] = value;
-        Update2ChildrenWithKey(cls,ClassesMetas,meta,value);
     end
 end
 
@@ -690,6 +692,7 @@ function Functions.CreateClassTables(cls)
     ClassesAll[cls] = all;
     ClassesPermissions[cls] = {};
     ClassesAllFunctions[cls] = setmetatable({},WeakTables);
+    ClassesAllMetaFunctions[cls] = setmetatable({},WeakTables);
     FinalClassesMembers[cls] = {};
     VirtualClassesMembers[cls] = {};
     VirtualClassesPermissons[cls] = {};

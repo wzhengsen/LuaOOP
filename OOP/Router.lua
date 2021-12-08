@@ -24,7 +24,6 @@ local error = error;
 local type = type;
 local getmetatable = getmetatable;
 local setmetatable = setmetatable;
-local tostring = tostring;
 local Config = require("OOP.Config");
 
 local i18n = require("OOP.i18n");
@@ -43,6 +42,7 @@ local AllClasses = Internal.AllClasses;
 local ClassesReadable = Internal.ClassesReadable;
 local ClassesWritable = Internal.ClassesWritable;
 local ClassesStatic = Internal.ClassesStatic;
+local ClassesMetas = Internal.ClassesMetas;
 
 local Update2ChildrenClassMeta = BaseFunctions.Update2ChildrenClassMeta;
 local Update2ChildrenWithKey = BaseFunctions.Update2ChildrenWithKey;
@@ -77,7 +77,6 @@ local p_final = Permission.final;
 local p_gs = Permission.get + Permission.set;
 local p_vf = Permission.virtual + Permission.final;
 local p_3p = Permission.public + Permission.private + Permission.protected;
-local p_gs_2p = p_gs + Permission.private + Permission.protected;
 
 local Router = {};
 
@@ -103,6 +102,7 @@ if Debug then
     local ClassesPermissions = Internal.ClassesPermissions;
     local VirtualClassesMembers = Internal.VirtualClassesMembers;
     local VirtualClassesPermissons = Internal.VirtualClassesPermissons;
+    local AllMetaFunctions = Internal.ClassesAllMetaFunctions;
     local ClassesBanNew = Internal.ClassesBanNew;
     local ClassesBanDelete = Internal.ClassesBanDelete;
 
@@ -110,6 +110,32 @@ if Debug then
 
     local p_const = Permission.const;
     local p_internalConstMethod = Internal.BitsMap.__InternalConstMethod;
+
+    ---Wrapping metamethod.
+    ---Because the invocation of metamethods does not depend on external lookups,
+    ---it is not possible to determine the access permissons of metamethods directly.
+    ---Therefore, only one more permission determination can be added to the invocation.
+    ---@param wCls table
+    ---@param f function
+    ---@param const boolean
+    ---@param key string
+    ---@return function
+    local function MetaFunctionWrapper(wCls,f,const,key)
+        local metas = AllMetaFunctions[wCls];
+        local newMF = metas[f];
+        if nil == newMF then
+            local newF = FunctionWrapper(wCls,f,nil,const);
+            newMF = function(...)
+                CheckPermission(wCls,key);
+                return newF(...);
+            end;
+            metas[newMF] = newMF;
+            metas[f] = newMF;
+        end
+        return newMF;
+    end
+
+
     -- It is only under debug that the values need to be routed to the corresponding fields of the types.
     -- To save performance, all qualifiers will be ignored under non-debug.
 
@@ -205,9 +231,9 @@ if Debug then
         local isFunction = "function" == vt;
 
         if meta then
-            if band(decor,p_gs_2p) ~= 0 then
+            if band(decor,p_gs) ~= 0 then
                 error((i18n"You cannot qualify meta-methods with %s."):format(
-                    private .. "," .. protected .. "," .. get .. "," .. set
+                    get .. "," .. set
                 ));
             elseif not isFunction then
                 error((i18n"A function must be assigned to the meta-method. - %s"):format(key));
@@ -260,18 +286,34 @@ if Debug then
         local pms = ClassesPermissions[cls];
         local isConst = band(decor,p_const) ~= 0;
         if isFunction then
-            value = FunctionWrapper(cls,value,nil,isConst);
+            if meta and not band(decor,p_public) == 0 then
+                -- Meta methods are wrapped with MetaFunctionWrapper functions only when they are not public.
+                value = MetaFunctionWrapper(cls,value,isConst,disKey);
+            else
+                value = FunctionWrapper(cls,value,nil,isConst);
+            end
             if isConst then
                 -- Indicates that it is an internal const method.
                 decor = bor(decor,p_internalConstMethod);
             end
         end
 
-        if meta and isStatic then
-            local mt = getmetatable(cls);
-            mt[meta] = value;
-            Update2ChildrenClassMeta(cls,meta,value);
-            pms[disKey] = decor;
+        if band(decor,p_final) ~= 0 then
+            FinalClassesMembers[cls][disKey] = true;
+            Update2ChildrenWithKey(cls,FinalClassesMembers,disKey,true);
+        end
+
+        if meta then
+            if isStatic then
+                local mt = getmetatable(cls);
+                mt[meta] = value;
+                Update2ChildrenClassMeta(cls,meta,value);
+                pms[disKey] = decor;
+            else
+                local metas = ClassesMetas[cls];
+                metas[meta] = value;
+                Update2ChildrenWithKey(cls,ClassesMetas,meta,value);
+            end
         else
             if gs ~= 0 or isStatic then
                 local cms = ClassesMembers[cls];
@@ -320,17 +362,10 @@ if Debug then
                     Update2Children(cls,ClassesBanDelete,ban);
                 end
             end
-
-            pms[disKey] = decor;
         end
-
-        if band(decor,p_final) ~= 0 then
-            FinalClassesMembers[cls][disKey] = true;
-            Update2ChildrenWithKey(cls,FinalClassesMembers,disKey,true);
-        end
+        pms[disKey] = decor;
     end;
 else
-    local ClassesMetas = Internal.ClassesMetas;
     -- In non-debug mode, no attention is paid to any qualifiers other than static.
     Pass = function(self,key)
         local bit = BitsMap[key];
@@ -353,11 +388,17 @@ else
         end
         local isStatic = band(decor,p_static) ~= 0;
         local meta = MetaMapName[key];
-        if meta and isStatic then
-            -- Meta methods are special and can only accept static qualifiers.
-            local mt = getmetatable(cls);
-            mt[meta] = value;
-            Update2ChildrenClassMeta(cls,meta,value);
+        if meta then
+            if isStatic then
+                -- Meta methods are special and can only accept static qualifiers.
+                local mt = getmetatable(cls);
+                mt[meta] = value;
+                Update2ChildrenClassMeta(cls,meta,value);
+            else
+                local metas = ClassesMetas[cls];
+                metas[meta] = value;
+                Update2ChildrenWithKey(cls,ClassesMetas,meta,value);
+            end
             return;
         end
 
@@ -394,11 +435,6 @@ else
                 ClassesMembers[cls][key] = value;
                 Update2ChildrenWithKey(cls,ClassesMembers,key,value);
             end
-        end
-
-        if meta then
-            local metas = ClassesMetas[cls];
-            metas[key] = value;
         end
     end;
 end
