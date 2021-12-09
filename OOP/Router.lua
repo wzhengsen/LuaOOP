@@ -55,11 +55,10 @@ local delete = Config.delete;
 local nNew = "n" .. new;
 local nDelete = "n" .. delete;
 
-local private = Config.Qualifiers.private;
-local protected = Config.Qualifiers.protected;
 local static = Config.Qualifiers.static;
 local final = Config.Qualifiers.final;
 local virtual = Config.Qualifiers.virtual;
+local override = Config.Qualifiers.override;
 local get = Config.get;
 local set = Config.set;
 local GetPropertyAutoConst = Config.GetPropertyAutoConst;
@@ -72,7 +71,9 @@ local p_private = Permission.private;
 local p_protected = Permission.protected;
 local p_static = Permission.static;
 local p_virtual = Permission.virtual;
+local p_override = Permission.override;
 local p_get = Permission.get;
+local p_set = Permission.set;
 local p_final = Permission.final;
 local p_gs = Permission.get + Permission.set;
 local p_vf = Permission.virtual + Permission.final;
@@ -165,33 +166,7 @@ if Debug then
     end;
 
     Done = function(_,key,value)
-        if band(decor,p_gs) == p_gs then
-            -- Check set,get,they are p_gs
-            error((i18n"%s,%s cannot be used at the same time."):format(get,set));
-        elseif band(decor,p_vf) == p_vf then
-            -- Check virtual,final,they are p_vf
-            error((i18n"%s,%s cannot be used at the same time."):format(final,virtual));
-        end
-
-        local ppp_flag = band(decor,p_3p);
-        if ppp_flag == 0 then
-            -- Without the public qualifier, public is added by default.
-            decor = bor(decor,p_public);
-        elseif ppp_flag ~= p_public and ppp_flag ~= p_private and ppp_flag ~= p_protected then
-            -- Check public,private,protected,they are p_3p
-            error((i18n"The %s qualifier cannot be used in conjunction with other access qualifiers."):format(key));
-        end
-
         local isStatic = band(decor,p_static) ~= 0;
-        local isVirtual = band(decor,p_virtual) ~= 0;
-        if isVirtual then
-            if value ~= 0 then
-                error((i18n"The pure virtual function %s must be assigned a value of 0."):format(key));
-            elseif isStatic then
-                error((i18n"The pure virtual function %s cannot be defined as a static function."):format(key));
-            end
-        end
-
         local meta = MetaMapName[key];
         local gs = band(decor,p_gs);
         local isGet = gs == p_get;
@@ -216,6 +191,55 @@ if Debug then
 
         if FinalClassesMembers[cls][disKey] then
             error((i18n"You cannot define final members again. - %s"):format(key));
+        end
+
+        local isVirtual = band(decor,p_virtual) ~= 0;
+        local vcp = VirtualClassesPermissons[cls];
+        local vPermisson = vcp[disKey];
+        if band(decor,p_override) ~= 0 then
+            if isVirtual then
+                error((i18n"%s,%s cannot be used at the same time."):format(override,virtual));
+            elseif nil == vPermisson then
+                error((i18n"Only pure virtual functions can be overridden. - %s"):format(key));
+            end
+            -- Strip the override and possible final properties,
+            -- check if the remaining properties are get/set/0,
+            -- and then check if they match the properties of the pure virtual function,
+            -- otherwise, raise an error.
+            local strippedDector = bor(decor - p_override,p_final) - p_final;
+            if strippedDector == p_get or strippedDector == p_set or strippedDector == 0 then
+                if band(strippedDector,vPermisson) ~= strippedDector then
+                    error((i18n"A different access qualifier is used when you override pure virtual functions. - %s"):format(key));
+                end
+            else
+                error((i18n"The %s function was overridden with an illegal qualifier."):format(key));
+            end
+            decor = bor(vPermisson,decor - p_override);
+        end
+
+        if band(decor,p_gs) == p_gs then
+            -- Check set,get,they are p_gs
+            error((i18n"%s,%s cannot be used at the same time."):format(get,set));
+        elseif band(decor,p_vf) == p_vf then
+            -- Check virtual,final,they are p_vf
+            error((i18n"%s,%s cannot be used at the same time."):format(final,virtual));
+        end
+
+        local ppp_flag = band(decor,p_3p);
+        if ppp_flag == 0 then
+            -- Without the public qualifier, public is added by default.
+            decor = bor(decor,p_public);
+        elseif ppp_flag ~= p_public and ppp_flag ~= p_private and ppp_flag ~= p_protected then
+            -- Check public,private,protected,they are p_3p
+            error((i18n"The %s qualifier cannot be used in conjunction with other access qualifiers."):format(key));
+        end
+
+        if isVirtual then
+            if value ~= 0 then
+                error((i18n"The pure virtual function %s must be assigned a value of 0."):format(key));
+            elseif isStatic then
+                error((i18n"The pure virtual function %s cannot be defined as a static function."):format(key));
+            end
         end
 
         local bit = BitsMap[key] or RouterReservedWord[key];
@@ -252,10 +276,8 @@ if Debug then
             decor = bor(decor,p_const);
         end
 
-        local vcp = VirtualClassesPermissons[cls];
         if isVirtual then
             local vcm = VirtualClassesMembers[cls];
-            local vPermisson = vcp[disKey];
             -- Always update the permission of the virtual function.
             local vp = bor(decor,p_virtual) - p_virtual;
             vcp[disKey] = vp;
@@ -269,7 +291,6 @@ if Debug then
             return;
         end
 
-        local vPermisson = vcp[disKey];
         if vPermisson then
             local vcm = VirtualClassesMembers[cls];
             -- Check pure virtual functions.

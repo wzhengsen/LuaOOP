@@ -32,6 +32,7 @@ local static = Config.Qualifiers.static;
 local const = Config.Qualifiers.const;
 local final = Config.Qualifiers.final;
 local virtual = Config.Qualifiers.virtual;
+local override = Config.Qualifiers.override;
 local get = Config.get;
 local set = Config.set;
 
@@ -45,12 +46,13 @@ local BitsMap = {
     [get] = 2 ^ 6,
     [set] = 2 ^ 7,
     [virtual] = 2 ^ 8,
+    [override] = 2 ^ 9,
 
     -- Used to instruct const methods internally,
     -- external code doesn't need to care about this.
-    __InternalConstMethod = 2 ^ 9,
+    __InternalConstMethod = 2 ^ 10,
 
-    max = (2 ^ 10) - 1
+    max = (2 ^ 11) - 1
 };
 if LuaVersion > 5.2 then
     for k, v in pairs(BitsMap) do
@@ -66,7 +68,8 @@ local Permission = {
     final = BitsMap[final],
     get = BitsMap[get],
     set = BitsMap[set],
-    virtual = BitsMap[virtual]
+    virtual = BitsMap[virtual],
+    override = BitsMap[override],
 };
 
 return {
@@ -114,6 +117,8 @@ return {
         [Config.Qualifiers.const] = true,
         [Config.Qualifiers.static] = true,
         [Config.Qualifiers.final] = true,
+        [Config.Qualifiers.virtual] = true,
+        [Config.Qualifiers.override] = true,
         [Config.new] = true,
         [Config.delete] = true,
         [Config.is] = true,
@@ -126,6 +131,7 @@ return {
         [Config.delete] = true,
         [Config.is] = true,
         [Config.handlers] = true,
+        [Config.friends] = true,
         [Config.__new__] = true,
         [Config.__delete__] = true,
         [Config.__singleton__] = true

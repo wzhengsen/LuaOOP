@@ -156,6 +156,12 @@ local LanguageMap = {
     },
     ["A different access qualifier is used when you override pure virtual functions. - %s"] = {
         zh = "在你重写纯虚函数时使用了不同的访问修饰符。- %s"
+    },
+    ["Only pure virtual functions can be overridden. - %s"] = {
+        zh = "只能重写纯虚函数。- %s"
+    },
+    ["The %s function was overridden with an illegal qualifier."] = {
+        zh = "重写%s函数时使用了不合法的修饰符。"
     }
 };
 
