@@ -162,6 +162,12 @@ local LanguageMap = {
     },
     ["The %s function was overridden with an illegal qualifier."] = {
         zh = "重写%s函数时使用了不合法的修饰符。"
+    },
+    ["The '...' parameter must be at the end of the list."] = {
+        zh = "不定参数必须位于列表的最后。"
+    },
+    ["The parameter type is not supported. - %s"] = {
+        zh = "不被支持的参数类型。 - %s"
     }
 };
 

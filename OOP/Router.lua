@@ -83,6 +83,7 @@ local Router = {};
 
 local Pass = nil;
 local Done = nil;
+local virtualKey = nil;
 local decor = 0;
 local cls = 0;
 local function Begin(self,outCls,key)
@@ -92,6 +93,59 @@ local function Begin(self,outCls,key)
 end
 
 if Debug then
+    local signMap = {
+        s = "string",
+        n = "number",
+        i = "integer",
+        d = "float",
+        v = "nil",
+        f = "function",
+        t = "table",
+        b = "boolean",
+        x = "thread",
+        u = "userdata",
+        ["?"] = "nil"
+    };
+
+    ---Check that the parameter type signature conforms to the specification.
+    ---@param sign  string   @The parameter type signature.
+    ---@param last? boolean  @If or not it is the last parameter type signature.
+    local CheckSign = function(sign,last)
+        if "string" ~= type(sign) then
+            error(i18n("The parameter type is not supported. - %s"):format(sign));
+        end
+        if sign == "..." then
+            if not last then
+                error(i18n"The '...' parameter must be at the end of the list.");
+            end
+        elseif sign ~= "*" then
+            for j = 1,#sign do
+                local char = sign:sub(j,j);
+                if not signMap[char] then
+                    error(i18n("The parameter type is not supported. - %s"):format(char));
+                end
+            end
+        end
+    end
+    local retSign = setmetatable({},{
+        __index = function(self,key)
+            CheckSign(key);
+            return self;
+        end,
+        __newindex = function (_,key,value)
+            CheckSign(key,true);
+            Done(nil,virtualKey,value);
+        end
+    });
+    local function SimulationVirtualFunction(...)
+        local args = {...};
+        local len = #args;
+        for i,sign in ipairs(args) do
+            CheckSign(sign,i == len);
+        end
+        return retSign;
+    end
+
     local ctor = Config.ctor;
     local dtor = Config.dtor;
 
@@ -151,6 +205,11 @@ if Debug then
         if bit then
             decor = bor(decor,bit);
         else
+            local isVirtual = band(decor,p_virtual) ~= 0;
+            if isVirtual then
+                virtualKey = key;
+                return SimulationVirtualFunction;
+            end
             local gs = band(decor,p_gs);
             if gs ~= 0 then
                 local isGet = gs == p_get;
@@ -387,12 +446,31 @@ if Debug then
         pms[disKey] = decor;
     end;
 else
+
+    -- In Release mode, it is sufficient to use the empty implementation.
+    local retSign = setmetatable({},{
+        __index = function(self)
+            return self;
+        end,
+        __newindex = function (_,_,value)
+            Done(nil,virtualKey,value);
+        end
+    });
+    local function SimulationVirtualFunction(...)
+        return retSign;
+    end
+
     -- In non-debug mode, no attention is paid to any qualifiers other than static.
     Pass = function(self,key)
         local bit = BitsMap[key];
         if bit then
             decor = bor(decor,bit);
         else
+            local isVirtual = band(decor,p_virtual) ~= 0;
+            if isVirtual then
+                virtualKey = key;
+                return SimulationVirtualFunction;
+            end
             local get_set = band(decor,p_gs);
             if get_set ~= 0 then
                 local property = (get_set == p_get and ClassesReadable or ClassesWritable)[cls][key];
