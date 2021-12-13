@@ -51,14 +51,14 @@ local Config = {
 
     friends = "friends",
 
-    -- If __singleton__ is defined,
+    -- If __singleton is defined,
     -- then the class can only access the singleton using the Instance property
     -- and "new" will be automatically modified to the protected.
-    __singleton__ = "__singleton__",
+    __singleton = "__singleton",
 
     -- Constructor and destructor names.
-    __new__ = "__new__",
-    __delete__ = "__delete__",
+    __new = "__new",
+    __delete = "__delete",
 
     ctor = "ctor",
     dtor = "dtor",
@@ -73,33 +73,33 @@ local Config = {
     -- Meta function names.
     -- You must implement the meta-function to make it work which is named Meta's value.
     Meta = {
-        __add = "__add__",
-        __sub = "__sub__",
-        __mul = "__mul__",
-        __mod = "__mod__",
-        __pow = "__pow__",
-        __div = "__div__",
-        __unm = "__unm__",
+        __add = "__add",
+        __sub = "__sub",
+        __mul = "__mul",
+        __mod = "__mod",
+        __pow = "__pow",
+        __div = "__div",
+        __unm = "__unm",
 
-        __lt = "__lt__",
-        __le = "__le__",
-        __concat = "__concat__",
-        __call = "__call__",
-        __gc = "__gc__",
-        __eq = "__eq__",
-        __pairs = "__pairs__",
-        __len = "__len__",
-        __tostring = "__tostring__",
+        __lt = "__lt",
+        __le = "__le",
+        __concat = "__concat",
+        __call = "__call",
+        __gc = "__gc",
+        __eq = "__eq",
+        __pairs = "__pairs",
+        __len = "__len",
+        __tostring = "__tostring",
 
-        __idiv = LuaVersion > 5.2 and "__idiv__" or nil,
-        __band = LuaVersion > 5.2 and "__band__" or nil,
-        __bor = LuaVersion > 5.2 and "__bor__" or nil,
-        __bxor = LuaVersion > 5.2 and "__bxor__" or nil,
-        __shl = LuaVersion > 5.2 and "__shl__" or nil,
-        __shr = LuaVersion > 5.2 and "__shr__" or nil,
-        __bnot = LuaVersion > 5.2 and "__bnot__" or nil,
+        __idiv = LuaVersion > 5.2 and "__idiv" or nil,
+        __band = LuaVersion > 5.2 and "__band" or nil,
+        __bor = LuaVersion > 5.2 and "__bor" or nil,
+        __bxor = LuaVersion > 5.2 and "__bxor" or nil,
+        __shl = LuaVersion > 5.2 and "__shl" or nil,
+        __shr = LuaVersion > 5.2 and "__shr" or nil,
+        __bnot = LuaVersion > 5.2 and "__bnot" or nil,
 
-        __close = LuaVersion > 5.3 and "__close__" or nil
+        __close = LuaVersion > 5.3 and "__close" or nil
     },
 
     -- Qualifiers names.
@@ -117,7 +117,7 @@ local Config = {
         override = "override"
     },
 
-    -- If __singleton__ is defined,
+    -- If __singleton is defined,
     -- this property will be generated automatically.
     Instance = "Instance",
 

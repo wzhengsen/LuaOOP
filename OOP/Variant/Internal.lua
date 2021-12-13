@@ -86,7 +86,7 @@ return {
     ClassesChildren = setmetatable({},WeakTable),
     ClassesMembers = setmetatable({},WeakTable),
     ClassesMetas = setmetatable({},WeakTable),
-    -- In order to keep __new__/__delete__/__singleton__ from being freely available and used externally,
+    -- In order to keep __new/__delete/__singleton from being freely available and used externally,
     -- they are stored in ClassesNew/ClassesDelete/ClassesSingleton instead of directly in the class.
     ClassesNew = setmetatable({},WeakTable),
     ClassesDelete = setmetatable({},WeakTable),
@@ -132,9 +132,9 @@ return {
         [Config.is] = true,
         [Config.handlers] = true,
         [Config.friends] = true,
-        [Config.__new__] = true,
-        [Config.__delete__] = true,
-        [Config.__singleton__] = true
+        [Config.__new] = true,
+        [Config.__delete] = true,
+        [Config.__singleton] = true
     },
     Permission = Permission,
     BitsMap = BitsMap,

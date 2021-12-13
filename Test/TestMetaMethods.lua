@@ -10,16 +10,16 @@ function Point:ctor(x,y)
     end
 end
 
-function Point:__add__(another)
+function Point:__add(another)
     return Point.new(self.x + another.x, self.y + another.y);
 end
 
-function Point.static:__call__(...)
+function Point.static:__call(...)
     return self.new(...);
 end
 
 local AnotherPoint = class(Point);
-function AnotherPoint:__call__()
+function AnotherPoint:__call()
     return self.x,self.y;
 end
 

@@ -13,7 +13,7 @@ function Device:GetBattery()
     return self.battery;
 end
 
-function Device:__singleton__()
+function Device:__singleton()
     return Device.new();
 end
 
