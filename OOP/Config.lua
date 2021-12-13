@@ -32,6 +32,7 @@ local Config = {
     -- please modify the following mapping.
 
     class = "class",
+    struct = "struct",
 
     ["class.default"] = "default",
     ["class.delete"] = "delete",
