@@ -757,21 +757,21 @@ function Point:ctor(x,y)
     end
 end
 
-function Point:__add__(another)
+function Point:__add(another)
     return Point.new(self.x + another.x, self.y + another.y);
 end
 
-function Point:__tostring__()
+function Point:__tostring()
     return "x = " .. self.x .. ";y = " .. self.y .. ";";
 end
 
 -- 元方法比较特殊，只能使用static修饰。
-function Point.static:__call__(...)
+function Point.static:__call(...)
     return self.new(...);
 end
 
 local AnotherPoint = class(Point);
-function AnotherPoint:__call__()
+function AnotherPoint:__call()
     return self.x,self.y;
 end
 
@@ -779,7 +779,7 @@ local p1 = Point.new(1,2);
 local p2 = Point.new(2,3);
 -- 此时调用__add__
 local p3 = p1 + p2;
--- 此时调用static.__call__
+-- 此时调用static.__call
 local p4 = Point(3,4);
 
 -- 此时调用__tostring__
@@ -881,7 +881,7 @@ function Device:dtor()
     print("单例已析构。");
 end
 -- 定义__singleton__来获取单例。
-function Device:__singleton__()
+function Device:__singleton()
     return Device.new();
 end
 
@@ -922,7 +922,7 @@ local File = class();
 -- 注册__new__方法来返回外部类生成的对象，也可以返回nil值。
 -- __new__方法会改变该类的默认生成行为（默认行为是生成一个表），
 -- 且该方法会被继承。
-function File.__new__(...)
+function File.__new(...)
     return io.open(...);
 end
 
@@ -967,7 +967,7 @@ local File = class(io);
 -- 也可以使用如下方式：
 -- local File = class(getmetatable(io.stdout).__index);
 
-function File.__new__(...)
+function File.__new(...)
     return io.open(...);
 end
 local file = File.new(__test__,"w");
@@ -999,7 +999,7 @@ end
 require("OOP.Class");
 
 local File = class(io);
-function File.__new__(...)
+function File.__new(...)
     return io.open(...);
 end
 
@@ -1018,10 +1018,10 @@ print(class.null(file));-- true
 local ExtClass = require("你的外部函数库");
 require("OOP.Class");
 local LuaClass = class(ExtClass);
-function LuaClass.__new__(...)
+function LuaClass.__new(...)
     return ExtClass.你的内存分配函数(...);
 end
-function LuaClass:__delete__()
+function LuaClass:__delete()
     ExtClass.你的内存释放函数(self);
 end
 function LuaClass:dtor()

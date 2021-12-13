@@ -59,15 +59,15 @@ local ctor = Config.ctor;
 local dtor = Config.dtor;
 local nCtor = "n" .. ctor;
 local nDtor = "n" .. dtor;
-local __new__ = Config.__new__;
-local __delete__ = Config.__delete__;
+local __new = Config.__new;
+local __delete = Config.__delete;
 
 local static = Config.Qualifiers.static;
 local get = Config.get;
 local set = Config.set;
 
 local friends = Config.friends;
-local __singleton__ = Config.__singleton__;
+local __singleton = Config.__singleton;
 local Instance = Config.Instance;
 local handlers = Config.handlers;
 local Meta = Config.Meta;
@@ -538,7 +538,7 @@ local function ClassSet(cls,key,value)
         Update2Children(cls,keyTable,ban);
     end
 
-    if key == __singleton__ then
+    if key == __singleton then
         if not isFunction then
             error((i18n"%s reserved word must be assigned to a function."):format(key));
         end
@@ -549,7 +549,7 @@ local function ClassSet(cls,key,value)
         cls[static][set][Instance] = function(val)
             DestroySingleton(cls,val)
         end;
-        -- Once register "__singleton__" for a class,set permission of "new","delete" method to protected.
+        -- Once register "__singleton" for a class,set permission of "new","delete" method to protected.
         local pms = ClassesPermissions[cls];
         local pm = pms[nNew];
         if band(pm,p_private) == 0 then
@@ -557,7 +557,7 @@ local function ClassSet(cls,key,value)
         end
         pms[nDelete] = p_protected;
         return;
-    elseif key == __new__ then
+    elseif key == __new then
         if not isFunction then
             error((i18n"%s reserved word must be assigned to a function."):format(key));
         end
@@ -565,7 +565,7 @@ local function ClassSet(cls,key,value)
         ClassesNew[cls] = value;
         Update2Children(cls,ClassesNew,value);
         return;
-    elseif key == __delete__ then
+    elseif key == __delete then
         if not isFunction then
             error((i18n"%s reserved word must be assigned to a function."):format(key));
         end

@@ -16,7 +16,7 @@ RestoreFileMeta();
 
 local File = class();
 
-function File.__new__(...)
+function File.__new(...)
     return io.open(...);
 end
 
@@ -51,7 +51,7 @@ assert(not ok);
 
 local FileIO = class(io);
 
-function FileIO.__new__(...)
+function FileIO.__new(...)
     return io.open(...);
 end
 

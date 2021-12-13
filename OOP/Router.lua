@@ -198,7 +198,7 @@ if Debug then
     -- 1 - public/private/protected cannot be used together;
     -- 2 - static cannot qualify constructors and destructors;
     -- 3 - Can't use qualifiers that don't exist;
-    -- 4 - Reserved words cannot be modified (__singleton__/friends/handlers);
+    -- 4 - Reserved words cannot be modified (__singleton/friends/handlers);
     -- 5 - (get/set) and (virtual/final) cannot be used together.
     Pass = function(self,key)
         local bit = BitsMap[key];

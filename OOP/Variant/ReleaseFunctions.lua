@@ -56,12 +56,12 @@ local new = Config.new;
 local is = Config.is;
 local __cls__ = Config.__cls__;
 
-local __singleton__ = Config.__singleton__;
+local __singleton = Config.__singleton;
 local Instance = Config.Instance;
 local handlers = Config.handlers;
 local friends = Config.friends;
-local __new__ = Config.__new__;
-local __delete__ = Config.__delete__;
+local __new = Config.__new;
+local __delete = Config.__delete;
 local Meta = Config.Meta;
 local static = Config.Qualifiers.static;
 local get = Config.get;
@@ -743,7 +743,7 @@ local function ClassGet(cls,key)
 end
 
 local function ClassSet(cls,key,value)
-    if key == __singleton__ then
+    if key == __singleton then
         -- Register "Instance" automatically.
         cls[static][get][Instance] = function ()
             return GetSingleton(cls,value);
@@ -752,11 +752,11 @@ local function ClassSet(cls,key,value)
             DestroySingleton(cls,val)
         end;
         return;
-    elseif key == __new__ then
+    elseif key == __new then
         ClassesNew[cls] = value;
         Update2Children(cls,ClassesNew,value);
         return;
-    elseif key == __delete__ then
+    elseif key == __delete then
         ClassesDelete[cls] = value;
         Update2Children(cls,ClassesDelete,value);
         return;
