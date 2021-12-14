@@ -22,6 +22,7 @@
 local type = type;
 
 require("OOP.Enum");
+require("OOP.Struct");
 local Config = require("OOP.Config");
 local Internal = require("OOP.Variant.Internal");
 local Debug = Config.Debug;

@@ -77,6 +77,7 @@ return {
     ClassesChildrenByName = {},
     DeathMark = setmetatable({},WeakTable),
     AllClasses = setmetatable({},WeakTable),
+    AllStructs = setmetatable({},WeakTable),
     AllEnumerations = setmetatable({},WeakTable),
     ClassesReadable = setmetatable({},WeakTable),
     ClassesWritable = setmetatable({},WeakTable),
