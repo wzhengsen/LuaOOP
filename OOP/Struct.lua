@@ -27,6 +27,7 @@ local ipairs = ipairs;
 local type = type;
 local select = select;
 local error = error;
+local rawset = rawset;
 local Internal = require("OOP.Variant.Internal");
 local Config = require("OOP.Config");
 local BaseFunctions = require("OOP.BaseFunctions");
@@ -34,10 +35,24 @@ local i18n = require("OOP.i18n");
 local Meta = Config.Meta;
 local AllStructs = Internal.AllStructs;
 local StructsMembers = Internal.ClassesMembers;
+local StructsDelays = Internal.ClassesStatic;
 local Copy = BaseFunctions.Copy;
 local ctor = Config.ctor;
 local struct = Config.struct;
 local Debug = Config.Debug;
+
+local function MetaCascadeGet(bases,tab)
+    return {
+        __index = function(t, k)
+            for _,base in ipairs(bases) do
+                local ret = tab[base][k];
+                if nil ~= ret then
+                    return ret;
+                end
+            end
+        end
+    };
+end
 
 local function StructBuild(bases)
     return function (proto)
@@ -49,17 +64,10 @@ local function StructBuild(bases)
         end
         -- Member table containing only the fields of non-function and non-meta methods.
         -- And these fields are not changed after initialization.
-        local members = setmetatable({},{
-            __index = function (_,key)
-                for _,base in ipairs(bases) do
-                    local ret = StructsMembers[base][key];
-                    if nil ~= ret then
-                        return ret;
-                    end
-                end
-            end
-        });
+        local members = setmetatable({},MetaCascadeGet(bases,StructsMembers));
+        local delays = setmetatable({},MetaCascadeGet(bases,StructsDelays));
         StructsMembers[proto] = members;
+        StructsDelays[proto] = delays;
         AllStructs[proto] = true;
 
         -- 1.Here all "members" are assigned only from the inherited structure.
@@ -97,11 +105,22 @@ local function StructBuild(bases)
                 if ret ~= nil then
                     return ret;
                 end
+                ret = delays[k];
+                if ret ~= nil then
+                    return ret;
+                end
                 for _,base in ipairs(bases) do
                     ret = base[k];
                     if ret ~= nil then
                         return ret;
                     end
+                end
+            end,
+            __newindex = function (_,k,v)
+                if Meta[k] or type(v) == "function" then
+                    rawset(proto,k,v);
+                else
+                    delays[k] = v;
                 end
             end,
             __call = function (_,...)
