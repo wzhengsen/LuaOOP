@@ -168,6 +168,15 @@ local LanguageMap = {
     },
     ["The parameter type is not supported. - %s"] = {
         zh = "不被支持的参数类型。 - %s"
+    },
+    ["Struct be used on a table with metatable."] = {
+        zh = "结构体被用于一个具有元表的表。"
+    },
+    ["The base structure is not a struct type."] = {
+        zh = "继承的基结构体不是一个结构体类型。"
+    },
+    ["The structure must be declared as a table."] = {
+        zh = "结构体必须被声明为一个表。"
     }
 };
 

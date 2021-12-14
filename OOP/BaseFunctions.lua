@@ -76,31 +76,31 @@ local function Update2ChildrenClassMeta(cls,key,value)
     end
 end
 
+local function _Copy(any,existTab)
+    if type(any) ~= "table" then
+        return any;
+    end
+    local ret = existTab[any];
+    if nil ~= ret then
+        return ret;
+    end
+
+    local tempTab = {};
+    existTab[any] = tempTab;
+    for k,v in pairs(any) do
+        tempTab[_Copy(k,existTab)] = _Copy(v,existTab);
+    end
+    return tempTab;
+end
+
 ---Copy any value.
 ---
 ---@param any any
 ---@return any
 ---
-local function Copy(any,existTab)
-    if type(any) ~= "table" then
-        return any;
-    end
-    if existTab then
-        local ret = existTab[any];
-        if nil ~= ret then
-            return ret;
-        end
-    end
-
-    existTab = existTab or {};
-    local tempTab = {};
-    existTab[any] = tempTab;
-    for k,v in pairs(any) do
-        tempTab[Copy(k,existTab)] = Copy(v,existTab);
-    end
-    return tempTab;
+local Copy = function (any)
+    return _Copy(any,{});
 end
-
 
 local function ClassBasesIsRecursive(baseCls,bases)
     for _,base in ipairs(bases) do

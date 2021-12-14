@@ -20,62 +20,114 @@
 -- THE SOFTWARE.
 
 local setmetatable = setmetatable;
+local getmetatable = getmetatable;
+local warn = warn or print;
+local pairs = pairs;
+local ipairs = ipairs;
 local type = type;
+local select = select;
+local error = error;
 local Internal = require("OOP.Variant.Internal");
 local Config = require("OOP.Config");
 local BaseFunctions = require("OOP.BaseFunctions");
-local ClassesBases = Internal.ClassesBases;
+local i18n = require("OOP.i18n");
+local Meta = Config.Meta;
+local AllStructs = Internal.AllStructs;
+local StructsMembers = Internal.ClassesMembers;
 local Copy = BaseFunctions.Copy;
-local struct = Config.struct;
-local new = Config.new;
 local ctor = Config.ctor;
-local dtor = Config.dtor;
+local struct = Config.struct;
+local Debug = Config.Debug;
 
-local function CopyProto(proto,sObj)
-    if proto ~= nil then
-        for k,v in pairs(proto) do
-            local pt = type(v);
-            if pt ~= "function" then
-                sObj[k] = pt == "table" and Copy(v) or v;
+local function StructBuild(bases)
+    return function (proto)
+        if Debug and type(proto) ~= "table" then
+            error(i18n"The structure must be declared as a table.");
+        end
+        if nil ~= getmetatable(proto) then
+            warn(i18n"Struct be used on a table with metatable.");
+        end
+        -- Member table containing only the fields of non-function and non-meta methods.
+        -- And these fields are not changed after initialization.
+        local members = setmetatable({},{
+            __index = function (_,key)
+                for _,base in ipairs(bases) do
+                    local ret = StructsMembers[base][key];
+                    if nil ~= ret then
+                        return ret;
+                    end
+                end
+            end
+        });
+        StructsMembers[proto] = members;
+        AllStructs[proto] = true;
+
+        -- 1.Here all "members" are assigned only from the inherited structure.
+        for _,base in ipairs(bases) do
+            local baseMembers = StructsMembers[base];
+            for k,v in pairs(baseMembers) do
+                members[k] = v;
             end
         end
-    end
-    local bases = ClassesBases[proto];
-    if bases ~= nil then
-        for _,v in ipairs(bases) do
-            CopyProto(v,sObj);
-        end
-    end
-end
 
-local function StructBuild(...)
-    local args = {...};
-    return function (proto)
-        local meta = {
+        -- 2.Moves non-meta methods and non-function fields from the prototype to members.
+        for k,v in pairs(proto) do
+            if not Meta[k] and type(v) ~= "function" then
+                members[k] = v;
+                proto[k] = nil;
+            end
+        end
+
+        -- 3.Assign the inherited value to the current structure.
+        -- Note:
+        -- Do not combine this step with step 1 because some fields may be delayed declarations
+        -- and the members of the structure do not contain delayed declarations of the fields.
+        for _,base in ipairs(bases) do
+            for k,v in pairs(base) do
+                if nil == proto[k] then
+                    proto[k] = v;
+                end
+            end
+        end
+
+        proto.__index = proto;
+        return setmetatable(proto,{
             __index = function (_,k)
-                local ret = proto[k];
+                local ret = members[k];
                 if ret ~= nil then
                     return ret;
                 end
+                for _,base in ipairs(bases) do
+                    ret = base[k];
+                    if ret ~= nil then
+                        return ret;
+                    end
+                end
+            end,
+            __call = function (_,...)
+                local sObj = setmetatable(Copy(members),proto);
+                local _ctor = proto[ctor];
+                if _ctor then
+                    _ctor(sObj, ...);
+                end
+                return sObj;
             end
-        };
-        proto[new] = function (...)
-            local sObj = setmetatable({},meta);
-            local _ctor = sObj[ctor];
-            if _ctor then
-                _ctor(sObj, ...);
-            end
-            return sObj;
-        end;
-        return setmetatable(proto, {
-            __index = args
         });
     end;
 end
 
-local function Struct(...)
-
-end
-
-
-_G[struct] = Struct;
+_G[struct] = function(...)
+    local len = select("#",...);
+    if len == 1 and nil == AllStructs[...] then
+        return StructBuild({})(...);
+    end
+    local bases = {...};
+    if Debug then
+        for _,v in ipairs(bases) do
+            if not AllStructs[v] then
+                error(i18n"The base structure is not a struct type.");
+            end
+        end
+    end
+    return StructBuild(bases);
+end;
