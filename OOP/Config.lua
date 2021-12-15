@@ -157,6 +157,9 @@ local Config = {
     -- "get" property will be qualified with const if this is true.
     GetPropertyAutoConst = false,
 
+    -- Whether to clean up members in Release mode.
+    ClearMembersInRelease = true,
+
     -- Used to extend inherited external classes.
     ExternalClass = {
         ---Function to determine if userdata is empty.

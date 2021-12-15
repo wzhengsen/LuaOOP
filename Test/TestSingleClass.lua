@@ -1,5 +1,6 @@
 -- Single class.
-local Debug = require("OOP.Config").Debug;
+local Config = require("OOP.Config");
+local Debug = Config.Debug;
 
 local Point = class();
 Point.x = 0;
@@ -51,7 +52,7 @@ assert(p1.data.others ~= p2.data.others);
 
 p1:delete();
 p2:delete();
-if Debug then
+if Debug or Config.ClearMembersInRelease then
     assert(p1.x == nil);
     assert(p2.y == nil);
 else

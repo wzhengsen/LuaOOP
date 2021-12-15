@@ -91,6 +91,8 @@ local ObjectsAll = Functions.ObjectsAll;
 local ObjectsCls = Functions.ObjectsCls;
 local DeathMark = Functions.DeathMark;
 
+local ClearMembersInRelease = Config.ClearMembersInRelease;
+
 ---Get the single instance, where it is automatically judged empty
 ---and does not require the user to care.
 ---
@@ -623,7 +625,28 @@ local function CallDel(self)
     ObjectsAll[self] = nil;
 end
 
-local function CreateClassDelete(cls)
+local CreateClassDelete = ClearMembersInRelease and function(cls)
+    return function (self)
+        CascadeDelete(self,cls,{});
+        local d = ClassesDelete[cls];
+        if d then
+            d(self);
+        else
+            local ut = "userdata" == type(self);
+            if ut then
+                d_setmetatable(self,nil);
+            else
+                setmetatable(self,nil);
+                for k,_ in pairs(self) do
+                    self[k] = nil;
+                end
+            end
+        end
+        DeathMark[self] = true;
+        ObjectsAll[self] = nil;
+    end
+end or
+function (cls)
     return function (self)
         CascadeDelete(self,cls,{});
         local d = ClassesDelete[cls];
