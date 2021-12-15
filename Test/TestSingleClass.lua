@@ -10,8 +10,8 @@ Point.data = {
 };
 
 function Point:ctor(x,y)
-    assert(self.x == 0);
-    assert(self.y == 0);
+    assert(self.x == Point.x);
+    assert(self.y == Point.y);
     assert(type(self.data) == "table");
     assert(self.data.something == "");
     if x and y then
@@ -34,11 +34,17 @@ assert(p1.data.something == "1,2");
 assert(p1.data ~= Point.data);
 assert(p1.data.others ~= Point.data.others);
 
+Point.type = "Point";
+Point.x = 5;
+
 local p2 = Point.new();
+assert(p2.type == "Point");
+p2.type = nil;
+assert(p2.type == nil);
 local x,y = p1:GetXY();
 assert(x == 1 and y == 2);
 x,y = p2:GetXY();
-assert(x == 0 and y == 0);
+assert(x == 5 and y == 0);
 
 assert(p1.data ~= p2.data);
 assert(p1.data.others ~= p2.data.others);

@@ -28,6 +28,7 @@ local type = type;
 local select = select;
 local error = error;
 local rawset = rawset;
+local rawget = rawget;
 local Internal = require("OOP.Variant.Internal");
 local Config = require("OOP.Config");
 local BaseFunctions = require("OOP.BaseFunctions");
@@ -36,6 +37,7 @@ local Meta = Config.Meta;
 local AllStructs = Internal.AllStructs;
 local StructsMembers = Internal.ClassesMembers;
 local StructsDelays = Internal.ClassesStatic;
+local StructsBases = Internal.ClassesBases;
 local Copy = BaseFunctions.Copy;
 local ctor = Config.ctor;
 local struct = Config.struct;
@@ -43,7 +45,7 @@ local Debug = Config.Debug;
 
 local function MetaCascadeGet(bases,tab)
     return {
-        __index = function(t, k)
+        __index = function(_, k)
             for _,base in ipairs(bases) do
                 local ret = tab[base][k];
                 if nil ~= ret then
@@ -52,6 +54,25 @@ local function MetaCascadeGet(bases,tab)
             end
         end
     };
+end
+
+local function CascadeRawGet(proto,key)
+    local members = StructsMembers[proto];
+    local ret = members[key];
+    if nil ~= ret then
+        return ret;
+    end
+    ret = rawget(proto,key);
+    if nil ~= ret then
+        return ret;
+    end
+    local bases = StructsBases[proto];
+    for _,base in ipairs(bases) do
+        ret = CascadeRawGet(base,key);
+        if nil ~= ret then
+            return ret;
+        end
+    end
 end
 
 local function StructBuild(bases)
@@ -68,7 +89,9 @@ local function StructBuild(bases)
         local delays = setmetatable({},MetaCascadeGet(bases,StructsDelays));
         StructsMembers[proto] = members;
         StructsDelays[proto] = delays;
+        StructsBases[proto] = bases;
         AllStructs[proto] = true;
+
 
         -- 1.Here all "members" are assigned only from the inherited structure.
         for _,base in ipairs(bases) do
@@ -98,7 +121,9 @@ local function StructBuild(bases)
             end
         end
 
-        proto.__index = proto;
+        proto.__index = function (_,k)
+            return CascadeRawGet(proto,k);
+        end;
         return setmetatable(proto,{
             __index = function (_,k)
                 local ret = members[k];

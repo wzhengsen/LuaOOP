@@ -2,12 +2,13 @@ local Debug = require("OOP.Config").Debug;
 local Interface = class();
 
 Interface.protected.data = nil;
-Interface.virtual.DoSomething1 = 0;
+Interface.virtual.DoSomething1("t?","i").b = 0;
 Interface.virtual.DoSomething2 = 0;
 Interface.virtual.get.Data = 0;
 
 local Test1 = class(Interface);
-function Test1:DoSomething1()
+function Test1:DoSomething1(t,i)
+    return false;
 end
 local ok = pcall(function ()
     local test1 = Test1.new();
