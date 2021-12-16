@@ -162,7 +162,7 @@ end
 
 _G[struct] = function(...)
     local len = select("#",...);
-    if len == 1 and nil == AllStructs[...] then
+    if len == 1 and nil == AllStructs[(...)] then
         return StructBuild({})(...);
     end
     local bases = {...};
