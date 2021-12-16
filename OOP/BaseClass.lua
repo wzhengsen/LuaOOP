@@ -62,6 +62,9 @@ class[null] = _null;
 
 if Debug then
     class[final] = function (...)
+        if type((...)) == "string" then
+            FinalClasses[(...)] = true;
+        end
         local cls = class.New(...);
         FinalClasses[cls] = true;
         return cls;

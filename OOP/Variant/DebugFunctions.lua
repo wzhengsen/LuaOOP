@@ -104,6 +104,7 @@ local ObjectsAll = Functions.ObjectsAll;
 local ObjectsCls = Functions.ObjectsCls;
 local CreateClassTables = Functions.CreateClassTables;
 local ClassesStatic = Functions.ClassesStatic;
+local ClassesChildrenByName = Functions.ClassesChildrenByName;
 
 local ClassesAll = Functions.ClassesAll;
 local ClassesPermissions = Functions.ClassesPermissions;
@@ -760,6 +761,9 @@ function Functions.PushBase(cls,bases,base,handlers,members,metas)
 end
 
 function Functions.ClassInherite(cls,args,bases,handlers,members,metas,name)
+    if FinalClasses[name] and ClassesChildrenByName[name] then
+        error(i18n"You cannot inherit a final class.");
+    end
     for idx, base in ipairs(args) do
         local baseType = type(base);
         assert(
@@ -769,8 +773,16 @@ function Functions.ClassInherite(cls,args,bases,handlers,members,metas,name)
         );
         assert(not FinalClasses[base],i18n"You cannot inherit a final class.");
         for i,b in ipairs(args) do
-            if b == base and idx ~= i then
-                error(i18n"It is not possible to inherit from the same class repeatedly.");
+            if idx ~= i then
+                if type(b) == "string" then
+                    local namedCls = NamedClasses[b];
+                    if namedCls then
+                        b = namedCls;
+                    end
+                end
+                if b == base then
+                    error(i18n"It is not possible to inherit from the same class repeatedly.");
+                end
             end
         end
     end
