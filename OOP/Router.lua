@@ -56,6 +56,7 @@ local nNew = "n" .. new;
 local nDelete = "n" .. delete;
 
 local static = Config.Qualifiers.static;
+local const = Config.Qualifiers.const;
 local final = Config.Qualifiers.final;
 local virtual = Config.Qualifiers.virtual;
 local override = Config.Qualifiers.override;
@@ -335,6 +336,11 @@ if Debug then
             decor = bor(decor,p_const);
         end
 
+        local isConst = band(decor,p_const) ~= 0;
+        if isConst and (key == ctor or key == dtor) then
+            error((i18n"%s qualifier cannot qualify %s method."):format(const,key));
+        end
+
         if isVirtual then
             local vcm = VirtualClassesMembers[cls];
             -- Always update the permission of the virtual function.
@@ -364,7 +370,6 @@ if Debug then
 
         local oVal = value;
         local pms = ClassesPermissions[cls];
-        local isConst = band(decor,p_const) ~= 0;
         if isFunction then
             if meta and not band(decor,p_public) == 0 then
                 -- Meta methods are wrapped with MetaFunctionWrapper functions only when they are not public.

@@ -22,4 +22,4 @@ assert(d.is() ~= A)
 
 assert(B.is(A));
 assert(not C.is(B));
-assert(C.is() == C)
+assert(C.is() == C);
