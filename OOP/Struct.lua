@@ -42,6 +42,7 @@ local Copy = BaseFunctions.Copy;
 local ctor = Config.ctor;
 local struct = Config.struct;
 local Debug = Config.Debug;
+local StructBehavior = Config.StructBehavior;
 
 local function MetaCascadeGet(bases,tab)
     return {
@@ -72,6 +73,35 @@ local function CascadeRawGet(proto,key)
         if nil ~= ret then
             return ret;
         end
+    end
+end
+
+local ProtoNewIndexMeta = nil;
+if Debug then
+    if StructBehavior == 0 then
+        ProtoNewIndexMeta = function(obj,key,value)
+            local m = StructsMembers[getmetatable(obj)];
+            if m[key] == nil then
+                warn(i18n"You are attempting to add a field to the struct.");
+            end
+            rawset(obj,key,value);
+        end;
+    elseif StructBehavior == 1 then
+        ProtoNewIndexMeta = function(obj,key,value)
+            local m = StructsMembers[getmetatable(obj)];
+            if m[key] == nil then
+                error(i18n"You are attempting to add a field to the struct and that behavior is prohibited.");
+            end
+            rawset(obj,key,value);
+        end;
+    elseif StructBehavior ~= 2 then
+        ProtoNewIndexMeta = function(obj,key,value)
+            local m = StructsMembers[getmetatable(obj)];
+            if m[key] == nil then
+                return;
+            end
+            rawset(obj,key,value);
+        end;
     end
 end
 
@@ -124,6 +154,7 @@ local function StructBuild(bases)
         proto.__index = function (_,k)
             return CascadeRawGet(proto,k);
         end;
+        proto.__newindex = ProtoNewIndexMeta;
         return setmetatable(proto,{
             __index = function (_,k)
                 local ret = members[k];

@@ -177,6 +177,12 @@ local LanguageMap = {
     },
     ["The structure must be declared as a table."] = {
         zh = "结构体必须被声明为一个表。"
+    },
+    ["You are attempting to add a field to the struct."] = {
+        zh = "你企图为结构体添加一个字段。"
+    },
+    ["You are attempting to add a field to the struct and that behavior is prohibited."] = {
+        zh = "你企图为结构体添加一个字段，该行为被禁止。"
     }
 };
 

@@ -151,6 +151,9 @@ local Config = {
     -- Same as PropertyBehavior.
     EnumBehavior = 1,
 
+    -- Same as PropertyBehavior.
+    StructBehavior = 2,
+
     -- The default initial index of the enumeration value.
     DefaultEnumIndex = 1,
 
