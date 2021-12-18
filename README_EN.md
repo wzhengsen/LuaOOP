@@ -2,37 +2,67 @@
 
 # LuaOOP
 
-## 0 - Overview
+## Overview
 
->What is LuaOOP?
+### What is LuaOOP?
 
 LuaOOP is an object-oriented pattern that borrows some of the class design from C++/C# and implements it using Lua.
 
->What features LuaOOP provides?
+### What features LuaOOP provides?
 
-*   [Basic class construction and destruction](#1---basic-class-construction-and-destruction);
-*   [Single and multiple inheritance of classes](#2---single-and-multiple-inheritance-of-class);
-*   [Access control](#3---access-control)（public/protected/private/static/const/friends/final）;
-*   [All reserved words are configurable](#4---all-reserved-words-are-configurable);
-*   [Properties](#5---properties);
-*   [Runtime type judgment](#6---runtime-type-judgment)（is）;
-*   [Meta-methods and Operator overloading](#7---meta-methods-and-operator-overloading);
-*   [Singleton](#8---singleton)（\_\_singleton\_\_）;
-*   [Extend or inherit from external classes](#9---extend-or-inherit-from-external-classes) (classes that generate userdata);
-*   [Debug and Release run modes](#10---debug-and-release-run-modes);
-*   [Simple event dispatch mode](#11---simple-event-dispatch-mode);
-*   [Enumeration](#12---enumeration);
-*   [Pure virtual functions](#13---pure-virtual-functions);
-*   [Lua5.1-Lua5.4 compat](#14---lua51-lua54-compat).
+* [Class](#class)
+    * [Construction](#construction)
+    * [Destruction](#destruction)
+* [Inheritance](#inheritance)
+    * [Single Inheritance](#single-inheritance)
+    * [Multiple Inheritance](#multiple-inheritance)
+    * [Name Inheritance](#name-inheritance)
+    * [Delayed Inheritance](#delayed-inheritance)
+* [Access Permissons](#access-permissons)
+    * [public](#public)
+    * [protected](#protected)
+    * [private](#private)
+    * [static](#static)
+    * [const](#const)
+    * [friends](#friends)
+    * [final](#final)
+        * [Non-inheritable](#non-inheritable)
+        * [Non-overridable](#non-overridable)
+    * [Combination](#combination)
+    * [Other Matters](#other-matters)
+* [Properties](#properties)
+* [Type Judgment](#type-judgment)
+* [Meta-methods](#meta-methods)
+    * [Standard Meta-methods](#standard-meta-methods)
+    * [Reserved Meta-methods](#reserved-meta-methods)
+    * [Imitation Meta-methods](#Imitation-meta-methods)
+        * [__new](#__new)
+        * [__delete](#__delete)
+        * [__singleton](#__singleton)
+* [External Classes And External Objects](#external-classes-and-external-objects)
+    * [Extend External Objects](#extend-external-objects)
+    * [Inherite External Classes](#inherite-external-classes)
+    * [Life Cycle](#life-cycle)
+* [Event](#event)
+    * [Listening](#listening)
+    * [Sort](#sort)
+    * [Disable](#disable)
+    * [Reset](#reset)
+    * [Remove](#remove)
+* [Enumeration](#enumeration);
+* [Pure Virtual Functions](#pure-virtual-functions)
+    * [Signature](#signature)
+* [Struct](#struct)
+    * [Similarities And Differences With Classes](#similarities-and-differences-with-classes)
+    * [Creating Structs](#creating-structs)
+* [Configuration](#configuration)
+    * [Reserved Words](#reserved-words)
+    * [Functionality](#functionality)
+* [Compatibility](#compatibility)
 
->planned or to be implemented
+## Class
 
-*   Custom qualifiers;
-*   New semantics when const qualifies methods.
-
----
-## 1 - Basic class construction and destruction
----
+### Construction
 ```lua
 require("OOP.Class");
 local Point = class();
@@ -46,7 +76,7 @@ Point.data = {
     others = {}
 };
 
--- Construction(may not be provided to use the default construction).
+-- Constructor(may not be provided to use the default constructor).
 function Point:ctor(x,y)
     if x and y then
         self.x = x;
@@ -54,50 +84,61 @@ function Point:ctor(x,y)
     end
 end
 
--- Destruction(may not be provided to use the default Destruction).
-function Point:dtor()
-    print(self,"Destructed at here.");
+function Point:PrintXY()
+    print("x = " .. self.x);
+    print("y = " .. self.y);
 end
+
+-- Use new to construct, and if a constructor exists, it will be called automatically.
+local p1 = Point.new(1,2);
+local p2 = Point.new();
+-- The members of the table type are deep-copied and the members of the object are not equal to the members of the class.
+assert(p1.data ~= Point.data);
+assert(p1.data.others ~= Point.data.others);
+p1:PrintXY();-- x = 1 y = 2
+p2:PrintXY();-- x = 0 y = 0
+```
+
+### Destruction
+```lua
+require("OOP.Class");
+local Point = class();
+Point.x = 0;
+Point.y = 0;
 
 function Point:PrintXY()
     print("x = " .. self.x);
     print("y = " .. self.y);
 end
 
-local p1 = Point.new(1,2);
--- The members of the table type are deep-copied and the members of the object are not equal to the members of the class.
-assert(p1.data ~= Point.data);
-assert(p1.data.others ~= Point.data.others);
+-- Destructor(may not be provided to use the default destructor).
+function Point:dtor()
+    print(self,"Destructing here");
+end
 
-local p2 = Point.new();
-p1:PrintXY();-- x = 1 y = 2
-p2:PrintXY();-- x = 0 y = 0
--- delete method will be generated automatically.
--- At this point destructor is called.
--- The content of object will be set empty after destruct
--- and no member functions can be called again.
+local p1 = Point.new();
+p1:PrintXY();-- x = 0 y = 0
+-- Use delete to destroy the object, which will be called automatically if destructor exist.
 p1:delete();
-p2:delete();
+
 print(p1.x);-- nil
-print(p2.x);-- nil
+print(p1.y);-- nil
 if not class.null(p1) then
-    -- You can judge a object whether have been destructed by class.null.
+    -- Only class.null can be used to determine if an object has been destroyed.
     p1:PrintXY();
 end
--- Raise error.
-p2:PrintXY();
+-- Raise an error.
+p1:PrintXY();
 ```
 
----
-## 2 - Single and multiple inheritance of class
----
->Inherite class by class variable directly:
+>**Note: The destructor is only called when the delete method is called manually. The destructor is not called when the object is not destroyed manually, but when the __gc metamethod is triggered by garbage collection or when the __close metamethod is triggered.**
+
+## Inheritance
+
+### Single Inheritance
 ```lua
 require("OOP.Class");
 local Point = class();
-
--- member x,member y.
--- It is also possible to not declare or define any members.
 Point.x = 0;
 Point.y = 0;
 
@@ -109,7 +150,7 @@ function Point:ctor(x,y)
 end
 
 function Point:dtor()
-    print(self,"Point is destructed.")
+    print(self,"Point is destructured.")
 end
 
 function Point:PrintXY()
@@ -117,10 +158,8 @@ function Point:PrintXY()
     print("y = " .. self.y);
 end
 
--- Point3D inherited from Point.
+-- Point3D inherits from Point.
 local Point3D = class(Point);
-
--- member z.
 Point3D.z = 0;
 
 function Point3D:ctor(x,y,z)
@@ -131,7 +170,54 @@ function Point3D:ctor(x,y,z)
 end
 
 function Point3D:dtor()
-    print(self,"Point3D is destructed.")
+    -- Do not call Point's destructor again, it will be called automatically.
+    print(self,"Point3D is destructured.")
+end
+
+function Point3D:PrintXYZ()
+    self:PrintXY();
+    print("z = " .. self.z);
+end
+
+local p3d = Point3D.new(1,2,3);
+p3d:PrintXY()-- x = 1 y = 2
+p3d:PrintXYZ()-- x = 1 y = 2 z = 3
+
+-- table: xxxxxxxx Point3D is destructured.
+-- table: xxxxxxxx Point is destructured.
+p3d:delete();
+```
+
+### Multiple Inheritance
+```lua
+require("OOP.Class");
+local Point = class();
+Point.x = 0;
+Point.y = 0;
+
+function Point:ctor(x,y)
+    if x and y then
+        self.x = x;
+        self.y = y;
+    end
+end
+
+function Point:dtor()
+    print(self,"Point is destructured.")
+end
+
+local Point3D = class(Point);
+Point3D.z = 0;
+
+function Point3D:ctor(x,y,z)
+    Point.ctor(self,x,y);
+    if z then
+        self.z = z;
+    end
+end
+
+function Point3D:dtor()
+    print(self,"Point3D is destructured.")
 end
 
 function Point3D:PrintXYZ()
@@ -152,7 +238,7 @@ function Color:ctor(r,g,b)
 end
 
 function Color:dtor()
-    print(self,"Color is destructed.")
+    print(self,"Color is destructured.")
 end
 
 function Color:PrintRGB()
@@ -161,7 +247,7 @@ function Color:PrintRGB()
     print("b = " .. self.b);
 end
 
--- Vertex inherited from Point3D and Color.
+-- The vertex inherits from points (Point3D) and colors (Color).
 local Vertex = class(Point3D,Color);
 function Vertex:ctor(p,c)
     if p then
@@ -173,53 +259,74 @@ function Vertex:ctor(p,c)
 end
 
 function Vertex:dtor()
-    -- Don't call the destructor of Color/Point/Point3D,they will be called automatically.
-    print(self,"Vertex is destructed.")
+    -- Don't call the Color/Point/Point3D destructors anymore, they will be called automatically.
+    print(self,"Vertex is destructured.")
 end
 
 local vertex = Vertex.new({x = 0,y = 1,z = 2},{r = 99,g = 88, b = 77});
--- Access to inherited methods, etc.
+-- Call inherited methods.
 vertex:PrintXY();
 vertex:PrintXYZ();
 vertex:PrintRGB();
 
--- The destructor will be called automatically in cascade.
+-- The destructuring will be called automatically in cascade.
 -- Output:
--- table: xxxxxxxx Vertex is destructed.
--- table: xxxxxxxx Point3D is destructed.
--- table: xxxxxxxx Point is destructed.
--- table: xxxxxxxx Color is destructed.
+-- table: xxxxxxxx Vertex is destructured.
+-- table: xxxxxxxx Point3D is destructured.
+-- table: xxxxxxxx Point is destructured.
+-- table: xxxxxxxx Color is destructured.
 vertex:delete();
 ```
 
->Inherite class by name:
-```lua
--- ...
--- It will be used as the name of class if the first parameter is a string type.
-local Point = class("Point");
--- ...
--- You must provide a type name to current class,when you want to inherite from a class by name.
-local Point3D = class("Point3D","Point");
--- ...
-local Color = class();
--- ...
+### Name Inheritance
 
--- When you inherit a class by its name, you can inherit a class that is not yet defined.
--- For example, right now, "Vertex" is not yet defined, but you can still inherit it by its name.
-local Vertex1 = class("Vertex1","Vertex");
--- Inherite from Point3D and Color.
--- Inherited by mixing class name and class variable.
-local Vertex = class("Vertex","Point3D",Color);
+Sometimes we want to give a name to a class so that we can inherit it by class name instead of class variables.
+```lua
+require("OOP.Class");
+-- The first parameter is a string that will be used as the name of the class.
+local Point = class("Point");
+Point.x = 0;
+Point.y = 0;
+-- ...
+-- When you wish to inherit a class by class name, you must provide a class name for the current class.
+local Point3D = class("Point3D","Point");
+Point.z = 0;
 -- ...
 ```
 
----
-## 3 - Access control
----
+### Delayed Inheritance
 
----
-### 3.1 - public
----
+For a class with a name, delayed inheritance can be used. \
+However, delayed inheritance is not a very useful and commonly used feature, but it can play a unique role in some specific cases.
+```lua
+require("OOP.Class");
+
+local Color = class();
+-- ...
+
+-- At this point, there is no class named "Point3D", but it can still be inherited.
+local Vertex = class("Vertex","Point3D",Color);
+-- ...
+-- The Vertex object constructed at this stage has only the features of Color and Vertex itself.
+-- ...
+
+-- At this point, there is no class named "Point" either, but it can be inherited.
+local Point3D = class("Point3D","Point");
+-- ...
+-- The Point3D object constructed at this stage has only its own features.
+-- The Vertex object constructed at this stage has only the features of Color/Point3D and Vertex itself, no features of Point.
+-- ...
+
+local Point = class("Point");
+-- ...
+-- At this point both Vertex and Point3D have all base class features.
+```
+
+## Access Permissons
+
+In particular,it should be noted that all access permissons rules also apply to [Standard Meta-methods](#standard-meta-methods) and [Properties](#properties).
+
+### public
 ```lua
 require("OOP.Class");
 local Test = class();
@@ -250,9 +357,7 @@ test:PrintMe();-- "123"
 print(test.data);-- "123"
 ```
 
----
-### 3.2 - protected
----
+### protected
 ```lua
 require("OOP.Class");
 local Test = class();
@@ -277,9 +382,7 @@ test:PrintMe();-- "123"
 print(test.data);
 ```
 
----
-### 3.3 - private
----
+### private
 ```lua
 require("OOP.Class");
 local Test = class();
@@ -304,43 +407,34 @@ local test1 = Test1.new();
 test1:PrintTestData();
 ```
 
----
-### 3.4 - static
----
-When a member is modified as static,means that the member can't be accessed by using object, but only by using class.
+### static
 
+When a member is modified as static,means that the member can't be accessed by using object, but only by using class.\
 Spcifically,constructor and destructor can't be modified by static.
 ```lua
 require("OOP.Class");
-local Point = class();
-
-Point.x = 0;
-Point.y = 0;
+local S = class();
 -- static member,used to count the total of objects.
-Point.static.Count = 0;
+S.static.Count = 0;
 
-function Point:ctor(x,y)
-    Point.Count = Point.Count + 1;
-    if x and y then
-        self.x = x;
-        self.y = y;
-    end
+function S:ctor(x,y)
+    S.Count = S.Count + 1;
 end
 
-function Point:dtor()
-    Point.Count = Point.Count - 1;
+function S:dtor()
+    S.Count = S.Count - 1;
 end
 
-function Point.static.ShowCount()
-    print("Count = ".. Point.Count);
+function S.static.ShowCount()
+    print("Count = ".. S.Count);
 end
 
-local p1 = Point.new(1,2);
-Point.ShowCount();-- Count = 1
-local p2 = Point.new();
-Point.ShowCount();-- Count = 2
+local p1 = S.new(1,2);
+S.ShowCount();-- Count = 1
+local p2 = S.new();
+S.ShowCount();-- Count = 2
 p1:delete();
-Point.ShowCount();-- Count = 1
+S.ShowCount();-- Count = 1
 
 print(p2.Count);-- nil
 
@@ -348,9 +442,10 @@ print(p2.Count);-- nil
 p2.ShowCount();
 ```
 
----
-### 3.5 - const
----
+### const
+
+Member variables modified by constants are not allowed to be modified again;\
+member functions modified by constants are not allowed to call non-constant methods or modify any members.
 ```lua
 require("OOP.Class");
 local Other = class();
@@ -372,6 +467,7 @@ function Test.const:ConstFunc()
 end
 function Test:NonConstFunc()
 end
+-- The method qualified by constants.
 function Test.const:ChangeValue()
     Other.new():DoSomething();-- Allows calling non-const methods of other classes.
     self:ConstFunc();-- Allows calling const methods.
@@ -386,39 +482,7 @@ test.data = "321";
 Test.data = "321";
 ```
 
----
-### 3.7 - final
----
->Non-inheritable final class:
-```lua
-require("OOP.Class");
--- After a class is modified with final, it is no longer inheritable.
-local FinalClass = class.final();
--- ...
-local ErrorClass = class(FinalClass);-- Raise error.
-```
-
->Non-override final members:
-```lua
-require("OOP.Class");
-local Base = class();
--- All of members modified by final can't be override no longer.
-Base.final.member1 = "1";
-Base.final.member2 = "2";
-function Base.final:FinalFunc()
-    -- ...
-end
-
-local ErrorClass = class(Base);
-ErrorClass.member1 = 1;-- Raise error.
-ErrorClass.member2 = 2;-- Raise error.
-function ErrorClass:FinalFunc()-- Raise error.
-end
-```
-
----
-### 3.7 - friends
----
+### friends
 ```lua
 require("OOP.Class");
 local Base = class();
@@ -453,10 +517,56 @@ base:ShowSecret(secret);-- 123     data = 123
 c2:ShowSecretC2(secret);-- 123     data = 123
 ```
 
----
-### 3.8 - Other matters
----
->The modifications to ctor and dtor will directly affect the new and delete methods, and in any case, new is necessarily static, e.g:
+### final
+
+#### Non-inheritable
+```lua
+require("OOP.Class");
+-- After a class is modified with final, it is no longer inheritable.
+local FinalClass = class.final();
+-- ...
+local ErrorClass = class(FinalClass);-- Raise error.
+```
+
+#### Non-overridable
+```lua
+require("OOP.Class");
+local Base = class();
+-- All of members modified by final can't be override no longer.
+Base.final.member1 = "1";
+Base.final.member2 = "2";
+function Base.final:FinalFunc()
+    -- ...
+end
+
+local ErrorClass = class(Base);
+ErrorClass.member1 = 1;-- Raise error.
+ErrorClass.member2 = 2;-- Raise error.
+function ErrorClass:FinalFunc()-- Raise error.
+end
+```
+
+### Combination
+
+public/protected/private/static/constant/final etc. can be used in combination:
+```lua
+local T = class();
+-- A non-overridable public static constant named Type.
+T.public.static.const.final.Type = "T_Type";
+-- A private constant named data1.
+T.private.const.data1 = {
+    str = "123",
+    int = 123
+};
+
+-- Wrong, public/private/protected cannot be more than one at the same time.
+T.public.private.protected.data2 = 123;
+-- ...
+```
+
+### Other Matters
+
+The modifications to ctor and dtor will directly affect the new and delete methods, and in any case, new is necessarily static, e.g:
 ```lua
 require("OOP.Class");
 local Test = class();
@@ -467,8 +577,7 @@ function Test.static.DestroyInstance(inst)
     inst:delete();
 end
 function Test.static.CopyFromInstance(inst)
-    -- Raise error, new is necessarily a static member,
-    -- and objects cannot access static members.
+    -- Raise error, new is necessarily a static member,and objects cannot access static members.
     return inst.new(table.unpack(inst.args));
 end
 function Test.private:ctor(...)
@@ -491,7 +600,7 @@ local test4 = Test.CreateInstance();
 test4:delete();
 ```
 
->Use class.raw to force a break in access permissions:
+Use class.raw to force a break in access permissions:
 ```lua
 require("OOP.Class");
 local Test = class();
@@ -513,7 +622,7 @@ print(forceBreak());
 print(test.mySecret);
 ```
 
->class.delete and class.default：
+class.delete and class.default：
 ```lua
 require("OOP.Class");
 -- If you don't want Test1 to be constructed,
@@ -530,71 +639,11 @@ local test2 = Test2.new();-- Raise an error, and the Test2 type cannot be constr
 -- it exists only to correspond to the c++ default keyword.
 ```
 
->Some special modifying rules:
-*   Constructors and destructors cannot be modified with static;
-*   None of the qualifiers can appear more than once at the same time;
-*   Pure virtual function qualifier can only be used alone (see later);
-*   Meta methods can **currently** only be modified with static (see later)
-*   Cannot qualify some special methods and members (events/singleton, etc., see later).
+Some special qualifying rules:
+* Constructors and destructors cannot be modified with static or const;
+* Cannot qualify some special methods and members ([Event](#event)/[Imitation Meta-methods](#imitation-meta-methods).etc).
 
----
-## 4 - All reserved words are configurable
----
-
-I don't like the reserved words and function names provided by default (e.g. class, private, new, etc.) or these reserved words and function names conflict with existing naming, what should I do?
-
-Before executing the ```require("OOP.Class");``` statement, please qualify the named mapping fields in the [Config.lua](OOP/Config.lua) file, some of the default fields are listed below:
-```lua
-class = "class"
-new = "new"
-delete = "delete"
-ctor = "ctor"
-public = "public"
-private = "private"
-protected = "protected"
-```
-For example, now:
-
-*   **class** renamed to **struct**;
-*   **new** renamed to **create**;
-*   **delete** renamed to **dispose**;
-*   **ctor** renamed to **\_\_init\_\_**;
-*   Other reserved words are named in their upper case.
-
-The following code will work fine:
-```lua
-local Config = require("OOP.Config");
-Config.class = "struct";
-Config.new = "create";
-Config.delete = "dispose";
-Config.ctor = "__init__";
-Config.Qualifiers.public = "PUBLIC";
-Config.Qualifiers.private = "PRIVATE";
-Config.Qualifiers.protected = "PROTECTED";
-
-require("OOP.Class");
-local Test = struct();
-Test.PROTECTED.data = "123";
-function Test:__init__()
-    self.data = self.data:rep(2);
-end
-function Test.PRIVATE:Func1()
-end
-function Test.PUBLIC:PrintData()
-    self:Func1();
-    print("data = " .. self.data);
-end
-local test = Test.create();
-test:PrintData();-- data = "123123"
-test:dispose();
-```
-
-For more renameable fields, see the [Config.lua](OOP/Config.lua) file.
-
----
-## 5 - Properties
----
->General form of use of properties
+## Properties
 ```lua
 require("OOP.Class");
 local Point = class();
@@ -611,20 +660,17 @@ end
 function Point:GetXY()
     return {x = self.x,y = self.y};
 end
-function Point:SetX(x)
-    self.x = x;
-end
 
--- where get means read-only, set means write-only.
+-- where 'get' means read-only, 'set' means write-only.
 -- Associate the XY property with the Point.GetXY method.
 Point.get.XY = Point.GetXY;
--- Associate the X property with the Point.SetX method,you can also use the access qualifier.
-Point.protected.set.X = Point.SetX;
 -- It can also be defined directly as a member function.
+function Point.protected.set:X(x)
+    self.x = x;
+end
 function Point.set:Y(y)
     self.y = y;
 end
-
 
 local Point3D = class(Point);
 Point3D.private.z = 0;
@@ -637,7 +683,7 @@ function Point3D:ctor(x,y,z)
     Point3D.Count = Point3D.Count + 1;
 end
 
--- Static properties, accessible only using classes,e.g. Point3D.Count
+-- Static properties, accessible only using classes.
 function Point3D.static.get.Count()
     return Point3D._Count;
 end
@@ -657,12 +703,11 @@ local xy = p.XY;
 print("X = " .. xy.x);-- X = 3
 print("Y = " .. xy.y);-- Y = 5
 
-p:SetX(999);
---p.X = 999;--X is now a private permission and is not accessible here.
+--Use the property to change the 'y' value.
 p.Y = 888;
 -- Using GetXY is equivalent to using the XY property.
 xy = p:GetXY();
-print("X = " .. xy.x);-- X = 999
+print("X = " .. xy.x);-- X = 3
 print("Y = " .. xy.y);-- Y = 888
 
 local p3d = Point3D.new(0,-1,0.5);
@@ -675,41 +720,16 @@ print("X = " .. xy.x);-- X = 100
 print("Y = " .. xy.y);-- Y = 99
 
 -- Raise error, read-only property cannot be written.
--- Accordingly, write-only attributes cannot be read.
--- If you need to change this behavior, please change the Config.PropertyBehavior value.
+-- Accordingly, write-only property cannot be read.
 p3d.XY = {x = 200,y = 300};
 
+-- Access to static properties.
 print(Point3D.Count);-- 1
+-- Static properties are not accessible through the object.
 print(p3d.Count);-- nil
 ```
 
->Special rules for the use of properties
-```lua
--- Sometimes, for "get" qualified properties,
--- we want it to imply the "const" qualification as well，
--- Then you can turn on the GetPropertyAutoConst switch to control this behavior.
-require("OOP.Config").GetPropertyAutoConst = true;
-require("OOP.Class");
-local Point = class();
-Point.x = 100;
-Point.y = 200;
-
-function Point.get:X()
-    self.x = self.y;-- Raise an error.The X property was automatically added with the const qualifier.
-    return self.x;
-end
-
--- You can also add the const qualifier manually,
--- which has the same effect as adding it automatically.
-function Point.get.const:Y()
-    self.y = self.x;-- Raise an error.
-    return self.y;
-end
-```
-
----
-## 6 - Runtime type judgment
----
+## Type judgment
 ```lua
 require("OOP.Class");
 local A = class();
@@ -743,14 +763,14 @@ print(C.is() == C)-- true
 ```
 >**Note: When calling is either with an object or a class, you do not need to use the ":" operator, you should use the "." operator directly.**
 
----
-## 7 - Meta-methods and Operator overloading
----
->How LuaOOP's metamethods are used:
+## Meta-methods
+
+In LuaOOP,both standard and imitation metamethods can be inherited and overridden.
+
+### Standard Meta-methods
 ```lua
 require("OOP.Class");
 local Point = class();
-
 Point.private.x = 0;
 Point.private.y = 0;
 
@@ -761,15 +781,16 @@ function Point:ctor(x,y)
     end
 end
 
-function Point:__add(another)
+-- Metamethods can also be qualified..
+function Point.final:__add(another)
     return Point.new(self.x + another.x, self.y + another.y);
 end
 
-function Point:__tostring()
+function Point.const:__tostring()
     return "x = " .. self.x .. ";y = " .. self.y .. ";";
 end
 
--- Meta methods are special and can only use the static qualifier.
+-- Use static to qualify the metamethod to make it accessible only through the class.
 function Point.static:__call(...)
     return self.new(...);
 end
@@ -800,72 +821,51 @@ local x,y = ap();
 print(x);-- 1000
 print(y);-- 2000
 
-p4();-- Raise an error, __call can only be accessed using class after being modified by static.
+p4();-- Raise an error, __call can only be accessed using class after being qualified by static.
 ```
 
->Why are the metamethods named differently from the Lua standard, for example \_\_add is named \_\_add\_\_?
+### Reserved Meta-methods
 
-To avoid some potential problems, LuaOOP does not use the same metamethod naming as the Lua standard, but uses an alternative name. Typically, the alternative name is the original name with two underscores.
+The following metamethods are reserved and cannot be customized,and do not change them by setmetatable:
+* __index
+* __newindex
+* __metatable
+* __mode
 
-Of course, you can change it to the same name as the Lua standard, or even change it to something else if you wish.
+### Imitation Meta-methods
 
-Modify the name mapping of the **Config.Meta** field to change the metamethod naming.
+Imitation metamethods are not really metamethods,but just member functions that are similar to metamethods, but they have unique roles and usage.
 
->What meta-methods can I implement?
+#### __new
 
----
-The metamethods that can be implemented with Lua version < 5.3 are:
+The __new metamethod is used to overload the new operation.Similar to C++,overloading the new operation will only care about what memory is allocated for the object (the default is to allocate a table) and not about the details of the constructor.\
+The only three types that can be allocated at the moment are table/userdata/nil.\
+The following demonstrates how to allocate table/nil values.See [External Classes And External Objects](#external-classes-and-external-objects) for allocating userdata:
+```lua
+require("OOP.Class");
+local T = class();
+T.data = nil;
+-- T only accepts construction with numeric types, all other construction parameters return nil.
+function T.__new(p)
+    return type(p) == "number" and {} or nil;
+end
+function T:ctor(p)
+    self.data = p;
+end
+assert(T.new() == nil);
+assert(T.new("123") == nil);
+assert(T.new(3).data == 3);
+```
 
-| Metamethod |   Alternative    |  Operator   |
-| :--------: | :--------------: | :---------: |
-|   __add    |   \_\_add\_\_    |    a + b    |
-|   __sub    |   \_\_sub\_\_    |    a - b    |
-|   __mul    |   \_\_mul\_\_    |    a * b    |
-|   __div    |   \_\_div\_\_    |    a / b    |
-|   __mod    |   \_\_mod\_\_    |    a % b    |
-|   __pow    |   \_\_pow\_\_    |    a ^ b    |
-|   __unm    |   \_\_unm\_\_    |     -b      |
-|    __lt    |    \_\_lt\_\_    |    a < b    |
-|    __le    |    \_\_le\_\_    |   a <= b    |
-|  __concat  |  \_\_concat\_\_  |   a .. b    |
-|   __call   |   \_\_call\_\_   |   a(...)    |
-|    __eq    |    \_\_eq\_\_    |   a == b    |
-|   __len    |   \_\_len\_\_    |     #a      |
-|  __pairs   |  \_\_pairs\_\_   |  pairs(a)   |
-| __tostring | \_\_tostring\_\_ | tostring(a) |
-|    __gc    |    \_\_gc\_\_    |             |
+#### __delete
 
----
-The additional metamethods that can be implemented with Lua version = 5.3 are:
+The __delete metamethod is used to overload the delete operation.Similar to C++,overloading the delete operation will only care about how memory is recycled,not the details of the destructor.\
+And objects that are allocated as tables and nulls generally do not need to overload the delete operation,their memory will be managed automatically by Lua.\
+For objects allocated as userdata, their memory is also managed automatically by Lua, but some userdata may be designed to be of type T**,in which case it may be necessary to implement the __delete meta method to recycle the memory they point to,see [Life Cycle](#life-cycle) for this case.
 
-| Metamethod | Alternative  | Operator |
-| :--------: | :----------: | :------: |
-|   __idiv   | \_\_idiv\_\_ |  a // b  |
-|   __band   | \_\_band\_\_ |  a & b   |
-|   __bor    | \_\_bor\_\_  |  a \| b  |
-|   __bxor   | \_\_bxor\_\_ |  a ~ b   |
-|   __shl    | \_\_shl\_\_  |  a << b  |
-|   __shr    | \_\_shr\_\_  |  a >> b  |
-|   __bnot   | \_\_bnot\_\_ |    ~a    |
+#### __singleton
 
----
-The additional metamethods that can be implemented with Lua version > 5.3 are:
-
-| Metamethod |  Alternative  |  Operator  |
-| :--------: | :-----------: | :--------: |
-|  __close   | \_\_close\_\_ | a\<close\> |
-
----
-The following metamethods cannot be implemented at this time:
-*   __index
-*   __newindex
-*   __metatable
-*   __mode
-
----
-## 8 - Singleton
----
-To use the pre-built singleton pattern implementation, define the \_\_singleton\_\_ method, but if you have your own unique implementation, you can also take your own implementation.
+The role of the __singleton meta-method is simply to make it easier to implement a singleton,but the meta-method is not necessary and you can take your own implementation if you have a unique one.
 ```lua
 require("OOP.Class");
 local Device = class();
@@ -906,26 +906,22 @@ assert(inst1 ~= inst2);
 local device = Device.new();
 ```
 
----
-## 9 - Extend or inherit from external classes
----
+## External Classes And External Objects
 
-In some cases, the Lua C API is used to register classes that can return userdata types (such as the FILE* type returned by io.open), which have separate meta-tables and construction entries.
+In some cases, the Lua C API is used to register classes that can return userdata types (such as the FILE* type returned by io.open), which have separate meta-tables and construction entries.\
+Sometimes we want to extend/inherit such external objects/external classes:
 
----
-### 9.1 - Extending external classes only
----
+### Extend External Objects
 ```lua
 local __file__ = (arg or {...})[arg and 0 or 2];
 local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
-local __test__ = __dir__ .. "/test";
+local __test1__ = __dir__ .. "/test1";
+local __test2__ = __dir__ .. "/test2";
 --
 require("OOP.Class");
 local File = class();
 
--- Register __new method to return the object generated by the external class, also can return nil value.
--- The __new method changes the default generation behavior of the class (the default behavior is to generate a table),
--- and the method will be inherited.
+-- Extend an external object and simply use the __new meta-method to return that object.
 function File.__new(...)
     return io.open(...);
 end
@@ -942,51 +938,65 @@ function File:MakeContent()
     return "The name of file is " .. self.filename ..",and opening mode is ".. self.mode;
 end
 
-local file = File.new(__test__,"w");
-file:write(file:MakeContent());
+local file1 = File.new(__test1__,"w");
+local file2 = io.open(__test2__,"w");
 
-assert(getmetatable(io.stdout) == getmetatable(file));
--- Although io.stdout and file use the same meta-table,
--- io.stdout is not extended by the File type,
--- so io.stdout cannot access the MakeContent method.
-print(io.stdout:MakeContent());-- Raise error.
+print(file1.is(File));-- true
+print(File.is(io));-- false
 
-file:close();-- FILE* types can access the close method.
+assert(getmetatable(file2) == getmetatable(file1));
+assert(file1.MakeContent ~= nil);
+file1:write(file1:MakeContent());
+-- Although file1 and file2 use the same meta-table,but file2 is not extended by the File type,
+-- so file2 cannot access the MakeContent method.
+assert(file2.MakeContent == nil);
 
--- Because File only extends the returned FILE* type,
--- but does not inherit the FILE* type itself,
+file1:close();-- FILE* types can access the close method.
+
+-- Because File only extends the returned FILE* type,but does not inherit the FILE* type itself,
 -- so it is not possible to access a field that only FILE* can access through the File class.
-File.close(file);-- File cannot access the close method, raising an error.
+File.close(file2);-- File cannot access the close method, raising an error.
 ```
 
----
-### 9.2 - Inheritance of external classes
----
+### Inherite External Classes
 ```lua
 local __file__ = (arg or {...})[arg and 0 or 2];
 local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
 local __test__ = __dir__ .. "/test";
 --
 require("OOP.Class");
--- Unlike direct extensions, the FILE* type is now inherited.
+-- Unlike directly extending,now inherited io.
 local File = class(io);
--- You can also use the following:
--- local File = class(getmetatable(io.stdout).__index);
 
+-- still need to allocate userdata of type FILE*.
 function File.__new(...)
     return io.open(...);
 end
+
 local file = File.new(__test__,"w");
 file:close();
+print(file.is(File));-- true
+print(File.is(io));-- true
 
 file = File.new(__test__,"w");
 File.close(file);-- Now, the close method can also be accessed through File.
 ```
 
----
-### 9.3 - Life cycle of external objects
----
->Determine if an external object is still available
+Sometimes the external class 'cls' inherits from the external class 'base'. If you need to be able to use is to determine this inheritance relationship even after being inherited, implement the Config.ExternalClass.IsInherite function:
+```lua
+local Config = require("OOP.Config");
+Config.ExternalClass.IsInherite = function(cls,base)
+    return 'Your code,return a boolean'
+end
+local LuaCls = class(cls);
+local lc = LuaCls.new();
+print(lc.is(base));-- true
+print(LuaCls.is(base));-- true
+```
+
+### Life Cycle
+
+Determine if an external object is available:
 ```lua
 local __file__ = (arg or {...})[arg and 0 or 2];
 local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
@@ -995,8 +1005,7 @@ local __test__ = __dir__ .. "/test";
 local Config = require("OOP.Config");
 
 -- In general it is sufficient to use class.null directly.
--- If there are special needs,
--- You can customize the Config.ExternalClass.Null function to determine if a certain userdata class is currently available.
+-- If there are special needs, you can customize the Config.ExternalClass.Null function to determine whether an external object is available or not.
 Config.ExternalClass.Null = function(obj)
     if getmetatable(obj) == getmetatable(io.stdout) then
         return (tostring(obj):find("(closed)")) ~= nil;
@@ -1009,18 +1018,19 @@ local File = class(io);
 function File.__new(...)
     return io.open(...);
 end
+function File:dtor()
+    self:close();
+end
 
 local file = File.new(__test__,"w");
 print(class.null(file));-- false
-file:close();
+file:delete();
 print(class.null(file));-- true
 ```
 
->Destroying the memory of external objects
-
-For Lua FILE* types, since their memory is managed by Lua, it is not possible to destroy and reclaim memory manually;\
-However, for some custom implemented types, which may have T\*\* structure, Lua memory management will not reclaim the contents of what they really point to, except for the T\*\* pointer.\
-Generally, \_\_delete\_\_ is implemented to destroy C/C++ memory:
+For Lua FILE* types, since their memory is managed by Lua, it is not possible to destroy and recycle memory manually;\
+However,for some custom implementations of types that may have T** structures,Lua memory management does not recycle what they really point to, except for the T** pointer.\
+Generally,__delete is implemented to destroy C/C++ memory:
 ```lua
 local ExtClass = require("Your external function library");
 require("OOP.Class");
@@ -1042,31 +1052,9 @@ obj:delete();-- "LuaClass is destructed at here."
 print(class.null(obj));-- true
 ```
 
----
-### 9.4 - The inheritance relationship between external class A and external class B
----
-Sometimes, external class A maintains some inheritance relationship with external class B. If you need to be able to use is to determine this inheritance relationship even after being inherited, please implement the Config.ExternalClass.IsInherite function:
-```lua
-local Config = require("OOP.Config");
-Config.ExternalClass.IsInherite = function(A,B)
-    return Your code,returns a boolean value;
-end
-```
+## Event
 
----
-## 10 - Debug and Release run modes
----
-
-By default, the **Config.Debug** field is assigned the value **true**, which means that the current runtime needs to determine the legality of access permissions and other operations, thus sacrificing more runtime efficiency.
-
-When this field is assigned the value **false**, most runtime checks will be skipped (e.g. allowing const assignments, allowing external access to private members, etc.) in order to achieve faster runtime efficiency.
-
-If the current application has been fully tested in Debug mode, you can change Config.Debug to false to get a boost in efficiency.
-
----
-## 11 - Simple event dispatch mode
----
->Direct response events:
+### Listening
 ```lua
 require("OOP.Class");
 local Listener = class();
@@ -1096,6 +1084,7 @@ local a = Listener.new("a");
 local b = Listener.new("b");
 local c = Listener.new("c");
 
+-- Use the 'event' reserved word to send events.
 -- Send an email to b with the content 123.
 -- The parameters correspond to those of the receive function.
 event.Email("b","123");
@@ -1106,7 +1095,8 @@ event.Any(nil);
 event.Any("any",true,-2,function()end,{});
 event.Any();
 ```
->Specify the order of response events:
+
+### Sort
 ```lua
 require("OOP.Class");
 local Listener = class();
@@ -1140,40 +1130,7 @@ a.handlers.Any = -1;
 event.Any();
 ```
 
->Disable/Enable/Remove event response:
-```lua
-require("OOP.Class");
-local Listener = class();
-function Listener.handlers:Any()
-    print("Responsing 'Any' event.");
-end
-
-local a = Listener.new();
--- a-Responsing 'Any' event.
-event.Any();
-
--- Assign false to disable the event response.
-a.handlers.Any = false;
-event.Any();-- There is no behavior.
-
--- Assign true to enable the event response.
-a.handlers.Any = true;
--- a-Responsing 'Any' event.
-event.Any();
-
--- Assign nil to remove the event response.
-a.handlers.Any = nil;
-event.Any();-- There is no behavior.
-
-local b = Listener.new();
--- b-Responsing 'Any' event.
-event.Any();
--- b also stops responding to events after destructuring.
-b:delete();
-event.Any();-- There is no behavior.
-```
-
->Reset event response:
+### Reset
 ```lua
 require("OOP.Class");
 local Listener = class();
@@ -1193,9 +1150,51 @@ event.Any();
 -- 'a' resets the response to the 'Any' event->table: xxxxxxxxxx
 ```
 
----
-## 12 - Enumeration
----
+### Disable
+```lua
+require("OOP.Class");
+local Listener = class();
+function Listener.handlers:Any()
+    print("Responsing 'Any' event.");
+end
+
+local a = Listener.new();
+-- a-Responsing 'Any' event.
+event.Any();
+
+-- Assign false to disable the event response.
+a.handlers.Any = false;
+event.Any();-- There is no behavior.
+
+-- Assign true to enable the event response.
+a.handlers.Any = true;
+-- a-Responsing 'Any' event.
+event.Any();
+```
+
+### 移除
+```lua
+require("OOP.Class");
+local Listener = class();
+function Listener.handlers:Any()
+    print("Responsing 'Any' event.");
+end
+
+local a = Listener.new();
+-- Assign nil to remove the event response.
+a.handlers.Any = nil;
+event.Any();-- There is no behavior.
+
+local b = Listener.new();
+-- b-Responsing 'Any' event.
+event.Any();
+-- b also stops responding to events after destructuring.
+b:delete();
+event.Any();-- There is no behavior.
+```
+
+## Enumeration
+
 In general, use **enum** to create an enumeration type.\
 Unlike using a simple table directly or using a series of variables as an enumeration, the type of enumeration generated using enum is **immutable** by default.\
 Similar to function types, enumeration types **will not** be assigned as members to objects as initial values.
@@ -1242,25 +1241,25 @@ print(Test.Number2.Four);
 print(test.Number2.Four);--Raises an error, the object cannot access the static enumeration.
 ```
 
----
-## 13 - Pure virtual functions
----
+## Pure virtual functions
+
 In general, use **virtual** to declare a pure virtual function.\
-Unlike in C++, virtual can **only** be used to declare pure virtual functions, and **cannot** be used in conjunction with other access qualifiers.
+Unlike in C++, virtual can **only** be used to declare pure virtual functions.
 ```lua
 require("OOP.Class");
 local Interface = class();
 Interface.virtual.DoSomething1 = 0;
-Interface.virtual.DoSomething2 = 0;
+Interface.virtual.const.DoSomething2 = 0;
 
 local Test1 = class(Interface);
 function Test1:DoSomething1()
     print("DoSomething1");
 end
-local test1 = Test1.new();--Raise an error, DoSomething2 has not been overridden and cannot be instantiated.
+local test1 = Test1.new();--Raise an error,DoSomething2 has not been overridden and cannot be instantiated.
 
 local Test2 = class(Test1);
-function Test2:DoSomething2()
+-- Note that the qualifiers must be consistent when implementing pure virtual functions,otherwise an error will be raised.
+function Test2.const:DoSomething2()
     print("DoSomething2");
 end
 local test2 = Test2.new();
@@ -1268,7 +1267,189 @@ test2:DoSomething1();-- "DoSomething1"
 test2:DoSomething2();-- "DoSomething2"
 ```
 
----
-## 14 - Lua5.1-Lua5.4 compat
----
+### Signature
+
+When declaring a pure virtual function,you can use the signature to mark the parameters and the value returned by the pure virtual function. \
+The meanings of these signatures are given in the following table:
+|Sign|  Type  |
+|:--:|:------:|
+| s  | string |
+| n  | number |
+| i  |integer |
+| d  | float  |
+| v  |  nil   |
+| ?  |  nil   |
+| f  |function|
+| t  | table  |
+| b  |boolean |
+| x  | thread |
+| u  |userdata|
+|... |  ...   |
+| *  |  Any   |
+
+Use signatures to declare pure virtual functions:
+```lua
+require("OOP.Class");
+local Interface = class();
+-- The first parameter accepts a string or a number.
+-- The second argument accepts a table or nuil value.
+-- Returns a boolean value and an integer.
+Interface.virtual.DoSomething("sn","t?").b.i = 0;
+
+local Test = class(Interface);
+
+-- But does not actually require that the signature be followed, meaning that the signature is merely a hint.
+function Test:DoSomething()
+    return "something";
+end
+print(Test.new():DoSomething());-- something
+```
+
+## Struct
+
+### Similarities And Differences With Classes
+|                      |      Class       |Struct|
+|:--------------------:|:----------------:|:----:|
+|    Reserved Words    |       class      |struct|
+|       Members        |       Yes        | Yes  |
+|     Construction     |       Yes        | Yes  |
+|     Destruction      |       Yes        |  No  |
+|     Inheritance      |       Yes        | Yes  |
+|      Properties      |       Yes        |  No  |
+|      Efficiency      |      Slower      |Faster|
+|     Meta-methods     |       Yes        | Yes  |
+|      Qualifiers      |       Yes        |  No  |
+|    Instantiation     |    T.new(...)    |T(...)|
+|   Name Inheritance   |       Yes        |  No  |
+| Delayed Inheritance  |       Yes        |  No  |
+|   Event Listening    |       Yes        |  No  |
+|Pure Virtual Functions|       Yes        |  No  |
+|  Memory Allocation   |table/userdata/nil|table |
+
+
+### Creating Structs
+```lua
+require("OOP.Class");
+local Vec2 = struct {
+    x = 0,
+    y = 0
+};
+function Vec2:ctor(x,y)
+    if x and y then
+        self.x = x;
+        self.y = y;
+    end
+end
+function Vec2:__add(other)
+    return Vec2(self.x + other.x,self.y + other.y);
+end
+function Vec2:__eq(other)
+    for k,v in pairs(self) do
+        if v ~= other[k] then
+            return false;
+        end
+    end
+    return true;
+end
+local v1 = Vec2(1,2);
+local v2 = Vec2(1,2);
+local v3 = v1 + v2;
+print(v1 == v2);-- true
+print(v3.x,v3.y);--2,4
+
+-- Structs can also be inherited(and of course multiple inheritance is possible).
+local Vec3 = struct(Vec2) {
+    z = 0
+};
+function Vec3:ctor(x,y,z)
+    if x and y and z then
+        Vec2.ctor(self,x,y);
+        self.z = z;
+    end
+end
+function Vec3:__add(other)
+    return Vec3(self.x + other.x,self.y + other.y,self.z + other.z);
+end
+function Vec3:Print()
+    for k,v in pairs(self) do
+        print(k.."=",v);
+    end
+end
+v1 = Vec3(1,2,3);
+v2 = Vec3(1,2,3);
+print(v1 == v2);-- true
+(v1+v2):Print();-- x=2 y=4 z=6
+```
+
+## Configuration
+
+### Reserved Words
+
+I don't like the reserved words and function names provided by default (e.g. private, new, etc.) or these reserved words and function names conflict with existing naming, what should I do?
+
+Before executing the ```require("OOP.Class");``` statement, please qualify the named mapping fields in the [Config.lua](OOP/Config.lua) file, some of the default fields are listed below:
+```lua
+new = "new"
+delete = "delete"
+ctor = "ctor"
+public = "public"
+private = "private"
+protected = "protected"
+```
+For example, now:
+
+* **new** renamed to **create**;
+* **delete** renamed to **dispose**;
+* **ctor** renamed to **\_\_init**;
+* Other reserved words are named in their upper case.
+
+The following code will work fine:
+```lua
+local Config = require("OOP.Config");
+Config.new = "create";
+Config.delete = "dispose";
+Config.ctor = "__init__";
+Config.Qualifiers.public = "PUBLIC";
+Config.Qualifiers.private = "PRIVATE";
+Config.Qualifiers.protected = "PROTECTED";
+
+require("OOP.Class");
+local Test = class();
+Test.PROTECTED.data = "123";
+function Test:__init()
+    self.data = self.data:rep(2);
+end
+function Test.PRIVATE:Func1()
+end
+function Test.PUBLIC:PrintData()
+    self:Func1();
+    print("data = " .. self.data);
+end
+local test = Test.create();
+test:PrintData();-- data = "123123"
+test:dispose();
+```
+
+For more renameable fields, see the [Config.lua](OOP/Config.lua) file.
+
+### Functionality
+
+The [Config.lua](OOP/Config.lua) file also contains some configuration regarding functionality,as shown in the following table:
+
+|        Field        |    Default    |   Functionality    |
+|:-------------------:|:-------------:|:------------------:|
+|        Debug        |     true      |Setting it to false improves performance, <br/>but most security checks and access permissions will be disabled.|
+|   PropertyBehavior  |       1       |When writing/reading a read/write only property:<br/>0->a warning will be raised;<br/>1->an error will be raised;<br/>2->the operation is allowed;<br/>other values->the operation is ignored.|
+|    ConstBehavior    |       1       |When modifying the value of a constant qualifier:<br/>Similar to the 'PropertyBehavior' field.|
+|    EnumBehavior     |       1       |When modifying the enumeration:<br/>Similar to the 'PropertyBehavior' field.|
+|   StructBehavior    |       2       |When adding fields to a struct object:<br/>Similar to the 'PropertyBehavior' field.|
+|   DefaultEnumIndex  |       1       |The default starting value of the enumeration value (kept Lua style by default,starting from 1).|
+| GetPropertyAutoConst|     false     |Whether the 'get' property is qualified with const by default (even if the const qualifier is not used).|
+|ClearMembersInRelease|     true      |For table objects, whether all key-value pairs are automatically cleared on destruction(only valid in Release mode).|
+|    ExternalClass    |      nil      |See [Inherite External Classes](#inherite-external-classes)|
+|      HoleLimit      |      15       |Indicates how often the event listener object is recycled, <br/>the higher the value, the lower the frequency.|
+|      Language       |      nil      |The language used to print the error message, currently only Chinese and English are supported. <br/>Set to "zh" to switch to Chinese.|
+
+## Compatibility
+
 Try to ensure Lua5.1-Lua5.4 compatibility, but LuaJIT is not tested.

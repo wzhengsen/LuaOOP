@@ -2,37 +2,67 @@
 
 # LuaOOP
 
-## 0 - 概述
+## 概述
 
->LuaOOP是什么？
+### LuaOOP是什么？
 
-LuaOOP是借鉴了C++/C#的部分类设计，并使用Lua实现的面向对象模式。
+LuaOOP是借鉴了C/C++/C#的类/结构体/枚举设计，并使用Lua实现的面向对象模式。
 
->LuaOOP提供了哪些功能？
+### LuaOOP提供了哪些功能？
 
-*   [基本的类构造及析构](#1---基本的类构造及析构)；
-*   [类的单继承、多继承](#2---类的单继承多继承)；
-*   [访问权控制](#3---访问权控制)（public/protected/private/static/const/friends/final）；
-*   [全部保留字可配置](#4---全部保留字可配置)；
-*   [属性](#5---属性)；
-*   [运行时类型判断](#6---运行时类型判断)（is）;
-*   [元方法与运算符重载](#7---元方法与运算符重载)；
-*   [单例](#8---单例)（\_\_singleton\_\_）；
-*   [扩展或继承外部类](#9---扩展或继承外部类)（生成userdata的类）；
-*   [Debug和Release运行模式](#10---debug和release运行模式)；
-*   [简单的事件分发模式](#11---简单的事件分发模式)；
-*   [枚举](#12---枚举)；
-*   [纯虚函数](#13---纯虚函数)；
-*   [Lua5.1-Lua5.4兼容](#14---lua51-lua54兼容)。
+* [类](#类)
+    * [构造](#构造)
+    * [析构](#析构)
+* [继承](#继承)
+    * [单继承](#单继承)
+    * [多继承](#多继承)
+    * [名称继承](#名称继承)
+    * [延迟继承](#延迟继承)
+* [访问权](#访问权)
+    * [公有](#公有)
+    * [保护](#保护)
+    * [私有](#私有)
+    * [静态](#静态)
+    * [常量](#常量)
+    * [友元](#友元)
+    * [final](#final)
+        * [不可继承](#不可继承)
+        * [不可重写](#不可重写)
+    * [组合](#组合)
+    * [其他事项](#其他事项)
+* [属性](#属性)
+* [类型判断](#类型判断)
+* [元方法](#元方法)
+    * [标准元方法](#标准元方法)
+    * [保留元方法](#保留元方法)
+    * [仿元方法](#仿元方法)
+        * [__new](#__new)
+        * [__delete](#__delete)
+        * [__singleton](#__singleton)
+* [外部类和外部对象](#外部类和外部对象)
+    * [扩展外部对象](#扩展外部对象)
+    * [继承外部类](#继承外部类)
+    * [生命周期](#生命周期)
+* [事件](#事件)
+    * [监听](#监听)
+    * [排序](#排序)
+    * [停用](#停用)
+    * [重置](#重置)
+    * [移除](#移除)
+* [枚举](#枚举)
+* [纯虚函数](#纯虚函数)
+    * [签名](#签名)
+* [结构体](#结构体)
+    * [与类的异同](#与类的异同)
+    * [创建结构体](#创建结构体)
+* [配置](#配置)
+    * [保留字](#保留字)
+    * [功能性](#功能性)
+* [兼容性](#兼容性)
 
->计划中或待实现
+## 类
 
-*   自定义修饰符；
-*   当const修饰方法时的新语义。
-
----
-## 1 - 基本的类构造及析构
----
+### 构造
 ```lua
 require("OOP.Class");
 local Point = class();
@@ -54,49 +84,61 @@ function Point:ctor(x,y)
     end
 end
 
--- 析构函数（可以不提供，以使用默认析构）。
-function Point:dtor()
-    print(self,"在此处析构");
+function Point:PrintXY()
+    print("x = " .. self.x);
+    print("y = " .. self.y);
 end
+
+-- 使用new来构造，如果存在构造函数，将自动调用。
+local p1 = Point.new(1,2);
+local p2 = Point.new();
+-- 表类型的成员被深拷贝，对象的成员不等于类的成员。
+assert(p1.data ~= Point.data);
+assert(p1.data.others ~= Point.data.others);
+p1:PrintXY();-- x = 1 y = 2
+p2:PrintXY();-- x = 0 y = 0
+```
+
+### 析构
+```lua
+require("OOP.Class");
+local Point = class();
+Point.x = 0;
+Point.y = 0;
 
 function Point:PrintXY()
     print("x = " .. self.x);
     print("y = " .. self.y);
 end
 
-local p1 = Point.new(1,2);
--- 表类型的成员被深拷贝，对象的成员不等于类的成员。
-assert(p1.data ~= Point.data);
-assert(p1.data.others ~= Point.data.others);
+-- 析构函数（可以不提供，以使用默认析构）。
+function Point:dtor()
+    print(self,"在此处析构");
+end
 
-local p2 = Point.new();
-p1:PrintXY();-- x = 1 y = 2
-p2:PrintXY();-- x = 0 y = 0
--- delete方法会自动生成。
--- 此时调用析构函数。
--- 析构之后对象的内容将置空，且不能再次调用任何成员函数。
+local p1 = Point.new();
+p1:PrintXY();-- x = 0 y = 0
+-- 使用delete以销毁对象，如果存在析构，将自动调用。
 p1:delete();
-p2:delete();
+
 print(p1.x);-- nil
-print(p2.x);-- nil
+print(p1.y);-- nil
 if not class.null(p1) then
-    -- 可以通过class.null来判断一个对象是否已经被销毁。
+    -- 仅能通过class.null来判断一个对象是否已经被销毁。
     p1:PrintXY();
 end
 -- 引发错误。
-p2:PrintXY();
+p1:PrintXY();
 ```
 
----
-## 2 - 类的单继承、多继承
----
->直接以类变量继承类：
+>**注意：只有在手动调用delete方法时才会调用析构函数。当对象不是被手动销毁，而是被垃圾回收触发__gc元方法或触发__close元方法时，并不会调用析构函数。**
+
+## 继承
+
+### 单继承
 ```lua
 require("OOP.Class");
 local Point = class();
-
--- 成员x，成员y。
--- 也可以不声明或定义任何成员。
 Point.x = 0;
 Point.y = 0;
 
@@ -118,8 +160,53 @@ end
 
 -- Point3D继承自Point。
 local Point3D = class(Point);
+Point3D.z = 0;
 
--- 成员z。
+function Point3D:ctor(x,y,z)
+    Point.ctor(self,x,y);
+    if z then
+        self.z = z;
+    end
+end
+
+function Point3D:dtor()
+    -- 不要再调用Point的析构函数，它会被自动调用。
+    print(self,"Point3D已析构。")
+end
+
+function Point3D:PrintXYZ()
+    self:PrintXY();
+    print("z = " .. self.z);
+end
+
+local p3d = Point3D.new(1,2,3);
+p3d:PrintXY()-- x = 1 y = 2
+p3d:PrintXYZ()-- x = 1 y = 2 z = 3
+
+-- table: xxxxxxxx Point3D已析构。
+-- table: xxxxxxxx Point已析构。
+p3d:delete();
+```
+
+### 多继承
+```lua
+require("OOP.Class");
+local Point = class();
+Point.x = 0;
+Point.y = 0;
+
+function Point:ctor(x,y)
+    if x and y then
+        self.x = x;
+        self.y = y;
+    end
+end
+
+function Point:dtor()
+    print(self,"Point已析构。")
+end
+
+local Point3D = class(Point);
 Point3D.z = 0;
 
 function Point3D:ctor(x,y,z)
@@ -191,34 +278,55 @@ vertex:PrintRGB();
 vertex:delete();
 ```
 
->通过类名继承类：
+### 名称继承
+
+有时，我们希望为一个类起一个名字，以便可以通过类名而不是类变量来继承它。
 ```lua
--- ...
+require("OOP.Class");
 -- 第一个参数为字符串，将被作为类的名字。
 local Point = class("Point");
+Point.x = 0;
+Point.y = 0;
 -- ...
--- 当你继承希望以类名继承一个类时，必须为当前类提供一个类型名。
+-- 当你希望以类名继承一个类时，必须为当前类提供一个类名。
 local Point3D = class("Point3D","Point");
--- ...
-local Color = class();
--- ...
-
--- 使用类名继承类时，可以继承还未定义的类。
--- 比如现在，"Vertex"还未定义，但仍然可以使用其名字继承它。
-local Vertex1 = class("Vertex1","Vertex");
--- 继承Point3D与Color。
--- 混合使用类名和类变量来继承。
-local Vertex = class("Vertex","Point3D",Color);
+Point.z = 0;
 -- ...
 ```
 
----
-## 3 - 访问权控制
----
+### 延迟继承
 
----
-### 3.1 - 公有修饰
----
+对一个拥有名字的类来说，可以使用延迟继承。\
+但延迟继承并不是一个非常有用和常用的功能，但在某些特定情况下，它会发挥独特的作用。
+```lua
+require("OOP.Class");
+
+local Color = class();
+-- ...
+
+-- 此时，还没有名为"Point3D"的类，但仍然可以继承它。
+local Vertex = class("Vertex","Point3D",Color);
+-- ...
+-- 在此阶段构造的Vertex对象只有Color和Vertex自身的特征。
+-- ...
+
+-- 此时，也没有名为"Point"的类，但也可以继承它。
+local Point3D = class("Point3D","Point");
+-- ...
+-- 在此阶段构造的Point3D对象只有自身的特征。
+-- 在此阶段构造的Vertex对象只有Color/Point3D和Vertex自身的特征，没有Point的特征。
+-- ...
+
+local Point = class("Point");
+-- ...
+-- 此时Vertex和Point3D都具有所有基类特征。
+```
+
+## 访问权
+
+需要特别指出的是，所有访问权规则也对[标准元方法](#标准元方法)和[属性](#属性)适用。
+
+### 公有
 ```lua
 require("OOP.Class");
 local Test = class();
@@ -233,7 +341,7 @@ local test = Test.new();
 test:PrintMe();-- "123"
 print(test.data);-- "123"
 ```
->**注意：如果没有任何修饰，成员方法和成员变量默认即是public访问权，所以，以上方式和以下方式是等价的：**
+>**注意：如果没有任何修饰，成员函数和成员变量默认即是public访问权（这和C++的默认行为不同），所以，以上方式和以下方式是等价的：**
 ```lua
 require("OOP.Class");
 local Test = class();
@@ -249,9 +357,7 @@ test:PrintMe();-- "123"
 print(test.data);-- "123"
 ```
 
----
-### 3.2 - 保护修饰
----
+### 保护
 ```lua
 require("OOP.Class");
 local Test = class();
@@ -276,9 +382,7 @@ test:PrintMe();-- "123"
 print(test.data);
 ```
 
----
-### 3.3 - 私有修饰
----
+### 私有
 ```lua
 require("OOP.Class");
 local Test = class();
@@ -303,53 +407,45 @@ local test1 = Test1.new();
 test1:PrintTestData();
 ```
 
----
-### 3.4 - 静态修饰
----
-当一个成员被static修饰时，表示该成员不能使用对象访问，仅可使用类访问。
+### 静态
 
-特别地，构造函数和析构函数不能使用static修饰。
+当一个成员被静态修饰时，表示该成员不能使用对象访问，仅可使用类访问。\
+特别地，构造函数和析构函数不能使用静态修饰。
 ```lua
 require("OOP.Class");
-local Point = class();
-
-Point.x = 0;
-Point.y = 0;
+local S = class();
 -- 静态成员，用于统计对象总数。
-Point.static.Count = 0;
+S.static.Count = 0;
 
-function Point:ctor(x,y)
-    Point.Count = Point.Count + 1;
-    if x and y then
-        self.x = x;
-        self.y = y;
-    end
+function S:ctor()
+    S.Count = S.Count + 1;
 end
 
-function Point:dtor()
-    Point.Count = Point.Count - 1;
+function S:dtor()
+    S.Count = S.Count - 1;
 end
 
-function Point.static.ShowCount()
-    print("Count = ".. Point.Count);
+function S.static.ShowCount()
+    print("Count = ".. S.Count);
 end
 
-local p1 = Point.new(1,2);
-Point.ShowCount();-- Count = 1
-local p2 = Point.new();
-Point.ShowCount();-- Count = 2
-p1:delete();
-Point.ShowCount();-- Count = 1
+local s1 = S.new();
+S.ShowCount();-- Count = 1
+local s2 = S.new();
+S.ShowCount();-- Count = 2
+s1:delete();
+S.ShowCount();-- Count = 1
 
-print(p2.Count);-- nil
+print(s2.Count);-- nil
 
--- 引发错误，使用对象访问ShowCount时将返回nil。
-p2.ShowCount();
+-- 引发错误，不能使用对象访问ShowCount，它是静态的。
+s2.ShowCount();
 ```
 
----
-### 3.5 - 常量修饰
----
+### 常量
+
+被常量修饰的成员变量不可再被修改；\
+被常量修饰的成员函数中不允许调用非常量方法，也不允许修改任意成员。
 ```lua
 require("OOP.Class");
 local Other = class();
@@ -371,6 +467,7 @@ function Test.const:ConstFunc()
 end
 function Test:NonConstFunc()
 end
+-- 被常量修饰的方法。
 function Test.const:ChangeValue()
     Other.new():DoSomething();-- 允许调用其它类的非const方法。
     self:ConstFunc();-- 允许调用const方法。
@@ -385,39 +482,7 @@ test.data = "321";
 Test.data = "321";
 ```
 
----
-### 3.7 - final修饰
----
->不可继承的final类：
-```lua
-require("OOP.Class");
--- class使用final修饰后，便不可再被继承。
-local FinalClass = class.final();
--- ...
-local ErrorClass = class(FinalClass);--引发错误。
-```
-
->不可重写的final成员：
-```lua
-require("OOP.Class");
-local Base = class();
--- final修饰后的成员都不可以再被重写。
-Base.final.member1 = "1";
-Base.final.member2 = "2";
-function Base.final:FinalFunc()
-    -- ...
-end
-
-local ErrorClass = class(Base);
-ErrorClass.member1 = 1;-- 引发错误。
-ErrorClass.member2 = 2;-- 引发错误。
-function ErrorClass:FinalFunc()-- 引发错误。
-end
-```
-
----
-### 3.7 - 友元类
----
+### 友元
 ```lua
 require("OOP.Class");
 local Base = class();
@@ -452,10 +517,56 @@ base:ShowSecret(secret);-- 123     data = 123
 c2:ShowSecretC2(secret);-- 123     data = 123
 ```
 
----
-### 3.8 - 其它事项
----
->对ctor和dtor的修饰将直接影响到new和delete方法，且无论如何，new必然是static修饰的，如：
+### final
+
+#### 不可继承
+```lua
+require("OOP.Class");
+-- class使用final修饰后，便不可再被继承。
+local FinalClass = class.final();
+-- ...
+local ErrorClass = class(FinalClass);--引发错误。
+```
+
+#### 不可重写
+```lua
+require("OOP.Class");
+local Base = class();
+-- final修饰后的成员都不可以再被重写。
+Base.final.member1 = "1";
+Base.final.member2 = "2";
+function Base.final:FinalFunc()
+    -- ...
+end
+
+local ErrorClass = class(Base);
+ErrorClass.member1 = 1;-- 引发错误。
+ErrorClass.member2 = 2;-- 引发错误。
+function ErrorClass:FinalFunc()-- 引发错误。
+end
+```
+
+### 组合
+
+公有/保护/私有/静态/常量/final等可以被组合使用：
+```lua
+local T = class();
+-- 一个名为Type的不可重写的公有静态常量。
+T.public.static.const.final.Type = "T_Type";
+-- 一个名为data1的私有常量。
+T.private.const.data1 = {
+    str = "123",
+    int = 123
+};
+
+-- 错误，公有/私有/保护不能同时出现一种以上。
+T.public.private.protected.data2 = 123;
+-- ...
+```
+
+### 其他事项
+
+对ctor和dtor的修饰将直接影响到new和delete方法，且无论如何，new必然是静态修饰的，如：
 ```lua
 require("OOP.Class");
 local Test = class();
@@ -489,7 +600,7 @@ local test4 = Test.CreateInstance();
 test4:delete();
 ```
 
->使用class.raw来强行突破访问权限：
+可以使用class.raw来强行突破访问权限：
 ```lua
 require("OOP.Class");
 local Test = class();
@@ -511,7 +622,7 @@ print(forceBreak());
 print(test.mySecret);
 ```
 
->class.delete和class.default：
+class.delete和class.default：
 ```lua
 require("OOP.Class");
 -- 如果你不希望Test1被构造，可以将class.delete赋值给构造函数。
@@ -528,71 +639,11 @@ local test2 = Test2.new();-- 引发错误，Test2类型也不能被构造。
 -- 它的存在仅仅为了对应c++的default关键字。
 ```
 
->一些特殊的修饰规则：
-*   构造函数和析构函数不能使用static修饰；
-*   各个修饰符都不能同时出现一次以上；
-*   纯虚函数的修饰只能单独使用（见后文）；
-*   元方法**目前**只能使用static修饰（见后文）；
-*   不能修饰一些特殊的方法和成员（事件/单例等，见后文）。
+一些特殊的修饰规则：
+* 构造函数和析构函数不能使用静态或常量修饰；
+* 不能修饰一些特殊的方法（[事件](#事件)/[仿元方法](#仿元方法)等）。
 
----
-## 4 - 全部保留字可配置
----
-
-我不喜欢默认提供的保留字和函数名（如class,private,new等）或这些保留字和函数名和已有命名相冲突，应该怎么办？
-
-在执行```require("OOP.Class");```语句之前，请修改[Config.lua](OOP/Config.lua)文件中的命名映射字段，以下列出了部分默认字段：
-```lua
-class = "class"
-new = "new"
-delete = "delete"
-ctor = "ctor"
-public = "public"
-private = "private"
-protected = "protected"
-```
-比如，现在将：
-
-*   **class** 重命名为 **struct**；
-*   **new** 重命名为 **create**；
-*   **delete** 重命名为 **dispose**；
-*   **ctor** 重命名为 **\_\_init\_\_**；
-*   其它保留字命名为它们的大写。
-
-以下代码便可正常运行：
-```lua
-local Config = require("OOP.Config");
-Config.class = "struct";
-Config.new = "create";
-Config.delete = "dispose";
-Config.ctor = "__init__";
-Config.Qualifiers.public = "PUBLIC";
-Config.Qualifiers.private = "PRIVATE";
-Config.Qualifiers.protected = "PROTECTED";
-
-require("OOP.Class");
-local Test = struct();
-Test.PROTECTED.data = "123";
-function Test:__init__()
-    self.data = self.data:rep(2);
-end
-function Test.PRIVATE:Func1()
-end
-function Test.PUBLIC:PrintData()
-    self:Func1();
-    print("data = " .. self.data);
-end
-local test = Test.create();
-test:PrintData();-- data = "123123"
-test:dispose();
-```
-
-关于其它更多的可重命名字段，参见[Config.lua](OOP/Config.lua)文件。
-
----
-## 5 - 属性
----
->属性的一般使用形式
+## 属性
 ```lua
 require("OOP.Class");
 local Point = class();
@@ -609,20 +660,17 @@ end
 function Point:GetXY()
     return {x = self.x,y = self.y};
 end
-function Point:SetX(x)
-    self.x = x;
-end
 
 -- 其中get表示只读，set表示只写。
 -- 将XY属性和Point.GetXY方法关联。
 Point.get.XY = Point.GetXY;
--- 将X属性和Point.SetX方法关联，也可以使用访问权修饰符。
-Point.protected.set.X = Point.SetX;
 -- 也可以直接定义为成员函数。
+function Point.protected.set:X(x)
+    self.x = x;
+end
 function Point.set:Y(y)
     self.y = y;
 end
-
 
 local Point3D = class(Point);
 Point3D.private.z = 0;
@@ -635,7 +683,7 @@ function Point3D:ctor(x,y,z)
     Point3D.Count = Point3D.Count + 1;
 end
 
--- 静态属性，只能使用类访问，如Point3D.Count
+-- 静态属性，只能通过类访问。
 function Point3D.static.get.Count()
     return Point3D._Count;
 end
@@ -655,12 +703,11 @@ local xy = p.XY;
 print("X = " .. xy.x);-- X = 3
 print("Y = " .. xy.y);-- Y = 5
 
-p:SetX(999);
---p.X = 999;--X现在为private权限，此处不可访问。
+-- 使用属性来更改y值。
 p.Y = 888;
 -- 使用GetXY和使用XY属性是等价的。
 xy = p:GetXY();
-print("X = " .. xy.x);-- X = 999
+print("X = " .. xy.x);-- X = 3
 print("Y = " .. xy.y);-- Y = 888
 
 local p3d = Point3D.new(0,-1,0.5);
@@ -674,38 +721,15 @@ print("Y = " .. xy.y);-- Y = 99
 
 -- 引发错误，只读属性不能被写入。
 -- 相应的，只写属性也不能被读取。
--- 如果需要改变此行为，请修改Config.PropertyBehavior值。
 p3d.XY = {x = 200,y = 300};
 
+-- 静态属性的访问。
 print(Point3D.Count);-- 1
+-- 通过对象无法访问静态属性。
 print(p3d.Count);-- nil
 ```
 
->属性的特殊使用规则
-```lua
--- 有时，对于get修饰的属性，我们希望它也能暗示地表示const修饰，
--- 那么可以打开GetPropertyAutoConst开关来控制这一行为。
-require("OOP.Config").GetPropertyAutoConst = true;
-require("OOP.Class");
-local Point = class();
-Point.x = 100;
-Point.y = 200;
-
-function Point.get:X()
-    self.x = self.y;-- 引发错误。X属性被自动添加了const修饰。
-    return self.x;
-end
-
--- 也可以手动添加const修饰，和自动添加的效果相同。
-function Point.get.const:Y()
-    self.y = self.x;-- 引发错误。
-    return self.y;
-end
-```
-
----
-## 6 - 运行时类型判断
----
+## 类型判断
 ```lua
 require("OOP.Class");
 local A = class();
@@ -739,14 +763,14 @@ print(C.is() == C)-- true
 ```
 >**注意：无论是使用对象或者类调用is时，都不必使用":"操作符，应当直接使用"."操作符。**
 
----
-## 7 - 元方法与运算符重载
----
->LuaOOP的元方法的使用方式：
+## 元方法
+
+在LuaOOP中，无论是标准元方法还是仿元方法，都可以继承和重写。
+
+### 标准元方法
 ```lua
 require("OOP.Class");
 local Point = class();
-
 Point.protected.x = 0;
 Point.protected.y = 0;
 
@@ -757,15 +781,16 @@ function Point:ctor(x,y)
     end
 end
 
-function Point:__add(another)
+-- 元方法也可以被修饰。
+function Point.final:__add(another)
     return Point.new(self.x + another.x, self.y + another.y);
 end
 
-function Point:__tostring()
+function Point.const:__tostring()
     return "x = " .. self.x .. ";y = " .. self.y .. ";";
 end
 
--- 元方法比较特殊，只能使用static修饰。
+-- 使用static修饰元方法，以使得该元方法只能通过类访问。
 function Point.static:__call(...)
     return self.new(...);
 end
@@ -777,91 +802,70 @@ end
 
 local p1 = Point.new(1,2);
 local p2 = Point.new(2,3);
--- 此时调用__add__
+-- 此时调用__add
 local p3 = p1 + p2;
 -- 此时调用static.__call
 local p4 = Point(3,4);
 
--- 此时调用__tostring__
+-- 此时调用__tostring
 print(p1);-- x = 1;y = 2;
 print(p2);-- x = 2;y = 3;
 print(p3);-- x = 3;y = 5;
 
 print(p4.is() == Point);-- true
 
--- static.__call__继承自Point.
+-- static.__call继承自Point.
 local ap = AnotherPoint(1000,2000);
--- __call__和static.__call__相互独立。
+-- __call和static.__call相互独立。
 local x,y = ap();
 print(x);-- 1000
 print(y);-- 2000
 
-p4();-- 引发错误，__call__被static修饰后只能使用类访问。
+p4();-- 引发错误，__call被static修饰后只能使用类访问。
 ```
 
->为什么元方法的命名和Lua标准不同，比如__add被命名为__add__？
+### 保留元方法
 
-为了避免某些潜在的问题，LuaOOP没有使用和Lua标准相同的元方法命名，而是使用了一个替代名称。一般的，替代名称都是在原名称的基础上，追加两个下划线。
+以下元方法予以保留，不能自定义，也不要通过setmetatable的方式来更改它们：
+* __index
+* __newindex
+* __metatable
+* __mode
 
-当然，你也可以更改为和Lua标准相同的名称，甚至更改为其它你愿意使用的名字。
+### 仿元方法
 
-修改**Config.Meta**字段的名称映射来改变元方法命名。
+仿元方法并不是真正的元方法，只是一些类似于元方法的成员函数，但它们有独特的作用和用法。
 
->我可以实现哪些元方法？
+#### __new
 
----
-Lua版本 < 5.3时可以实现的元方法为：
+__new元方法的作用是重载new操作。和C++类似，重载new操作只会关心为对象分配的内存是什么（默认为分配一个表），而不关心构造函数的细节。\
+目前可以分配的类型只能是表/用户数据/空值这三种类型。\
+以下演示了如何分配表/空值，分配用户数据的情况请参见[外部类和外部对象](#外部类和外部对象)：
+```lua
+require("OOP.Class");
+local T = class();
+T.data = nil;
+-- T仅接受以数字类型构造，其他构造参数一律返回nil。
+function T.__new(p)
+    return type(p) == "number" and {} or nil;
+end
+function T:ctor(p)
+    self.data = p;
+end
+assert(T.new() == nil);
+assert(T.new("123") == nil);
+assert(T.new(3).data == 3);
+```
 
-|   元方法   |      替代名      |   运算符    |
-| :--------: | :--------------: | :---------: |
-|   __add    |   \_\_add\_\_    |    a + b    |
-|   __sub    |   \_\_sub\_\_    |    a - b    |
-|   __mul    |   \_\_mul\_\_    |    a * b    |
-|   __div    |   \_\_div\_\_    |    a / b    |
-|   __mod    |   \_\_mod\_\_    |    a % b    |
-|   __pow    |   \_\_pow\_\_    |    a ^ b    |
-|   __unm    |   \_\_unm\_\_    |     -b      |
-|    __lt    |    \_\_lt\_\_    |    a < b    |
-|    __le    |    \_\_le\_\_    |   a <= b    |
-|  __concat  |  \_\_concat\_\_  |   a .. b    |
-|   __call   |   \_\_call\_\_   |   a(...)    |
-|    __eq    |    \_\_eq\_\_    |   a == b    |
-|   __len    |   \_\_len\_\_    |     #a      |
-|  __pairs   |  \_\_pairs\_\_   |  pairs(a)   |
-| __tostring | \_\_tostring\_\_ | tostring(a) |
-|    __gc    |    \_\_gc\_\_    |             |
+#### __delete
 
----
-Lua版本 = 5.3时可以额外实现的元方法为：
+__delete元方法的作用是重载delete操作。和C++类似，重载delete操作只会关心如何回收内存，而不关心析构函数的细节。\
+并且被分配为表和空值的对象一般不需要重载delete操作，它们的内存将被Lua自动管理。\
+对于被分配为用户数据的对象，其内存也是由Lua自动管理，但有些用户数据可能被设计为T**类型，在这种情况下，可能需要实现__delete元方法来回收其指向的内存，这种情况请参见[生命周期](#生命周期)。
 
-| 元方法 |    替代名    | 运算符 |
-| :----: | :----------: | :----: |
-| __idiv | \_\_idiv\_\_ | a // b |
-| __band | \_\_band\_\_ | a & b  |
-| __bor  | \_\_bor\_\_  | a \| b |
-| __bxor | \_\_bxor\_\_ | a ~ b  |
-| __shl  | \_\_shl\_\_  | a << b |
-| __shr  | \_\_shr\_\_  | a >> b |
-| __bnot | \_\_bnot\_\_ |   ~a   |
+#### __singleton
 
----
-Lua版本 > 5.3时可以额外实现的元方法为：
-
-| 元方法  |    替代名     |   运算符   |
-| :-----: | :-----------: | :--------: |
-| __close | \_\_close\_\_ | a\<close\> |
-
----
-以下元方法暂时不能实现：
-*   __index
-*   __newindex
-*   __metatable
-*   __mode
-
----
-## 8 - 单例
----
-如果要使用预置的单例模式实现，请定义__singleton__方法，但如果自己有独特的实现方式，也可以采取自己的实现。
+__singleton元方法的作用仅仅是为了更方便地实现单例，但该元方法不是必要的，如果自己有独特的实现方式，也可以采取自己的实现。
 ```lua
 require("OOP.Class");
 local Device = class();
@@ -880,7 +884,7 @@ end
 function Device:dtor()
     print("单例已析构。");
 end
--- 定义__singleton__来获取单例。
+-- 定义__singleton来获取单例。
 function Device:__singleton()
     return Device.new();
 end
@@ -898,30 +902,26 @@ Device.Instance = nil;-- "单例已析构。"
 local inst2 = Device.Instance;
 assert(inst1 ~= inst2);
 
--- 引发错误，定义__singleton__后，new将被默认为protected修饰（除非已预先指明构造函数为private修饰）。
+-- 引发错误，定义__singleton后，new将被默认为protected修饰（除非已预先指明构造函数为private修饰）。
 local device = Device.new();
 ```
 
----
-## 9 - 扩展或继承外部类
----
+## 外部类和外部对象
 
-在某些情况下，使用Lua C API注册了一些可以返回userdata类型的类（如io.open返回的FILE*类型），这些userdata有独立的元表和构造入口。
+在某些情况下，使用Lua C API注册了一些可以返回用户数据的类（如io.open返回的FILE*类型），这些用户数据有独立的元表和构造入口。\
+有时，我们希望扩展/继承这种外部对象/外部类：
 
----
-### 9.1 - 仅扩展外部类
----
+### 扩展外部对象
 ```lua
 local __file__ = (arg or {...})[arg and 0 or 2];
 local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
-local __test__ = __dir__ .. "/test";
+local __test1__ = __dir__ .. "/test1";
+local __test2__ = __dir__ .. "/test2";
 --
 require("OOP.Class");
 local File = class();
 
--- 注册__new__方法来返回外部类生成的对象，也可以返回nil值。
--- __new__方法会改变该类的默认生成行为（默认行为是生成一个表），
--- 且该方法会被继承。
+-- 扩展一个外部对象，只需要使用__new元方法来返回这个对象即可。
 function File.__new(...)
     return io.open(...);
 end
@@ -938,49 +938,65 @@ function File:MakeContent()
     return "The name of file is " .. self.filename ..",and opening mode is ".. self.mode;
 end
 
-local file = File.new(__test__,"w");
-file:write(file:MakeContent());
+local file1 = File.new(__test1__,"w");
+local file2 = io.open(__test2__,"w");
 
-assert(getmetatable(io.stdout) == getmetatable(file));
--- 虽然io.stdout和file使用同一元表，但io.stdout并非由File类型扩展而来，
--- 所以io.stdout不能访问MakeContent方法。
-print(io.stdout:MakeContent());-- 引发错误。
+print(file1.is(File));-- true
+print(File.is(io));-- false
 
-file:close();-- FILE*类型可以访问close方法。
+assert(getmetatable(file2) == getmetatable(file1));
+assert(file1.MakeContent ~= nil);
+file1:write(file1:MakeContent());
+-- 虽然file1和file2使用同一元表，但file2并非由File类型扩展而来，
+-- 所以file2没有MakeContent方法。
+assert(file2.MakeContent == nil);
+
+file1:close();-- FILE*类型可以访问close方法。
 
 -- 因为File仅扩展了返回的FILE*类型，而本身没有继承FILE*类型，
 -- 所以通过File类无法访问只有FILE*能访问的域。
-File.close(file);-- File无法访问close方法，引发错误。
+File.close(file2);-- File无法访问close方法，引发错误。
 ```
 
----
-### 9.2 - 继承外部类
----
+### 继承外部类
 ```lua
 local __file__ = (arg or {...})[arg and 0 or 2];
 local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
 local __test__ = __dir__ .. "/test";
 --
 require("OOP.Class");
--- 不同于直接扩展，现在继承FILE*类型。
+-- 不同于直接扩展，现在直接继承io类型。
 local File = class(io);
--- 也可以使用如下方式：
--- local File = class(getmetatable(io.stdout).__index);
 
+-- 仍然需要分配FILE*类型的用户数据。
 function File.__new(...)
     return io.open(...);
 end
+
 local file = File.new(__test__,"w");
 file:close();
+print(file.is(File));-- true
+print(File.is(io));-- true
 
 file = File.new(__test__,"w");
 File.close(file);--现在，也可以通过File来访问close方法。
 ```
 
----
-### 9.3 - 外部对象的生命周期
----
->判断外部对象是否仍然可用
+有时，外部类cls继承于外部类base，如果需要在被继承后，仍然能够使用is来判断这种继承关系，请实现Config.ExternalClass.IsInherite函数：
+```lua
+local Config = require("OOP.Config");
+Config.ExternalClass.IsInherite = function(cls,base)
+    return 你的代码，要求返回布尔值
+end
+local LuaCls = class(cls);
+local lc = LuaCls.new();
+print(lc.is(base));-- true
+print(LuaCls.is(base));-- true
+```
+
+### 生命周期
+
+判断外部对象是否可用：
 ```lua
 local __file__ = (arg or {...})[arg and 0 or 2];
 local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
@@ -988,8 +1004,8 @@ local __test__ = __dir__ .. "/test";
 --
 local Config = require("OOP.Config");
 
--- 一般来说直接使用class.null即可，
--- 如果有特殊需求，可以自定义Config.ExternalClass.Null函数来判断某个userdata类目前是否可用。
+-- 一般情况下，直接使用class.null即可，
+-- 如果有特殊需求，可以自定义Config.ExternalClass.Null函数来判断某个外部对象是否可用。
 Config.ExternalClass.Null = function(obj)
     if getmetatable(obj) == getmetatable(io.stdout) then
         return (tostring(obj):find("(closed)")) ~= nil;
@@ -1002,18 +1018,19 @@ local File = class(io);
 function File.__new(...)
     return io.open(...);
 end
+function File:dtor()
+    self:close();
+end
 
 local file = File.new(__test__,"w");
 print(class.null(file));-- false
-file:close();
+file:delete();
 print(class.null(file));-- true
 ```
 
->销毁外部对象的内存
-
 对于Lua FILE*类型，由于其内存由Lua管理，无法手动销毁并回收内存；
-但对于某些自定义实现的类型，可能具有T\*\*结构，Lua内存管理除了回收T\*\*指针外，对其真正指向的内容不会回收。\
-一般地，实现__delete__以销毁C/C++内存：
+但对于某些自定义实现的类型，可能具有T**结构，Lua内存管理除了回收T\*\*指针外，对其真正指向的内容不会回收。\
+一般地，实现__delete以回收C/C++内存：
 ```lua
 local ExtClass = require("你的外部函数库");
 require("OOP.Class");
@@ -1035,31 +1052,9 @@ obj:delete();-- "LuaClass在此处析构。"
 print(class.null(obj));-- true
 ```
 
----
-### 9.4 - 外部类A与外部类B的继承关系
----
-有时，外部类A与外部类B保持着某种继承关系，如果需要在被继承后，仍然能够使用is来判断这种继承关系，请实现Config.ExternalClass.IsInherite函数：
-```lua
-local Config = require("OOP.Config");
-Config.ExternalClass.IsInherite = function(A,B)
-    return 你的代码，要求返回boolean值；
-end
-```
+## 事件
 
----
-## 10 - Debug和Release运行模式
----
-
-在默认情况下，**Config.Debug**字段被赋值为**true**，这表示当前运行时需要判断访问权限和其它一些操作的合法性，因此会牺牲比较多的运行时效率。
-
-当该字段被赋值为**false**时，绝大多数运行时检查将会跳过（比如允许对const赋值，允许外部访问private成员等），以期获得更快的运行时效率。
-
-如果当前应用在Debug模式下已经进行了充分测试，可以更改Config.Debug为false来获取效率提升。
-
----
-## 11 - 简单的事件分发模式
----
->直接响应事件：
+### 监听
 ```lua
 require("OOP.Class");
 local Listener = class();
@@ -1068,7 +1063,7 @@ function Listener:ctor(name)
     self.name = name;
 end
 
--- 接收名为Email的事件，携带2个额外参数。
+-- 使用handlers保留字的字段来监听名为Email的事件，携带2个额外参数。
 -- 但self一定为第一个参数。
 function Listener.handlers:Email(name,content)
     if name == self.name then
@@ -1079,7 +1074,7 @@ function Listener.handlers:Email(name,content)
     end
 end
 
--- 接收事件的参数长度没有限制，比如接收有任意长度参数的名为Any的事件。
+-- 监听事件的参数长度没有限制，比如监听有任意长度参数的名为Any的事件。
 function Listener.handlers:Any(...)
     print(...);
 end
@@ -1089,6 +1084,7 @@ local a = Listener.new("a");
 local b = Listener.new("b");
 local c = Listener.new("c");
 
+-- 使用event保留字来发送事件。
 -- 向b发送一封内容为123的邮件。
 -- 其参数与接收函数的参数一一对应。
 event.Email("b","123");
@@ -1099,7 +1095,8 @@ event.Any(nil);
 event.Any("any",true,-2,function()end,{});
 event.Any();
 ```
->指定顺序响应事件：
+
+### 排序
 ```lua
 require("OOP.Class");
 local Listener = class();
@@ -1133,40 +1130,7 @@ a.handlers.Any = -1;
 event.Any();
 ```
 
->停用/启用/移除事件响应：
-```lua
-require("OOP.Class");
-local Listener = class();
-function Listener.handlers:Any()
-    print("响应Any事件。");
-end
-
-local a = Listener.new();
--- a-响应Any事件。
-event.Any();
-
--- 赋值为false以停用事件响应。
-a.handlers.Any = false;
-event.Any();-- 没有任何行为。
-
--- 赋值为true以启用事件响应。
-a.handlers.Any = true;
--- a-响应Any事件。
-event.Any();
-
--- 赋值为nil以移除事件响应。
-a.handlers.Any = nil;
-event.Any();-- 没有任何行为。
-
-local b = Listener.new();
--- b-响应Any事件。
-event.Any();
--- b在析构后，也不再响应事件。
-b:delete();
-event.Any();-- 没有任何行为。
-```
-
->重置事件响应：
+### 重置
 ```lua
 require("OOP.Class");
 local Listener = class();
@@ -1186,9 +1150,51 @@ event.Any();
 -- a重置了Any事件的响应->table: xxxxxxxxxx
 ```
 
----
-## 12 - 枚举
----
+### 停用
+```lua
+require("OOP.Class");
+local Listener = class();
+function Listener.handlers:Any()
+    print("响应Any事件。");
+end
+
+local a = Listener.new();
+-- a-响应Any事件。
+event.Any();
+
+-- 赋值为false以停用事件响应。
+a.handlers.Any = false;
+event.Any();-- 没有任何行为。
+
+-- 赋值为true以启用事件响应。
+a.handlers.Any = true;
+-- a-响应Any事件。
+event.Any();
+```
+
+### 移除
+```lua
+require("OOP.Class");
+local Listener = class();
+function Listener.handlers:Any()
+    print("响应Any事件。");
+end
+
+local a = Listener.new();
+-- 赋值为nil以移除事件响应。
+a.handlers.Any = nil;
+event.Any();-- 没有任何行为。
+
+local b = Listener.new();
+-- b-响应Any事件。
+event.Any();
+-- b在析构后，也不再响应事件（意为自动移除）。
+b:delete();
+event.Any();-- 没有任何行为。
+```
+
+## 枚举
+
 一般地，使用**enum**来创建一个枚举类型。\
 与直接使用一个简单的表或使用一系列变量作为枚举不同的是，使用enum生成的枚举类型是默认**不可变**的。\
 与函数类型相似，枚举类型**不会**被作为成员赋值给对象作为初值。
@@ -1220,7 +1226,7 @@ print(Number3.Seven);--7
 print(Number3.Eight);--8
 print(Number3.Nine);--9
 -- 枚举不可改变。
-Number3.Nine = 10;--引发错误。（或者修改Config.EnumBehavior来改变这一行为）
+Number3.Nine = 10;--引发错误。
 
 local Test = class();
 Test.Number1 = Number1;
@@ -1235,16 +1241,15 @@ print(Test.Number2.Four);
 print(test.Number2.Four);--引发错误，对象不能访问静态枚举。
 ```
 
----
-## 13 - 纯虚函数
----
+## 纯虚函数
+
 一般地，使用**virtual**来声明一个纯虚函数。\
-与c++中不同的是，virtual**只能**用来声明纯虚函数，且**不能**和其它访问限定符同时使用。
+与c++中不同的是，virtual**只能**用来声明纯虚函数。
 ```lua
 require("OOP.Class");
 local Interface = class();
 Interface.virtual.DoSomething1 = 0;
-Interface.virtual.DoSomething2 = 0;
+Interface.virtual.const.DoSomething2 = 0;
 
 local Test1 = class(Interface);
 function Test1:DoSomething1()
@@ -1253,7 +1258,8 @@ end
 local test1 = Test1.new();--引发错误，DoSomething2还未被重写，不能实例化。
 
 local Test2 = class(Test1);
-function Test2:DoSomething2()
+-- 注意，实现纯虚函数时，修饰符必须保持一致，否则将引发错误。
+function Test2.const:DoSomething2()
     print("DoSomething2");
 end
 local test2 = Test2.new();
@@ -1261,7 +1267,188 @@ test2:DoSomething1();-- "DoSomething1"
 test2:DoSomething2();-- "DoSomething2"
 ```
 
----
-## 14 - Lua5.1-Lua5.4兼容
----
+### 签名
+
+声明纯虚函数时，可以使用签名来标注该纯虚函数的参数和返回的值。\
+这些签名的含义见下表：
+|签名|  类型  |
+|:--:|:------:|
+| s  | string |
+| n  | number |
+| i  |integer |
+| d  | float  |
+| v  |  nil   |
+| ?  |  nil   |
+| f  |function|
+| t  | table  |
+| b  |boolean |
+| x  | thread |
+| u  |userdata|
+|... |  ...   |
+| *  |任意类型|
+
+使用签名来声明纯虚函数：
+```lua
+require("OOP.Class");
+local Interface = class();
+-- 第一个参数接受一个字符串或数字；
+-- 第二个参数接受一个表或空值；
+-- 返回一个布尔值和整数。
+Interface.virtual.DoSomething("sn","t?").b.i = 0;
+
+local Test = class(Interface);
+
+-- 但实际上并不要求一定按照签名来实现，意味着签名仅仅只是一个提示。
+function Test:DoSomething()
+    return "something";
+end
+print(Test.new():DoSomething());-- something
+```
+
+## 结构体
+
+### 与类的异同
+|        |        类        | 结构体 |
+|:------:|:----------------:|:------:|
+| 保留字 |       class      | struct |
+|  成员  |        是        |   是   |
+|  构造  |        是        |   是   |
+|  析构  |        是        |   否   |
+|  继承  |        是        |   是   |
+|  属性  |        是        |   否   |
+|  效率  |       更慢       |  更快  |
+| 元方法 |        是        |   是   |
+| 修饰符 |        是        |   否   |
+| 实例化 |    T.new(...)    | T(...) |
+|名字继承|        是        |   否   |
+|延迟继承|        是        |   否   |
+|事件监听|        是        |   否   |
+|纯虚函数|        是        |   否   |
+|内存分配| 表/用户数据/空值 |   表   |
+
+
+### 创建结构体
+```lua
+require("OOP.Class");
+local Vec2 = struct {
+    x = 0,
+    y = 0
+};
+function Vec2:ctor(x,y)
+    if x and y then
+        self.x = x;
+        self.y = y;
+    end
+end
+function Vec2:__add(other)
+    return Vec2(self.x + other.x,self.y + other.y);
+end
+function Vec2:__eq(other)
+    for k,v in pairs(self) do
+        if v ~= other[k] then
+            return false;
+        end
+    end
+    return true;
+end
+local v1 = Vec2(1,2);
+local v2 = Vec2(1,2);
+local v3 = v1 + v2;
+print(v1 == v2);-- true
+print(v3.x,v3.y);--2,4
+
+-- 结构体也可以继承（当然也可以多继承）。
+local Vec3 = struct(Vec2) {
+    z = 0
+};
+function Vec3:ctor(x,y,z)
+    if x and y and z then
+        Vec2.ctor(self,x,y);
+        self.z = z;
+    end
+end
+function Vec3:__add(other)
+    return Vec3(self.x + other.x,self.y + other.y,self.z + other.z);
+end
+function Vec3:Print()
+    for k,v in pairs(self) do
+        print(k.."=",v);
+    end
+end
+v1 = Vec3(1,2,3);
+v2 = Vec3(1,2,3);
+print(v1 == v2);-- true
+(v1+v2):Print();-- x=2 y=4 z=6
+```
+
+## 配置
+
+### 保留字
+
+我不喜欢默认提供的保留字（如private,new等）或这些保留字和已有命名相冲突，应该怎么办？
+
+在执行```require("OOP.Class");```语句之前，请修改[Config.lua](OOP/Config.lua)文件中的命名映射字段，以下列出了部分默认字段：
+```lua
+new = "new"
+delete = "delete"
+ctor = "ctor"
+public = "public"
+private = "private"
+protected = "protected"
+```
+比如，现在将：
+
+* **new** 重命名为 **create**；
+* **delete** 重命名为 **dispose**；
+* **ctor** 重命名为 **__init**；
+* 其他保留字命名为它们的大写。
+
+以下代码便可正常运行：
+```lua
+local Config = require("OOP.Config");
+Config.new = "create";
+Config.delete = "dispose";
+Config.ctor = "__init";
+Config.Qualifiers.public = "PUBLIC";
+Config.Qualifiers.private = "PRIVATE";
+Config.Qualifiers.protected = "PROTECTED";
+
+require("OOP.Class");
+local Test = class();
+Test.PROTECTED.data = "123";
+function Test:__init()
+    self.data = self.data:rep(2);
+end
+function Test.PRIVATE:Func1()
+end
+function Test.PUBLIC:PrintData()
+    self:Func1();
+    print("data = " .. self.data);
+end
+local test = Test.create();
+test:PrintData();-- data = "123123"
+test:dispose();
+```
+关于其它更多的可重命名字段，参见[Config.lua](OOP/Config.lua)文件。
+
+### 功能性
+
+[Config.lua](OOP/Config.lua)文件中还有一些关于功能性的配置，见下表：
+
+|        字段名       |     默认值    |   功能性    |
+|:-------------------:|:-------------:|:-----------:|
+|        Debug        |     true      |设置为false时可以提高运行效率，<br/>但大多数安全性检测和访问权限制都将失效。|
+|   PropertyBehavior  |       1       |写入/读取一个只读/只写属性时：<br/>0->将引发一个警告；<br/>1->将引发一个错误；<br/>2->允许该操作；<br/>其他值->忽略该操作。|
+|    ConstBehavior    |       1       |修改常量修饰的值时：<br/>类似于PropertyBehavior字段。|
+|    EnumBehavior     |       1       |修改枚举时：<br/>类似于PropertyBehavior字段。|
+|   StructBehavior    |       2       |为结构体对象新增字段时：<br/>类似于PropertyBehavior字段。|
+|   DefaultEnumIndex  |       1       |枚举值默认的起始值（默认保持为Lua风格，从1开始）。|
+| GetPropertyAutoConst|     false     |get属性是否默认使用常量修饰（即使不使用const修饰符）。|
+|ClearMembersInRelease|     true      |对于表对象，在销毁时是否自动清除所有键值对（仅Release模式下有效）。|
+|    ExternalClass    |      nil      |见[继承外部类](#继承外部类)|
+|      HoleLimit      |      15       |指示事件监听对象被回收的频率，<br/>数值越大，频率越低。|
+|      Language       |      nil      |打印错误信息使用的语言，当前仅支持中文和英文。<br/>设为"zh"以切换为中文。|
+
+## 兼容性
+
 尽量确保Lua5.1-Lua5.4的兼容性，但LuaJIT并未测试。
