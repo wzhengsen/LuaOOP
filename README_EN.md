@@ -51,6 +51,7 @@ LuaOOP is an object-oriented pattern that borrows some of the class design from 
     * [Remove](#remove)
 * [Enumeration](#enumeration);
 * [Pure Virtual Functions](#pure-virtual-functions)
+    * [Override](#Override)
     * [Signature](#signature)
 * [Struct](#struct)
     * [Similarities And Differences With Classes](#similarities-and-differences-with-classes)
@@ -1172,7 +1173,7 @@ a.handlers.Any = true;
 event.Any();
 ```
 
-### 移除
+### Remove
 ```lua
 require("OOP.Class");
 local Listener = class();
@@ -1190,6 +1191,14 @@ local b = Listener.new();
 event.Any();
 -- b also stops responding to events after destructuring.
 b:delete();
+event.Any();-- There is no behavior.
+
+-- Anonymous variable.
+Listener.new();
+-- Anonymous variable-Responsing 'Any' event.
+event.Any();
+-- At this point the anonymous variable is garbage collected.
+collectgarbage();
 event.Any();-- There is no behavior.
 ```
 
@@ -1243,6 +1252,8 @@ print(test.Number2.Four);--Raises an error, the object cannot access the static 
 
 ## Pure virtual functions
 
+## Override
+
 In general, use **virtual** to declare a pure virtual function.\
 Unlike in C++, virtual can **only** be used to declare pure virtual functions.
 ```lua
@@ -1250,21 +1261,27 @@ require("OOP.Class");
 local Interface = class();
 Interface.virtual.DoSomething1 = 0;
 Interface.virtual.const.DoSomething2 = 0;
+Interface.virtual.protected.const.DoSomething3 = 0;
 
 local Test1 = class(Interface);
 function Test1:DoSomething1()
     print("DoSomething1");
 end
-local test1 = Test1.new();--Raise an error,DoSomething2 has not been overridden and cannot be instantiated.
+local test1 = Test1.new();--Raise an error,DoSomething2/DoSomething3 has not been overridden and cannot be instantiated.
 
 local Test2 = class(Test1);
 -- Note that the qualifiers must be consistent when implementing pure virtual functions,otherwise an error will be raised.
 function Test2.const:DoSomething2()
     print("DoSomething2");
+    self:DoSomething3();
+end
+-- You can also use override to qualify the overridden method, which will automatically use the same qualifier.
+function Test2.override:DoSomething3()
+    print("DoSomething3");
 end
 local test2 = Test2.new();
 test2:DoSomething1();-- "DoSomething1"
-test2:DoSomething2();-- "DoSomething2"
+test2:DoSomething2();-- "DoSomething2" "DoSomething3"
 ```
 
 ### Signature

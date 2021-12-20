@@ -51,6 +51,7 @@ LuaOOP是借鉴了C/C++/C#的类/结构体/枚举设计，并使用Lua实现的�
     * [移除](#移除)
 * [枚举](#枚举)
 * [纯虚函数](#纯虚函数)
+    * [重写](#重写)
     * [签名](#签名)
 * [结构体](#结构体)
     * [与类的异同](#与类的异同)
@@ -1191,6 +1192,14 @@ event.Any();
 -- b在析构后，也不再响应事件（意为自动移除）。
 b:delete();
 event.Any();-- 没有任何行为。
+
+-- 匿名变量。
+Listener.new();
+-- 匿名变量-响应Any事件。
+event.Any();
+-- 此时匿名变量被垃圾回收。
+collectgarbage();
+event.Any();--没有任何行为。
 ```
 
 ## 枚举
@@ -1243,6 +1252,8 @@ print(test.Number2.Four);--引发错误，对象不能访问静态枚举。
 
 ## 纯虚函数
 
+### 重写
+
 一般地，使用**virtual**来声明一个纯虚函数。\
 与c++中不同的是，virtual**只能**用来声明纯虚函数。
 ```lua
@@ -1250,21 +1261,27 @@ require("OOP.Class");
 local Interface = class();
 Interface.virtual.DoSomething1 = 0;
 Interface.virtual.const.DoSomething2 = 0;
+Interface.virtual.protected.const.DoSomething3 = 0;
 
 local Test1 = class(Interface);
 function Test1:DoSomething1()
     print("DoSomething1");
 end
-local test1 = Test1.new();--引发错误，DoSomething2还未被重写，不能实例化。
+local test1 = Test1.new();--引发错误，DoSomething2/DoSomething3还未被重写，不能实例化。
 
 local Test2 = class(Test1);
 -- 注意，实现纯虚函数时，修饰符必须保持一致，否则将引发错误。
 function Test2.const:DoSomething2()
     print("DoSomething2");
+    self:DoSomething3();
+end
+-- 也可以使用override来修饰重写的方法，将自动使用相同的修饰符。
+function Test2.override:DoSomething3()
+    print("DoSomething3");
 end
 local test2 = Test2.new();
 test2:DoSomething1();-- "DoSomething1"
-test2:DoSomething2();-- "DoSomething2"
+test2:DoSomething2();-- "DoSomething2" "DoSomething3"
 ```
 
 ### 签名
