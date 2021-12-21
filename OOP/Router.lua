@@ -226,6 +226,7 @@ if Debug then
     end;
 
     Done = function(_,key,value)
+        if nil == key then return;end
         local isStatic = band(decor,p_static) ~= 0;
         local meta = MetaMapName[key];
         local gs = band(decor,p_gs);
@@ -486,7 +487,7 @@ else
     end;
 
     Done = function(_,key,value)
-        if band(decor,p_virtual) ~= 0 then
+        if nil == key or band(decor,p_virtual) ~= 0 then
             -- Skip pure virtual functions.
             return;
         end
