@@ -193,9 +193,12 @@ if Debug then
             -- Consider the following case.
             -- local A = class();
             -- function A.protected:ctor()end
+            -- function A.protected:dtor()end
             -- local B = class(A);
-            -- function B:ctor()end
-            if not byObj then
+            -- function B:ctor()end-- Allowed.
+            -- function B.protected:dtor()end-- Allowed.
+            -- function B:dtor()end -- Raise error at here.
+            if not byObj and not rawequal(cls,self) then
                 return true;
             end
         end
