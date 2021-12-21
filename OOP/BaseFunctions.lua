@@ -162,9 +162,10 @@ if Debug then
     ---@param self table
     ---@param key any
     ---@param set? boolean
+    ---@param byObj? boolean
     ---@return boolean
     ---
-    CheckPermission = function(self,key,set)
+    CheckPermission = function(self,key,set,byObj)
         local stackCls = AccessStack[#AccessStack];
         if stackCls == 0 then
             -- 0 means that any access rights can be broken.
@@ -188,6 +189,14 @@ if Debug then
                     end
                     return false;
                 end
+            end
+            -- Consider the following case.
+            -- local A = class();
+            -- function A.protected:ctor()end
+            -- local B = class(A);
+            -- function B:ctor()end
+            if not byObj then
+                return true;
             end
         end
 

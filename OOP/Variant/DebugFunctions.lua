@@ -310,7 +310,7 @@ function Functions.MakeInternalObjectMeta(cls,metas)
         if property and not property[2] then
             pre = "s";
         end
-        if not CheckPermission(cCls,pre .. key,true) then
+        if not CheckPermission(cCls,pre .. key,true,true) then
             return;
         end
         if pre == "s" then
@@ -398,7 +398,7 @@ local function RetrofiteUserDataObjectMetaExternal(obj,meta,cls)
             if property and not property[2] then
                 pre = "s";
             end
-            if not CheckPermission(cls,pre .. key,true) then
+            if not CheckPermission(cls,pre .. key,true,true) then
                 return;
             end
             if pre == "s" then
