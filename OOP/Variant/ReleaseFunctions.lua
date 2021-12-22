@@ -783,7 +783,7 @@ local function ClassSet(cls,key,value)
         ClassesDelete[cls] = value;
         Update2Children(cls,ClassesDelete,value);
         return;
-    elseif key == friends then
+    elseif key == friends or nil == key then
         return;
     else
         local property = ClassesWritable[cls][key];

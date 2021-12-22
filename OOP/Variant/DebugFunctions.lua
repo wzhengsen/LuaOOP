@@ -504,6 +504,7 @@ local function ClassGet(cls,key)
 end
 
 local function ClassSet(cls,key,value)
+    if nil == key then return;end
     -- The reserved words cannot be used.
     if ReservedWord[key] then
         error((i18n"%s is a reserved word and you can't set it."):format(key));
