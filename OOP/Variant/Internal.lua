@@ -50,9 +50,7 @@ local BitsMap = {
 
     -- Used to instruct const methods internally,
     -- external code doesn't need to care about this.
-    __InternalConstMethod = 2 ^ 10,
-
-    max = (2 ^ 11) - 1
+    ["__InternalConstMethod🥷"] = 2 ^ 10
 };
 if LuaVersion > 5.2 then
     for k, v in pairs(BitsMap) do

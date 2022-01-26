@@ -165,7 +165,7 @@ if Debug then
     local RouterReservedWord = Internal.RouterReservedWord;
 
     local p_const = Permission.const;
-    local p_internalConstMethod = Internal.BitsMap.__InternalConstMethod;
+    local p_internalConstMethod = Internal.BitsMap["__InternalConstMethod🥷"];
 
     ---Wrapping metamethod.
     ---Because the invocation of metamethods does not depend on external lookups,
