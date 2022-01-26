@@ -130,7 +130,7 @@ if Debug then
     local p_public = Permission.public;
     local p_protected = Permission.protected;
     local p_private = Permission.private;
-    local p_internalConstMethod = Internal.BitsMap.__InternalConstMethod;
+    local p_internalConstMethod = Internal.BitsMap["__InternalConstMethod🥷"];
 
     ---Cascade to get permission values up to the top of the base class.
     ---
