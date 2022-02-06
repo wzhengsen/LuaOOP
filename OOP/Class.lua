@@ -20,11 +20,15 @@
 -- THE SOFTWARE.
 
 local setmetatable = setmetatable;
+local getmetatable = getmetatable;
 local type = type;
 local pcall = pcall;
 local error = error;
 local next = next;
 local select = select;
+local d_setmetatable = debug.setmetatable;
+local rawget = rawget;
+local rawset = rawset;
 
 local Config = require("OOP.Config");
 local Debug = Config.Debug;
@@ -33,6 +37,7 @@ local raw = Config.raw;
 local del = Config.del;
 
 local i18n = require("OOP.i18n");
+local Internal = require("OOP.Variant.Internal");
 
 local Functions = Debug and require("OOP.Variant.DebugFunctions") or require("OOP.Variant.ReleaseFunctions");
 local ClassesBases = Functions.ClassesBases;
@@ -43,12 +48,19 @@ local CheckClass = Functions.CheckClass;
 local ClassInherite = Functions.ClassInherite;
 local CreateClassIs = Functions.CreateClassIs;
 local CreateClassDelete = Functions.CreateClassDelete;
-local RetrofiteUserDataObjectMeta = Functions.RetrofiteUserDataObjectMeta;
+local RetrofitExternalObjectMeta = Functions.RetrofitExternalObjectMeta;
+local MakeInternalObjectMeta = Functions.MakeInternalObjectMeta;
 local RegisterHandlersAndMembers = Functions.RegisterHandlersAndMembers;
 local AttachClassFunctions = Functions.AttachClassFunctions;
 local ClassesBanNew = Functions.ClassesBanNew;
 local ClassesMetas = Functions.ClassesMetas;
 local VirtualClassesMembers = Functions.VirtualClassesMembers;
+local ObjectsCls = Internal.ObjectsCls;
+local NamedClasses = Internal.NamedClasses;
+local AllClasses = Internal.AllClasses;
+local ObjectsAll = Internal.ObjectsAll;
+local __internal__ = Config.__internal__;
+local to = Config.to;
 
 
 local ClassCreateLayer = 0;
@@ -91,11 +103,15 @@ local function CreateClassNew(cls,clsAll,handlers,members)
 
         if ClassCreateLayer == 1 then
             RegisterHandlersAndMembers(obj,all,handlers,members);
-            local oType = type(obj);
-            if "userdata" == oType then
-                RetrofiteUserDataObjectMeta(obj,cls);
+            local metas = getmetatable(obj);
+            if not metas or rawget(metas,__internal__) then
+                -- If the object does not have a meta table or if the meta table is internal to LuaOOP,
+                -- then it is sufficient to use that meta table directly.
+                d_setmetatable(obj,ClassesMetas[cls]);
             else
-                setmetatable(obj,ClassesMetas[cls]);
+                -- Otherwise, the meta-table is retrofited.
+                ObjectsCls[obj] = cls;
+                RetrofitExternalObjectMeta(cls,metas,false);
             end
             ObjectInit(obj,cls,clsAll,...);
         else
@@ -120,14 +136,24 @@ function class.New(...)
         assert(select("#",...) == len,i18n"You cannot inherit a nil value.");
     end
 
-
     local cls,metas,name = CheckClass(args);
+    if rawget(metas,__internal__) then
+        MakeInternalObjectMeta(cls,metas);
+    else
+        -- The third parameter true indicates that this meta-table was created externally
+        -- and that it is forced to transform this meta-table.
+        -- That is, the difference between the SOL class and the FILE* class is.
+        -- 1. the use of names to force the retrofitting of the SOL class (true).
+        -- 2. the use of a table to inherit the FILE* class (false).
+        RetrofitExternalObjectMeta(cls,metas,true);
+    end
+
     local all,bases,handlers,members = CreateClassTables(cls);
 
     local clsMeta = {};
     setmetatable(cls,clsMeta);
 
-    ClassInherite(cls,args,bases,handlers,members,metas,name);
+    ClassInherite(cls,args,bases,handlers,members,ClassesMetas[cls],name);
 
     AttachClassFunctions(
         cls,
@@ -148,8 +174,54 @@ if Debug then
         assert(select("#",...) == 0 and "function" == type(f),errorWords);
         return BreakFunctionWrapper(f);
     end
+    class[to] = function (cls,obj)
+        local t = type(cls);
+        if t == "string" then
+            cls = NamedClasses[cls];
+        elseif t == "table" then
+            if not AllClasses[cls] then
+                cls = nil;
+            end
+        end
+        if nil == cls then
+            error(i18n"A non-existent class is used.");
+        end
+        local metas = getmetatable(obj);
+        if not metas or rawget(metas,__internal__) then
+            d_setmetatable(obj,ClassesMetas[cls]);
+        else
+            RetrofitExternalObjectMeta(cls,metas,false);
+            ObjectsCls[obj] = cls;
+        end
+        if not ObjectsAll[obj] then
+            ObjectsAll[obj] = {};
+        end
+    end;
 else
     class[raw]=function(f)return f;end
+    class[to] = function (cls,obj)
+        local t = type(cls);
+        if t == "string" then
+            cls = NamedClasses[cls];
+        elseif t == "table" then
+            if not AllClasses[cls] then
+                cls = nil;
+            end
+        end
+        if nil == cls then
+            return;
+        end
+        local metas = getmetatable(obj);
+        if not metas or rawget(metas,__internal__) then
+            d_setmetatable(obj,ClassesMetas[cls]);
+        else
+            RetrofitExternalObjectMeta(cls,metas,false);
+            ObjectsCls[obj] = cls;
+        end
+        if type(obj) == "userdata" and not ObjectsAll[obj] then
+            ObjectsAll[obj] = {};
+        end
+    end;
 end
 
 class[del] = Functions.CallDel;

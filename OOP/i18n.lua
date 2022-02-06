@@ -183,7 +183,10 @@ local LanguageMap = {
     },
     ["You are attempting to add a field to the struct and that behavior is prohibited."] = {
         zh = "你企图为结构体添加一个字段，该行为被禁止。"
-    }
+    },
+    ["A non-existent class is used."] = {
+        zh = "使用了不存在的类。"
+    },
 };
 
 return function (words)

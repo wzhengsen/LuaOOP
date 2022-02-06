@@ -30,6 +30,7 @@ local select = select;
 local remove = table.remove;
 local insert = table.insert;
 local d_setmetatable = debug.setmetatable;
+local next = next;
 
 local Config = require("OOP.Config");
 local i18n = require("OOP.i18n");
@@ -54,8 +55,8 @@ local dtor = Config.dtor;
 
 local new = Config.new;
 local is = Config.is;
-local __cls__ = Config.__cls__;
 
+local __internal__ = Config.__internal__;
 local __singleton = Config.__singleton;
 local Instance = Config.Instance;
 local handlers = Config.handlers;
@@ -66,6 +67,7 @@ local Meta = Config.Meta;
 local static = Config.Qualifiers.static;
 local get = Config.get;
 local set = Config.set;
+local __cls__ = Config.__cls__;
 
 local MetaMapName = Config.MetaMapName;
 
@@ -155,6 +157,7 @@ local registry = debug.getregistry();
 ---
 ---Check the class and return the meta-table for the class object.
 ---
+---
 ---@param args table
 ---@return table @cls
 ---@return table @metas
@@ -169,21 +172,25 @@ local function CheckClass(args)
         if NamedClasses[name] then
             error((i18n"You cannot use this name \"%s\", which is already used by other class.").format(name));
         else
+            -- Save the names and classes mapped to each other.
             NamedClasses[name] = cls;
             NamedClasses[cls] = name;
+
             metas = registry[name];
-            if nil == metas then
+            if nil == metas or rawget(metas,__internal__) then
                 -- If a meta table by that name does not exist in the registry, it is created.
-                metas = {__name = name,[__cls__] = cls};
+                -- Otherwise, the class is not an internal class.
+                metas = {[__internal__] = true};
                 registry[name] = metas;
+                ClassesMetas[cls] = metas;
             else
-                metas[__cls__] = cls;
+                ClassesMetas[cls] = {[__internal__] = true};
             end
         end
     else
-        metas = {};
+        metas = {[__internal__] = true};
+        ClassesMetas[cls] = metas;
     end
-    Functions.MakeInternalObjectMeta(cls,metas);
     return cls,metas,name;
 end
 
@@ -276,19 +283,13 @@ end
 ---@return "table?"
 local function CreateClassObject(cls,...)
     local _new = ClassesNew[cls];
-    local obj = nil;
-    local oType = "table";
-    if _new then
-        -- The object returned by the _new function must be userdata or nil.
-        obj = _new(...);
-        oType = type(obj);
-    else
-        obj = {};
-    end
+    local obj = _new and _new(...) or {};
     local all = nil;
-    if "table" == oType then
+    local t = type(obj);
+    if "table" == t then
         all = obj;
     elseif nil ~= obj then
+        -- Try to get a pre-existing 'all' table (nested constructs may exist).
         all = ObjectsAll[obj];
         if nil == all then
             all = {};
@@ -344,7 +345,7 @@ local function RegisterHandlersAndMembers(obj,all,handlers,members)
     for key,value in pairs(members) do
         -- Automatically set member of object.
         -- Before the instance can change the meta-table, its members must be set.
-        all[key] = Copy(value);
+        rawset(all,key,Copy(value));
     end
 end
 
@@ -374,47 +375,34 @@ local HandlersControl = setmetatable({},{
 ---@return table
 ---
 local function MakeInternalObjectMeta(cls,metas)
-    ClassesMetas[cls] = metas;
     metas.__index = function (sender,key)
         if key == handlers then
             HandlersControlObj = sender;
             return HandlersControl;
         end
         local ret = nil;
-        local cCls = nil;
-        if "userdata" == type(sender) then
-            local all = ObjectsAll[sender];
-            if not all then
-                all = {};
-                ObjectsAll[sender] = all;
-            end
-            cCls = ObjectsCls[sender];
-            if not cCls then
-                cCls = metas[__cls__];
-                ObjectsCls[sender] = cCls;
-            end
+        local all = ObjectsAll[sender];
+        if all then
             ret = all[key];
             if nil ~= ret then
                 return ret;
             end
-        else
-            cCls = cls;
         end
 
         -- Check the properties of current class.
-        local property = ClassesReadable[cCls][key];
+        local property = ClassesReadable[cls][key];
         if property and not property[2] then
             return property[1](sender);
         end
 
         -- Check the key of current class.
-        ret = rawget(cCls,key);
+        ret = rawget(cls,key);
         if nil ~= ret then
             return ret;
         end
 
         -- Check base class.
-        for _, base in ipairs(ClassesBases[cCls]) do
+        for _, base in ipairs(ClassesBases[cls]) do
             ret = CascadeGet(base,key,{},true);
             if nil ~= ret then
                 return ret;
@@ -422,28 +410,13 @@ local function MakeInternalObjectMeta(cls,metas)
         end
     end;
     metas.__newindex = function (sender,key,value)
-        local isUserData = "userdata" == type(sender);
-        local cCls = nil;
-        if isUserData then
-            cCls = ObjectsCls[sender];
-            if not cCls then
-                cCls = metas[__cls__];
-                ObjectsCls[sender] = cCls;
-            end
-        else
-            cCls = cls;
-        end
-        local property = ClassesWritable[cCls][key];
+        local property = ClassesWritable[cls][key];
         if property and not property[2] then
             property[1](sender,value);
             return;
         end
-        if isUserData then
-            local all = ObjectsAll[sender];
-            if not all then
-                all = {};
-                ObjectsAll[sender] = all;
-            end
+        local all = ObjectsAll[sender];
+        if all then
             all[key] = value;
             return;
         end
@@ -452,87 +425,141 @@ local function MakeInternalObjectMeta(cls,metas)
     return metas;
 end
 
-local function RetrofiteMetaMethod(meta,methodName,method)
-    local oldMethod = rawget(meta,methodName);
-    rawset(meta,methodName,function (sender,...)
-        local all = ObjectsAll[sender];
-        if not all then
-            if methodName ~= "__close" and methodName ~= "__gc" then
-                if nil ~= oldMethod then
-                    return oldMethod(sender,...);
-                elseif methodName == "__eq" then
-                    return false;
-                else
-                    error((i18n"This meta method is not implemented. - %s"):format(methodName));
-                end
+local function RetrofiteMetaMethod(_cls,metas,name,forceRetrofit)
+    --- Since the meta table may still be used for external classes or other classes after being retrofitted,
+    -- the custom meta method goes through the sender to find it.
+    local oldMeta = rawget(metas,name);
+    if name == "__gc" or name == "__close" then
+        rawset(metas,name,function (sender)
+            local cls = ObjectsCls[sender];
+            if nil == cls and forceRetrofit then
+                ObjectsCls[sender] = _cls;
+                cls = _cls;
             end
-        elseif method then
-            return method(sender,...);
-        end
-    end);
+            local meta = cls and ClassesMetas[cls][name] or oldMeta;
+            if meta then
+                return meta(sender);
+            end
+        end);
+    elseif name == "__eq" then
+        rawset(metas,name,function (sender,other)
+            local cls = ObjectsCls[sender];
+            if nil == cls and forceRetrofit then
+                ObjectsCls[sender] = _cls;
+                cls = _cls;
+            end
+            local meta = cls and ClassesMetas[cls][name] or oldMeta;
+            if meta then
+                return meta(sender,other);
+            end
+            return rawequal(sender,other);
+        end);
+    elseif name == "__tostring" then
+        rawset(metas,name,function (sender)
+            local cls = ObjectsCls[sender];
+            if nil == cls and forceRetrofit then
+                ObjectsCls[sender] = _cls;
+                cls = _cls;
+            end
+            local meta = cls and ClassesMetas[cls][name] or oldMeta;
+            if meta then
+                return meta(sender);
+            end
+            return (rawget(metas,"__name") or type(sender)) .. " - LuaOOP Object.";
+        end);
+    elseif name == "__len" then
+        rawset(metas,name,function (sender)
+            local cls = ObjectsCls[sender];
+            if nil == cls and forceRetrofit then
+                ObjectsCls[sender] = _cls;
+                cls = _cls;
+            end
+            local meta = cls and ClassesMetas[cls][name] or oldMeta;
+            if meta then
+                return meta(sender);
+            end
+            return rawlen(sender);
+        end);
+    elseif name == "__pairs" then
+        rawset(metas,name,function (sender)
+            local cls = ObjectsCls[sender];
+            if nil == cls and forceRetrofit then
+                ObjectsCls[sender] = _cls;
+                cls = _cls;
+            end
+            local meta = cls and ClassesMetas[cls][name] or oldMeta;
+            if meta then
+                return meta(sender);
+            end
+            return next,sender,nil;
+        end);
+    else
+        rawset(metas,name,function (sender,...)
+            local cls = ObjectsCls[sender];
+            if nil == cls and forceRetrofit then
+                ObjectsCls[sender] = _cls;
+                cls = _cls;
+            end
+            local meta = cls and ClassesMetas[cls][name] or oldMeta;
+            if meta then
+                return meta(sender,...);
+            end
+            error((i18n"This meta method is not implemented. - %s"):format(name));
+        end);
+    end
 end
 
---- Generate a meta-table for an object (typically a userdata).
----
----@param obj userdata
----
-local function RetrofiteUserDataObjectMetaExternal(obj,meta,cls)
-    -- Unlike the normal table type, which saves meta-tables directly in ClassesMetas[cls].
-    -- The userdata type, on the other hand, gets its own meta-table and then retrofites this meta-table.
-    -- The retrofited meta-table is saved in ClassesMetas[meta] and __index and __newindex are unique logic,
-    -- other meta-methods are overridden.
-
-    local found = ClassesMetas[meta];
-    if found then
-        -- It has been Retrofited,skip it.
+local function RetrofitExternalObjectMeta(cls,metas,forceRetrofit)
+    if rawget(metas,__cls__) then
         return;
     end
-
-    local clsMeta = setmetatable(ClassesMetas[cls],{
-        __newindex = function (sender,key,value)
-            -- Copy the operation on clsMeta to meta.
-            rawset(sender,key,value);
-            RetrofiteMetaMethod(meta,key,value)
-        end
-    });
-    for k,v in pairs(clsMeta) do
-        if Meta[k] then
-            RetrofiteMetaMethod(meta,k,v)
-        end
+    rawset(metas,__cls__,cls);
+    -- Attempt to retrofit the meta-table.
+    -- Only __index and __newindex will integrate the logic,
+    -- the logic of other meta methods will be overwritten.
+    for name,_ in pairs(Meta) do
+        RetrofiteMetaMethod(cls,metas,name,forceRetrofit);
     end
 
-    local index = rawget(meta,"__index");
+    local index = rawget(metas,"__index");
     local indexFunc = "function" == type(index);
-    rawset(meta,"__index",function (sender,key)
-        -- Check self all.
-        local all = ObjectsAll[sender];
-        local ret = nil;
-        if all then
+    local newIndex = rawget(metas,"__newindex");
+    local newIndexFunc =  "function" == type(newIndex);
+    rawset(metas,"__index",function (sender,key)
+        local oCls = ObjectsCls[sender];
+        if nil == oCls and forceRetrofit then
+            ObjectsCls[sender] = cls;
+            oCls = cls;
+        end
+        if oCls then
             if key == handlers then
                 HandlersControlObj = sender;
                 return HandlersControl;
             end
-            ret = all[key];
-            if nil ~= ret then
-                return ret;
-            end
-        end
 
-        local cls = ObjectsCls[sender];
-        if cls then
+            -- Check self all.
+            local all = ObjectsAll[sender];
+            local ret = nil;
+            if all then
+                ret = all[key];
+                if nil ~= ret then
+                    return ret;
+                end
+            end
+
             -- Check cls methods and members.
-            ret = rawget(cls,key);
+            ret = rawget(oCls,key);
             if nil ~= ret then
                 return ret;
             end
 
             -- Check cls properties.
-            local property = ClassesReadable[cls][key];
+            local property = ClassesReadable[oCls][key];
             if property and not property[2] then
                 return property[1](sender);
             end
             -- Check cls bases.
-            for _, base in ipairs(ClassesBases[cls]) do
+            for _, base in ipairs(ClassesBases[oCls]) do
                 ret = CascadeGet(base,key,{},true);
                 if nil ~= ret then
                     return ret;
@@ -541,49 +568,44 @@ local function RetrofiteUserDataObjectMetaExternal(obj,meta,cls)
         end
         -- Finally, check the original method or table.
         if index then
-            return indexFunc and index(sender,key) or index[key];
+            if indexFunc then
+                return index(sender,key);
+            end
+            return index[key];
         end
     end);
-    local newIndex = rawget(meta,"__newindex");
-    local newIndexFunc =  "function" == type(newIndex);
-    rawset(meta,"__newindex",function (sender,key,value)
-        local cls = ObjectsCls[sender];
-        if cls then
-            local property = ClassesWritable[cls][key];
+    rawset(metas,"__newindex",function (sender,key,value)
+        local oCls = ObjectsCls[sender];
+        if nil == oCls and forceRetrofit then
+            ObjectsCls[sender] = cls;
+            oCls = cls;
+        end
+        if oCls then
+            local property = ClassesWritable[oCls][key];
             if property and not property[2] then
                 property[1](sender,value);
                 return;
             end
             local all = ObjectsAll[sender];
             all[key] = value;
-        end
-
-        -- Finally, write by the original method.
-        if not cls or newIndex then
-            if newIndexFunc then
-                newIndex(sender,key,value);
-            elseif newIndex then
-                newIndex[key] = value;
+        else
+             -- Finally, write by the original method.
+            if newIndex then
+                if newIndexFunc then
+                    newIndex(sender,key,value);
+                elseif newIndex then
+                    newIndex[key] = value;
+                end
             else
-                error((i18n"attempt to index a %s value."):format(meta.__name or ""));
+                local t = type(sender);
+                if "table" == t then
+                    rawset(sender,key,value);
+                else
+                    error((i18n"attempt to index a %s value."):format(t));
+                end
             end
         end
     end);
-
-    ClassesMetas[meta] = meta;
-end
-
-local function RetrofiteUserDataObjectMeta(obj,cls)
-    -- Instances of the userdata type require the last cls information.
-    -- Because multiple different lua classes can inherit from the same c++ class.
-    ObjectsCls[obj] = cls;
-
-    local meta = getmetatable(obj);
-    -- If the __cls__ field exists in the meta table,
-    -- then this userdata can be considered as internal userdata and does not need to retrofite the meta table.
-    if nil == rawget(meta,__cls__) then
-        RetrofiteUserDataObjectMetaExternal(obj,meta,cls);
-    end
 end
 
 --[[
@@ -701,7 +723,7 @@ local function AttachClassFunctions(cls,_is,_new,_delete)
     cls[delete] = _delete;
 end
 
-local function ClassInherite(cls,args,bases,handlers,members,metas,name)
+local function ClassInherite(cls,args,bases,handlers,members,metas,name,pb)
     local children = ClassesChildrenByName[name];
     if children then
         -- If some class inherits by name before that class is defined,
@@ -724,7 +746,7 @@ local function ClassInherite(cls,args,bases,handlers,members,metas,name)
             end
         end
         if nil ~= base then
-            Functions.PushBase(cls,bases,base,handlers,members,metas);
+            (pb or PushBase)(cls,bases,base,handlers,members,metas);
         end
     end
 end
@@ -830,7 +852,7 @@ Functions.CreateClassObject = CreateClassObject;
 Functions.CallDel = CallDel;
 Functions.MakeInternalObjectMeta = MakeInternalObjectMeta;
 Functions.RegisterHandlersAndMembers = RegisterHandlersAndMembers;
-Functions.RetrofiteUserDataObjectMeta = RetrofiteUserDataObjectMeta;
+Functions.RetrofitExternalObjectMeta = RetrofitExternalObjectMeta;
 Functions.RetrofiteMetaMethod = RetrofiteMetaMethod;
 Functions.CreateClassTables = CreateClassTables;
 Functions.AttachClassFunctions = AttachClassFunctions;

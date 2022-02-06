@@ -46,6 +46,7 @@ local Config = {
     null = "null",
     raw = "raw",
     del = "del",
+    to = "to",
 
     set = "set",
     get = "get",
@@ -185,6 +186,7 @@ local Config = {
 
     --****************Functional fields end****************
 
+    __internal__ = "💠",
     __cls__ = "🧬"
 };
 

@@ -24,11 +24,11 @@ local setmetatable = setmetatable;
 local d_setmetatable = debug.setmetatable;
 local rawset = rawset;
 local rawget = rawget;
+local rawequal = rawequal;
 local type = type;
 local pairs = pairs;
 local ipairs = ipairs;
 local warn = warn or print;
-local tostring = tostring;
 
 local Config = require("OOP.Config");
 local i18n = require("OOP.i18n");
@@ -49,7 +49,6 @@ local BitsMap = R.BitsMap;
 local Permission = R.Permission;
 local Begin = R.Begin;
 
-local __cls__ = Config.__cls__;
 local new = Config.new;
 local delete = Config.delete;
 local nNew = "n" .. new;
@@ -61,6 +60,7 @@ local nCtor = "n" .. ctor;
 local nDtor = "n" .. dtor;
 local __new = Config.__new;
 local __delete = Config.__delete;
+local __cls__ = Config.__cls__;
 
 local static = Config.Qualifiers.static;
 local get = Config.get;
@@ -77,12 +77,13 @@ local MetaMapName = Config.MetaMapName;
 local PropertyBehavior = Config.PropertyBehavior;
 
 local Functions = require("OOP.Variant.ReleaseFunctions");
-local GetSingleton = Functions.GetSingleton;
-local DestroySingleton = Functions.DestroySingleton;
-local RetrofiteMetaMethod = Functions.RetrofiteMetaMethod;
-local ClassInherite = Functions.ClassInherite;
-local PushBase = Functions.PushBase;
-local CreateClassObject = Functions.CreateClassObject;
+local R_GetSingleton = Functions.GetSingleton;
+local R_DestroySingleton = Functions.DestroySingleton;
+local R_RetrofiteMetaMethod = Functions.RetrofiteMetaMethod;
+local R_ClassInherite = Functions.ClassInherite;
+local R_PushBase = Functions.PushBase;
+local R_CreateClassObject = Functions.CreateClassObject;
+local R_CreateClassTables = Functions.CreateClassTables;
 local FinalClassesMembers = Functions.FinalClassesMembers;
 local VirtualClassesMembers = Functions.VirtualClassesMembers;
 local VirtualClassesPermissons = Functions.VirtualClassesPermissons;
@@ -102,7 +103,6 @@ local ClassesNew = Functions.ClassesNew;
 local ClassesDelete = Functions.ClassesDelete;
 local ObjectsAll = Functions.ObjectsAll;
 local ObjectsCls = Functions.ObjectsCls;
-local CreateClassTables = Functions.CreateClassTables;
 local ClassesStatic = Functions.ClassesStatic;
 local ClassesChildrenByName = Functions.ClassesChildrenByName;
 
@@ -207,32 +207,25 @@ local HandlersControl = setmetatable({},{
     end
 });
 
-local function GetAndCheck(cls,key,sender,metas)
+local function GetAndCheck(cls,sender,key)
     if key == handlers then
         HandlersControlObj = sender;
         return HandlersControl;
     end
-    local cCls = nil;
-    if metas and "userdata" == type(sender) then
-        cCls = ObjectsCls[sender];
-        if not cCls then
-            cCls = metas[__cls__];
-            ObjectsCls[sender] = cCls;
-        end
-    else
-        cCls = cls;
-    end
     -- Check the properties of current class.
     local pre = "n";
-    local property = ClassesReadable[cCls][key];
+    local property = ClassesReadable[cls][key];
     if property and not property[2] then
         pre = "g";
     end
 
-    if not CheckPermission(cCls,pre .. key) then
+    if not CheckPermission(cls,pre .. key) then
         return nil;
     end
+
     -- Check self __all__ first.
+    -- Some objects may be created externally and have no 'all' table,
+    -- so create one manually at this point.
     local all = ObjectsAll[sender];
     if nil == all then
         all = {};
@@ -243,7 +236,7 @@ local function GetAndCheck(cls,key,sender,metas)
         return ret;
     end
     -- Check the key of current class.
-    ret = rawget(cCls,key);
+    ret = rawget(cls,key);
     if nil ~= ret then
         return ret;
     end
@@ -251,7 +244,7 @@ local function GetAndCheck(cls,key,sender,metas)
     if pre == "g" then
         return property[1](sender);
     else
-        property = ClassesWritable[cCls][key];
+        property = ClassesWritable[cls][key];
         if property and not property[2] then
             if PropertyBehavior ~= 2 then
                 if PropertyBehavior == 0 then
@@ -264,12 +257,12 @@ local function GetAndCheck(cls,key,sender,metas)
         end
     end
     -- Check current class.
-    ret = ClassesAll[cCls][key];
+    ret = ClassesAll[cls][key];
     if nil ~= ret then
         return ret;
     end
     -- Check bases.
-    for _, base in ipairs(ClassesBases[cCls]) do
+    for _, base in ipairs(ClassesBases[cls]) do
         ret = CascadeGet(base,key,{},true);
         if nil ~= ret then
             return ret;
@@ -277,173 +270,125 @@ local function GetAndCheck(cls,key,sender,metas)
     end
 end
 
+local function SetAndCheck(cls,sender,key,value)
+    -- The reserved words cannot be used.
+    if ReservedWord[key] then
+        error((i18n"%s is a reserved word and you can't set it."):format(key));
+    end
+    local pre = "n";
+    local property = ClassesWritable[cls][key];
+    if property and not property[2] then
+        pre = "s";
+    end
+    if not CheckPermission(cls,pre .. key,true,true) then
+        return;
+    end
+    if pre == "s" then
+        property[1](sender,value);
+        return;
+    else
+        property = ClassesReadable[cls][key];
+        if property and not property[2] then
+            if PropertyBehavior ~= 2 then
+                if PropertyBehavior == 0 then
+                    warn(("You can't write a read-only property. - %s"):format(key));
+                elseif PropertyBehavior == 1 then
+                    error((i18n"You can't write a read-only property. - %s"):format(key));
+                end
+                return;
+            end
+        end
+    end
+    -- Some objects may be created externally and have no 'all' table,
+    -- so create one manually at this point.
+    local all = ObjectsAll[sender];
+    if nil == all then
+        all = {};
+        ObjectsAll[sender] = all;
+    end
+    all[key] = value;
+end
+
 ---
 ---Generate a meta-table for an object (typically a table) generated by a pure lua class.
 ---
 ---@param cls table
 ---@param metas? table
----@return table
 ---
-function Functions.MakeInternalObjectMeta(cls,metas)
-    ClassesMetas[cls] = metas;
+local function MakeInternalObjectMeta(cls,metas)
     metas.__index = function (sender,key)
-        return GetAndCheck(cls,key,sender,metas);
+        return GetAndCheck(cls,sender,key);
     end;
     metas.__newindex = function (sender,key,value)
-        local isUserData = "userdata" == type(sender);
-        local cCls = nil;
-        if isUserData then
-            cCls = ObjectsCls[sender];
-            if not cCls then
-                cCls = metas[__cls__];
-                ObjectsCls[sender] = cCls;
-            end
-        else
-            cCls = cls;
-        end
-        -- The reserved words cannot be used.
-        if ReservedWord[key] then
-            error((i18n"%s is a reserved word and you can't set it."):format(key));
-        end
-        local pre = "n";
-        local property = ClassesWritable[cCls][key];
-        if property and not property[2] then
-            pre = "s";
-        end
-        if not CheckPermission(cCls,pre .. key,true,true) then
-            return;
-        end
-        if pre == "s" then
-            property[1](sender,value);
-            return;
-        else
-            property = ClassesReadable[cCls][key];
-            if property and not property[2] then
-                if PropertyBehavior ~= 2 then
-                    if PropertyBehavior == 0 then
-                        warn(("You can't write a read-only property. - %s"):format(key));
-                    elseif PropertyBehavior == 1 then
-                        error((i18n"You can't write a read-only property. - %s"):format(key));
-                    end
-                    return;
-                end
-            end
-        end
-        local all = ObjectsAll[sender];
-        if nil == all then
-            all = {};
-            ObjectsAll[sender] = {};
-        end
-        rawset(all,key,value);
-    end
-    return metas;
+        SetAndCheck(cls,sender,key,value);
+    end;
 end
 
 ---
 --- Retrofit userdata's meta-table to fit lua-class's hybrid inheritance pattern.
----
----@param obj userdata
----
-local function RetrofiteUserDataObjectMetaExternal(obj,meta,cls)
-        -- Unlike the normal table type, which saves meta-tables directly in ClassesMetas[cls].
-    -- The userdata type, on the other hand, gets its own meta-table and then retrofites this meta-table.
-    -- The retrofited meta-table is saved in ClassesMetas[meta] and __index and __newindex are unique logic,
-    -- other meta-methods are overridden.
-
-    local found = ClassesMetas[meta];
-    if found then
-        -- It has been Retrofited,skip it.
+local function RetrofitExternalObjectMeta(cls,metas,forceRetrofit)
+    if rawget(metas,__cls__) then
         return;
     end
-
-    local clsMeta = setmetatable(ClassesMetas[cls],{
-        __newindex = function (sender,key,value)
-            -- Copy the operation on clsMeta to meta.
-            rawset(sender,key,value);
-            RetrofiteMetaMethod(meta,key,value)
-        end
-    });
-    for k,v in pairs(clsMeta) do
-        if Meta[k] then
-            RetrofiteMetaMethod(meta,k,v)
-        end
+    rawset(metas,__cls__,cls);
+    -- Attempt to retrofit the meta-table.
+    -- Only __index and __newindex will integrate the logic,
+    -- the logic of other meta methods will be overwritten.
+    for name,_ in pairs(Meta) do
+        R_RetrofiteMetaMethod(cls,metas,name,forceRetrofit)
     end
 
-    local index = rawget(meta,"__index");
-    local newIndex = rawget(meta,"__newindex");
+    local index = rawget(metas,"__index");
+    local newIndex = rawget(metas,"__newindex");
     local indexFunc = "function" == type(index);
     local newIndexFunc =  "function" == type(newIndex);
-    rawset(meta,"__index",function(sender,key)
-        local cls = ObjectsCls[sender];
-        if cls then
-            local ret = GetAndCheck(cls,key,sender);
+    rawset(metas,"__index",function(sender,key)
+        local oCls = ObjectsCls[sender];
+        if nil == oCls and forceRetrofit then
+            ObjectsCls[sender] = cls;
+            oCls = cls;
+        end
+        if oCls then
+            local ret = GetAndCheck(oCls,sender,key);
             if nil ~= ret then
                 return ret;
             end
         end
         -- Finally, check the original method or table.
         if index then
-            return indexFunc and index(sender,key) or index[key];
+            if indexFunc then
+                return index(sender,key);
+            end
+            return index[key];
         end
+        return nil;
     end);
-    rawset(meta,"__newindex",function (sender,key,value)
-        local cls = ObjectsCls[sender];
-        if cls then
-            -- The reserved words cannot be used.
-            if ReservedWord[key] then
-                error((i18n"%s is a reserved word and you can't set it."):format(key));
-            end
-            local pre = "n";
-            local property = ClassesWritable[cls][key];
-            if property and not property[2] then
-                pre = "s";
-            end
-            if not CheckPermission(cls,pre .. key,true,true) then
-                return;
-            end
-            if pre == "s" then
-                property[1](sender,value);
-                return;
+    rawset(metas,"__newindex",function (sender,key,value)
+        local oCls = ObjectsCls[sender];
+        if nil == oCls and forceRetrofit then
+            ObjectsCls[sender] = cls;
+            oCls = cls;
+        end
+        if oCls then
+            SetAndCheck(oCls,sender,key,value);
+        else
+             -- Finally, write by the original method.
+            if newIndex then
+                if newIndexFunc then
+                    newIndex(sender,key,value);
+                elseif newIndex then
+                    newIndex[key] = value;
+                end
             else
-                property = ClassesReadable[cls][key];
-                if property and not property[2] then
-                    if PropertyBehavior ~= 2 then
-                        if PropertyBehavior == 0 then
-                            warn(("You can't write a read-only property. - %s"):format(key));
-                        elseif PropertyBehavior == 1 then
-                            error((i18n"You can't write a read-only property. - %s"):format(key));
-                        end
-                        return;
-                    end
+                local t = type(sender);
+                if "table" == t then
+                    rawset(sender,key,value);
+                else
+                    error((i18n"attempt to index a %s value."):format(t));
                 end
             end
-            local all = ObjectsAll[sender];
-            all[key] = value;
-        end
-        -- Finally, write by the original method.
-        if not cls or newIndex then
-            if newIndexFunc then
-                newIndex(sender,key,value);
-            elseif newIndex then
-                newIndex[key] = value;
-            else
-                error((i18n"attempt to index a %s value."):format(meta.__name or ""));
-            end
         end
     end);
-
-    ClassesMetas[meta] = meta;
-end
-
-local function RetrofiteUserDataObjectMeta(obj,cls)
-    local meta = getmetatable(obj);
-    assert("table" == type(meta),i18n"The userdata to be retrofited must have a meta table.");
-    -- Instances of the userdata type require the last cls information.
-    -- Because multiple different lua classes can inherit from the same c++ class.
-    ObjectsCls[obj] = cls;
-    if nil == rawget(meta,__cls__) then
-        RetrofiteUserDataObjectMetaExternal(obj,meta,cls);
-    end
 end
 
 local function ClassGet(cls,key)
@@ -503,6 +448,11 @@ local function ClassGet(cls,key)
     end
 end
 
+local function DestroySingleton(cls,val)
+    assert(nil == val,i18n"The nil value needs to be passed in to destory the object.");
+    R_DestroySingleton(cls,val);
+end
+
 local function ClassSet(cls,key,value)
     if nil == key then return;end
     -- The reserved words cannot be used.
@@ -546,7 +496,7 @@ local function ClassSet(cls,key,value)
         end
         -- Register "Instance" automatically.
         cls[static][get][Instance] = function()
-            return GetSingleton(cls,value);
+            return R_GetSingleton(cls,value);
         end;
         cls[static][set][Instance] = function(val)
             DestroySingleton(cls,val)
@@ -646,10 +596,6 @@ local function ClassSet(cls,key,value)
     end
 end
 
-Functions.RetrofiteUserDataObjectMeta = RetrofiteUserDataObjectMeta;
-Functions.ClassSet = ClassSet;
-Functions.ClassGet = ClassGet;
-
 local function MakeClassHandlersTable(cls,handlers,bases)
     -- Putting the response function in p for override the response function of the base class
     -- allows you to use the current class to wrap the response function.
@@ -686,8 +632,8 @@ local function MakeClassHandlersTable(cls,handlers,bases)
     });
 end
 
-function Functions.CreateClassTables(cls)
-    local all,bases,handlers,members,r,w = CreateClassTables(cls);
+local function CreateClassTables(cls)
+    local all,bases,handlers,members,r,w = R_CreateClassTables(cls);
 
     MakeClassHandlersTable(cls,handlers);
     all = {}
@@ -702,8 +648,8 @@ function Functions.CreateClassTables(cls)
     return all,bases,handlers,members,r,w;
 end
 
-function Functions.PushBase(cls,bases,base,handlers,members,metas)
-    PushBase(cls,bases,base,handlers,members,metas);
+local function PushBase(cls,bases,base,handlers,members,meta)
+    R_PushBase(cls,bases,base,handlers,members,meta);
     local fm = FinalClassesMembers[cls];
     local vm = VirtualClassesMembers[cls];
     local vp = VirtualClassesPermissons[cls];
@@ -761,7 +707,7 @@ function Functions.PushBase(cls,bases,base,handlers,members,metas)
     end
 end
 
-function Functions.ClassInherite(cls,args,bases,handlers,members,metas,name)
+local function ClassInherite(cls,args,bases,handlers,members,meta,name)
     if FinalClasses[name] and ClassesChildrenByName[name] then
         error(i18n"You cannot inherit a final class.");
     end
@@ -787,17 +733,12 @@ function Functions.ClassInherite(cls,args,bases,handlers,members,metas,name)
             end
         end
     end
-    ClassInherite(cls,args,bases,handlers,members,metas,name);
+    R_ClassInherite(cls,args,bases,handlers,members,meta,name,PushBase);
 end
 
-function Functions.DestroySingleton(cls,val)
-    assert(nil == val,i18n"The nil value needs to be passed in to destory the object.");
-    DestroySingleton(cls,val);
-end
-
-function Functions.CreateClassObject(...)
-    local obj,all = CreateClassObject(...);
-    if (nil ~= obj) and (obj == all) then
+local function CreateClassObject(...)
+    local obj,all = R_CreateClassObject(...);
+    if (nil ~= obj) and rawequal(obj,all) then
         all = ObjectsAll[obj];
         if nil == all then
             all = {};
@@ -856,13 +797,13 @@ local function CascadeDelete(obj,cls,called)
     end
 end
 
-function Functions.CallDel(self)
+local function CallDel(self)
     CascadeDelete(self,self[is](),{});
     DeathMark[self] = true;
     ObjectsAll[self] = nil;
 end
 
-function Functions.CreateClassDelete(cls)
+local function CreateClassDelete(cls)
     return function (self)
         if ClassesBanDelete[cls] then
             error(i18n"The class/base classes destructor is not accessible.");
@@ -876,10 +817,10 @@ function Functions.CreateClassDelete(cls)
         end
         DeathMark[self] = true;
         ObjectsAll[self] = nil;
-    end
+    end;
 end
 
-function Functions.AttachClassFunctions(cls,_is,_new,_delete)
+local function AttachClassFunctions(cls,_is,_new,_delete)
     local all = ClassesAll[cls];
     local static = ClassesStatic[cls];
     local pms = ClassesPermissions[cls];
@@ -893,5 +834,17 @@ function Functions.AttachClassFunctions(cls,_is,_new,_delete)
     all[delete] = FunctionWrapper(cls,_delete);
     pms[nDelete] = p_public;
 end
+
+Functions.RetrofitExternalObjectMeta = RetrofitExternalObjectMeta;
+Functions.MakeInternalObjectMeta = MakeInternalObjectMeta;
+Functions.PushBase = PushBase;
+Functions.CreateClassTables = CreateClassTables;
+Functions.ClassInherite = ClassInherite;
+Functions.CreateClassObject = CreateClassObject;
+Functions.ClassSet = ClassSet;
+Functions.ClassGet = ClassGet;
+Functions.CallDel = CallDel;
+Functions.CreateClassDelete = CreateClassDelete;
+Functions.AttachClassFunctions = AttachClassFunctions;
 
 return Functions;

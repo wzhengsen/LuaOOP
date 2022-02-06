@@ -5,12 +5,18 @@ local function RestoreFileMeta()
     -- Avoid problems arising from using debug and release at the same time,
     -- unrelated to the test code.
     local mt = getmetatable(io.stdout);
-    if not _G.FileMetaIndex then
-        _G.FileMetaIndex = mt.__index;
-        _G.FileMetaNewIndex = mt.__newindex;
+    if not _G.FileMetaStore then
+        _G.FileMetaStore = {};
+        for k,v in pairs(mt) do
+            _G.FileMetaStore[k] = v;
+        end
     end
-    mt.__index = _G.FileMetaIndex;
-    mt.__newindex = _G.FileMetaNewIndex;
+    for k,_ in pairs(mt) do
+        mt[k] = nil;
+    end
+    for k,v in pairs(_G.FileMetaStore) do
+        mt[k] = v;
+    end
 end
 RestoreFileMeta();
 

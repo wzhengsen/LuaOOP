@@ -20,6 +20,9 @@
 -- THE SOFTWARE.
 
 local type = type;
+local getmetatable = getmetatable;
+local setmetatable = setmetatable;
+local d_setmetatable = debug.setmetatable;
 
 require("OOP.Enum");
 require("OOP.Struct");
@@ -68,11 +71,11 @@ if Debug then
         local cls = class.New(...);
         FinalClasses[cls] = true;
         return cls;
-    end
+    end;
 else
     class[final] = function (...)
         return class.New(...);
-    end
+    end;
 end
 
 class[ClassDefault] = function ()end;
