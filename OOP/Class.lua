@@ -174,7 +174,7 @@ if Debug then
         assert(select("#",...) == 0 and "function" == type(f),errorWords);
         return BreakFunctionWrapper(f);
     end
-    class[to] = function (cls,obj)
+    class[to] = function (obj,cls)
         local t = type(cls);
         if t == "string" then
             cls = NamedClasses[cls];
@@ -196,10 +196,11 @@ if Debug then
         if not ObjectsAll[obj] then
             ObjectsAll[obj] = {};
         end
+        return obj;
     end;
 else
     class[raw]=function(f)return f;end
-    class[to] = function (cls,obj)
+    class[to] = function (obj,cls)
         local t = type(cls);
         if t == "string" then
             cls = NamedClasses[cls];
@@ -209,7 +210,7 @@ else
             end
         end
         if nil == cls then
-            return;
+            return obj;
         end
         local metas = getmetatable(obj);
         if not metas or rawget(metas,__internal__) then
@@ -221,6 +222,7 @@ else
         if type(obj) == "userdata" and not ObjectsAll[obj] then
             ObjectsAll[obj] = {};
         end
+        return obj;
     end;
 end
 

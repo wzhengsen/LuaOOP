@@ -42,6 +42,7 @@ local function RunTest(d)
     require("Test.TestEnum");
     require("Test.TestVirtual");
     require("Test.TestStruct");
+    require("Test.TestTo");
 
     print(("-- The time taken to run the test in %s mode is "):format(d and "debug" or "release")..(os.clock() - clock));
 end

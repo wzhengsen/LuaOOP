@@ -43,6 +43,7 @@ LuaOOP is an object-oriented pattern that borrows some of the class design from 
     * [Extend External Objects](#extend-external-objects)
     * [Inherite External Classes](#inherite-external-classes)
     * [Life Cycle](#life-cycle)
+* [Conversion](#conversion)
 * [Event](#event)
     * [Listening](#listening)
     * [Sort](#sort)
@@ -1051,6 +1052,55 @@ print(class.null(obj));-- false
 -- The destructor will still be called.
 obj:delete();-- "LuaClass is destructed at here."
 print(class.null(obj));-- true
+```
+
+## Conversion
+
+Sometimes I want to convert an object to the type I specify, which of course can be a duck typing or something else (generally a table or user data):
+```lua
+local __file__ = (arg or {...})[arg and 0 or 2];
+local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
+local __test__ = __dir__ .. "/test";
+
+local To = class("To");
+To.x = 0;
+To.y = 0;
+function To:PrintXY()
+    print("x=".. self.x);
+    print("y=".. self.y);
+    return self.x,self.y;
+end
+
+local convertTo = {x = 1,y = 3};
+-- Use class.to to complete the conversion.
+class.to(convertTo,To);
+local x,y = convertTo:PrintXY();
+assert(x == 1);
+assert(y == 3);
+assert(convertTo.is() == To);
+
+-- There are other forms of calls to class.to.
+convertTo = class.to({x = 2,y = 5},"To");
+x,y = convertTo:PrintXY();
+assert(x == 2);
+assert(y == 5);
+assert(convertTo.is() == To);
+
+-- Please note that class.to does not guarantee that the conversion is absolutely safe.
+convertTo = class.to({x = 2},"To");
+local ok = pcall(To.PrintXY,convertTo);
+assert(ok == false);
+
+local fileTo = io.open(__test__,"w");
+class.to(fileTo,To);
+fileTo.x = 2;
+fileTo.y = 6;
+x,y = fileTo:PrintXY();
+assert(x == 2);
+assert(y == 6);
+assert(fileTo.is() == To);
+fileTo:close();
+os.remove(__test__);
 ```
 
 ## Event

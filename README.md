@@ -43,6 +43,7 @@ LuaOOP是借鉴了C/C++/C#的类/结构体/枚举设计，并使用Lua实现的�
     * [扩展外部对象](#扩展外部对象)
     * [继承外部类](#继承外部类)
     * [生命周期](#生命周期)
+* [转换](#转换)
 * [事件](#事件)
     * [监听](#监听)
     * [排序](#排序)
@@ -1051,6 +1052,55 @@ print(class.null(obj));-- false
 -- 析构函数仍然会被调用。
 obj:delete();-- "LuaClass在此处析构。"
 print(class.null(obj));-- true
+```
+
+## 转换
+
+有时候，我希望将一个对象转换成我指定的类型，当然，这个对象可以是鸭子类型或者别的什么（一般来说是一个表或用户数据）：
+```lua
+local __file__ = (arg or {...})[arg and 0 or 2];
+local __dir__ = __file__:match("^(.+)[/\\][^/\\]+$");
+local __test__ = __dir__ .. "/test";
+
+local To = class("To");
+To.x = 0;
+To.y = 0;
+function To:PrintXY()
+    print("x=".. self.x);
+    print("y=".. self.y);
+    return self.x,self.y;
+end
+
+local convertTo = {x = 1,y = 3};
+-- 使用class.to来完成转换。
+class.to(convertTo,To);
+local x,y = convertTo:PrintXY();
+assert(x == 1);
+assert(y == 3);
+assert(convertTo.is() == To);
+
+-- class.to还有其他调用形式。
+convertTo = class.to({x = 2,y = 5},"To");
+x,y = convertTo:PrintXY();
+assert(x == 2);
+assert(y == 5);
+assert(convertTo.is() == To);
+
+-- 请注意，class.to并不保证转换是绝对安全的。
+convertTo = class.to({x = 2},"To");
+local ok = pcall(To.PrintXY,convertTo);
+assert(ok == false);
+
+local fileTo = io.open(__test__,"w");
+class.to(fileTo,To);
+fileTo.x = 2;
+fileTo.y = 6;
+x,y = fileTo:PrintXY();
+assert(x == 2);
+assert(y == 6);
+assert(fileTo.is() == To);
+fileTo:close();
+os.remove(__test__);
 ```
 
 ## 事件
