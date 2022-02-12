@@ -25,7 +25,7 @@ if LuaVersion >= 5.4 then
 end
 local Config = {
     LuaVersion = LuaVersion,
-    Version = "1.0.6",
+    Version = "1.0.7",
 
     --****************Rename fields start****************
     -- If you need to rename some of the LuaOOP names to suit specific needs,
