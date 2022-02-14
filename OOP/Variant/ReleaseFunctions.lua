@@ -587,6 +587,10 @@ local function RetrofitExternalObjectMeta(cls,metas,forceRetrofit)
                 return;
             end
             local all = ObjectsAll[sender];
+            if all == nil and forceRetrofit then
+                all = {};
+                ObjectsAll[sender] = all;
+            end
             all[key] = value;
         else
              -- Finally, write by the original method.
