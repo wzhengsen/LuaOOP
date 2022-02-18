@@ -686,11 +686,11 @@ function Point3D:ctor(x,y,z)
 end
 
 -- Static properties, accessible only using classes.
-function Point3D.static.get.Count()
-    return Point3D._Count;
+function Point3D.static.get:Count()
+    return self._Count;
 end
-function Point3D.static.set.Count(val)
-    Point3D._Count = val;
+function Point3D.static.set:Count(val)
+    self._Count = val;
 end
 
 function Point3D.set:X(x)

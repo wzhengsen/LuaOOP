@@ -773,7 +773,7 @@ local function ClassGet(cls,key)
     if property and property[2] then
         -- Is static property?
         -- Class can't access object's property directly.
-        return property[1]()
+        return property[1](cls);
     end
     local ret = ClassesStatic[cls][key];
     if nil ~= ret then
@@ -797,7 +797,7 @@ local function ClassSet(cls,key,value)
         cls[static][get][Instance] = function ()
             return GetSingleton(cls,value);
         end;
-        cls[static][set][Instance] = function (val)
+        cls[static][set][Instance] = function (_,val)
             DestroySingleton(cls,val)
         end;
         return;
@@ -816,7 +816,7 @@ local function ClassSet(cls,key,value)
         if property and property[2] then
             -- Is static property?
             -- Class can't access object's property directly.
-            property[1](value);
+            property[1](cls,value);
             return;
         end
         local meta = MetaMapName[key];

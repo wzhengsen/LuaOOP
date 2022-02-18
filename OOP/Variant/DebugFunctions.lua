@@ -413,7 +413,7 @@ local function ClassGet(cls,key)
 
     if property then
         if property[2] then
-            return property[1]();
+            return property[1](cls);
         end
     else
         property = ClassesWritable[cls][key];
@@ -498,7 +498,7 @@ local function ClassSet(cls,key,value)
         cls[static][get][Instance] = function()
             return R_GetSingleton(cls,value);
         end;
-        cls[static][set][Instance] = function(val)
+        cls[static][set][Instance] = function(_,val)
             DestroySingleton(cls,val)
         end;
         -- Once register "__singleton" for a class,set permission of "new","delete" method to protected.
@@ -543,7 +543,7 @@ local function ClassSet(cls,key,value)
             end
             if property then
                 if property[2] then
-                    property[1](value);
+                    property[1](cls,value);
                     return;
                 end
             else
