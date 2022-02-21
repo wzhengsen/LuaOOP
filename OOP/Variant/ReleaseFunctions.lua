@@ -798,7 +798,7 @@ local function ClassSet(cls,key,value)
             return GetSingleton(cls,value);
         end;
         cls[static][set][Instance] = function (_,val)
-            DestroySingleton(cls,val)
+            DestroySingleton(cls,val);
         end;
         return;
     elseif key == __new then

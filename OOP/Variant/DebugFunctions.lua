@@ -208,6 +208,7 @@ local HandlersControl = setmetatable({},{
 });
 
 local function GetAndCheck(cls,sender,key)
+    if key == nil then return nil; end
     if key == handlers then
         HandlersControlObj = sender;
         return HandlersControl;
@@ -271,6 +272,7 @@ local function GetAndCheck(cls,sender,key)
 end
 
 local function SetAndCheck(cls,sender,key,value)
+    if key == nil then return; end
     -- The reserved words cannot be used.
     if ReservedWord[key] then
         error((i18n"%s is a reserved word and you can't set it."):format(key));
@@ -392,6 +394,7 @@ local function RetrofitExternalObjectMeta(cls,metas,forceRetrofit)
 end
 
 local function ClassGet(cls,key)
+    if nil == key then return nil; end
     if BitsMap[key] then
         return Begin(Router,cls,key);
     end
