@@ -849,5 +849,6 @@ Functions.ClassGet = ClassGet;
 Functions.CallDel = CallDel;
 Functions.CreateClassDelete = CreateClassDelete;
 Functions.AttachClassFunctions = AttachClassFunctions;
+Functions.DestroySingleton = DestroySingleton;
 
 return Functions;
