@@ -98,6 +98,9 @@ local function CreateClassNew(cls,clsAll,handlers,members)
         local ok,obj,all = pcall(CreateClassObject,cls,...);
         if not ok or nil == obj then
             ClassCreateLayer = ClassCreateLayer - 1;
+            if not ok then
+                error(obj);
+            end
             return nil;
         end
 
