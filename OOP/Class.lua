@@ -91,7 +91,7 @@ local function CreateClassNew(cls,clsAll,handlers,members)
             assert(not ClassesBanNew[cls],i18n"The class/base classes constructor is not accessible.");
             local key = next(VirtualClassesMembers[cls]);
             if nil ~= key then
-                error((i18n"Cannot construct class with unoverridden pure virtual functions. - %s"):format(key:sub(3)));
+                error((i18n"Cannot construct class with unoverridden pure virtual functions. - %s"):format(key:sub(2)));
             end
         end
         ClassCreateLayer = ClassCreateLayer + 1;
