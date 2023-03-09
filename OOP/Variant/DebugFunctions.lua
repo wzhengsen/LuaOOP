@@ -19,7 +19,6 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 
-local getmetatable = getmetatable;
 local setmetatable = setmetatable;
 local d_setmetatable = debug.setmetatable;
 local rawset = rawset;

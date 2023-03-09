@@ -28,7 +28,6 @@ local next = next;
 local select = select;
 local d_setmetatable = debug.setmetatable;
 local rawget = rawget;
-local rawset = rawset;
 
 local Config = require("OOP.Config");
 local Debug = Config.Debug;

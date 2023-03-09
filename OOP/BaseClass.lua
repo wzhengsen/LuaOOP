@@ -20,9 +20,7 @@
 -- THE SOFTWARE.
 
 local type = type;
-local getmetatable = getmetatable;
 local setmetatable = setmetatable;
-local d_setmetatable = debug.setmetatable;
 
 require("OOP.Enum");
 require("OOP.Struct");
