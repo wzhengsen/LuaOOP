@@ -38,7 +38,7 @@ local i18n = require("OOP.i18n");
 
 local class = setmetatable({},{
     __call = function(c,...)
-        return c.New(...)
+        return c.new(...)
     end
 });
 rawset(_G,Config.class,class);
@@ -66,13 +66,13 @@ if Debug then
         if type((...)) == "string" then
             FinalClasses[(...)] = true;
         end
-        local cls = class.New(...);
+        local cls = class.new(...);
         FinalClasses[cls] = true;
         return cls;
     end;
 else
     class[final] = function (...)
-        return class.New(...);
+        return class.new(...);
     end;
 end
 

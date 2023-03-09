@@ -128,7 +128,7 @@ end
 ---
 ---@vararg string|table
 ---@return table @class
-function class.New(...)
+function class.new(...)
     local args = {...};
     if Debug then
         local len = 0;
