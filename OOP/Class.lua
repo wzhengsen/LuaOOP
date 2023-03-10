@@ -171,11 +171,19 @@ end
 
 if Debug then
     local BreakFunctionWrapper = require("OOP.BaseFunctions").BreakFunctionWrapper;
-    local errorWords = (i18n"%s must wrap a function."):format(raw);
-    class[raw] = function (f,...)
-        assert(select("#",...) == 0 and "function" == type(f),errorWords);
-        return BreakFunctionWrapper(f);
-    end
+    local errorWords = (i18n "%s must wrap a function."):format(raw);
+    class[raw] = function(first, second, third)
+        if nil == third then
+            if nil == second then
+                assert("function" == type(first), errorWords);
+                return BreakFunctionWrapper(first);
+            else
+                return BreakFunctionWrapper(function() return first[second]; end)();
+            end
+        else
+            BreakFunctionWrapper(function() first[second] = third; end)();
+        end
+    end;
     class[to] = function (obj,cls)
         local t = type(cls);
         if t == "string" then
@@ -201,7 +209,17 @@ if Debug then
         return obj;
     end;
 else
-    class[raw]=function(f)return f;end
+    class[raw] = function(first, second, third)
+        if nil == third then
+            if nil == second then
+                return first;
+            else
+                return first[second];
+            end
+        else
+            first[second] = third;
+        end
+    end;
     class[to] = function (obj,cls)
         local t = type(cls);
         if t == "string" then

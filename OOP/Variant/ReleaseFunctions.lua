@@ -261,8 +261,7 @@ local function ClassIs(cls,bases,...)
     local baseCls = select(1,...);
     if baseCls == nil then
         return false;
-    end
-    if baseCls == cls then
+    elseif baseCls == cls then
         return true;
     end
     return ClassBasesIsRecursive(baseCls,bases);
