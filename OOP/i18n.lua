@@ -187,6 +187,9 @@ local LanguageMap = {
     ["A non-existent class is used."] = {
         zh = "使用了不存在的类。"
     },
+    ["An error occurred when creating the object -"] = {
+        zh = "当创建对象时发生错误-"
+    }
 };
 
 return function (words)

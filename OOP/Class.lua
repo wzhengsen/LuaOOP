@@ -96,6 +96,9 @@ local function CreateClassNew(cls,clsAll,handlers,members)
         ClassCreateLayer = ClassCreateLayer + 1;
         local ok,obj,all = pcall(CreateClassObject,cls,...);
         if not ok or nil == obj then
+            if obj then
+                print(i18n"An error occurred when creating the object -",obj);
+            end
             ClassCreateLayer = ClassCreateLayer - 1;
             if not ok then
                 error(obj);
