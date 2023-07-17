@@ -424,10 +424,10 @@ local function MakeInternalObjectMeta(cls,metas)
     return metas;
 end
 
-local function RetrofiteMetaMethod(_cls,metas,name,forceRetrofit)
+local function RetrofiteMetaMethod(_cls, metas, name, forceRetrofit)
     --- Since the meta table may still be used for external classes or other classes after being retrofitted,
-    -- the custom meta method goes through the sender to find it.
-    local oldMeta = rawget(metas,name);
+    --- the custom meta method goes through the sender to find it.
+    local oldMeta = rawget(metas, name);
     if name == "__gc" or name == "__close" then
         rawset(metas,name,function (sender)
             local cls = ObjectsCls[sender];
