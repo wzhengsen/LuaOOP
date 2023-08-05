@@ -28,6 +28,7 @@ local Internal = require("OOP.Variant.Internal");
 local ClassesChildren = Internal.ClassesChildren;
 local ClassesBases = Internal.ClassesBases;
 local ClassesFriends = Internal.ClassesFriends;
+local ClassesFunctionDefined = Internal.ClassesFunctionDefined;
 local NamedClasses = Internal.NamedClasses;
 local Permission = Internal.Permission;
 local Debug = Config.Debug;
@@ -39,6 +40,7 @@ local pairs = pairs;
 local type = type;
 local getmetatable = getmetatable;
 local rawequal = rawequal;
+local getinfo = debug.getinfo;
 
 ---Maps some value changes to subclasses.
 ---@param cls table
@@ -102,17 +104,43 @@ local Copy = function (any)
     return _Copy(any,{});
 end
 
-local function ClassBasesIsRecursive(baseCls,bases)
-    for _,base in ipairs(bases) do
-        if rawequal(base,baseCls) then
+local function ClassBasesIsRecursive(baseCls, bases)
+    for _, base in ipairs(bases) do
+        if rawequal(base, baseCls) then
             return true;
         else
             local bBases = ClassesBases[base];
-            if bBases and ClassBasesIsRecursive(baseCls,bBases) then
+            if bBases and ClassBasesIsRecursive(baseCls, bBases) then
                 return true;
-            elseif IsInherite and IsInherite(base,baseCls) then
+            elseif IsInherite and IsInherite(base, baseCls) then
                 return true;
             end
+        end
+    end
+    return false;
+end
+
+local function DefinedInClass(info, cls)
+    local src = info.short_src;
+    local defined = ClassesFunctionDefined[cls][src];
+    if defined then
+        local def = info.linedefined;
+        for i = 1, #defined, 2 do
+            if def >= defined[i] and def <= defined[i + 1] then
+                return true;
+            end
+        end
+    end
+    return false;
+end
+
+local function DefinedInClasses(info, cls)
+    if DefinedInClass(info, cls) then
+        return true;
+    end
+    for _, child in ipairs(ClassesChildren[cls]) do
+        if DefinedInClasses(info, child) then
+            return true;
         end
     end
     return false;
@@ -161,11 +189,12 @@ if Debug then
     ---
     ---@param self table
     ---@param key any
+    ---@param callLvl integer
     ---@param set? boolean
     ---@param byObj? boolean
     ---@return boolean
     ---
-    CheckPermission = function(self,key,set,byObj)
+    CheckPermission = function(self, key, callLvl, set, byObj)
         local stackCls = AccessStack[#AccessStack];
         if stackCls == 0 then
             -- 0 means that any access rights can be broken.
@@ -229,21 +258,60 @@ if Debug then
             return true;
         end
 
+        -- 0 - OK
+        -- 1 - private error
+        -- 2 - protected error
+        local status = 0;
         local _friends = ClassesFriends[cls];
         --Check if it is a friendly class.
         if not _friends or (not _friends[stackCls] and not _friends[NamedClasses[stackCls]]) then
             -- Check public,private,protected.
-            if band(pm,p_private) ~= 0 then
-                error((i18n"Attempt to access private members outside the permission. - %s"):format(key:sub(2)));
-            elseif band(pm,p_protected) ~= 0 then
+            if band(pm, p_private) ~= 0 then
+                status = 1;
+            elseif band(pm, p_protected) ~= 0 then
                 if stackCls then
                     bases = ClassesBases[stackCls];
-                    if bases and ClassBasesIsRecursive(cls,bases) then
+                    if bases and ClassBasesIsRecursive(cls, bases) then
                         return true;
                     end
                 end
-                error((i18n"Attempt to access protected members outside the permission. - %s"):format(key:sub(2)));
+                status = 2;
             end
+
+            -- If a field's permission check fails, the lines of definition of the code accessing
+            -- the field are again used to determine whether it should pass.
+            -- If a lua function (or closure) that accesses a field is defined in a class that has permission
+            -- to access the field, then the field access permissions in that closure should also pass.
+            --
+            -- Defects:
+            -- When a closure is defined outside of a class, but on the same line as a function of the class,
+            -- access permissions within the closure will not be properly determined.
+            local info = getinfo(callLvl, "S");
+            if info.what ~= "C" then
+                if DefinedInClass(info, cls) then
+                    return true;
+                elseif status ~= 1 then
+                    if byObj then
+                        if not rawequal(self, cls) then
+                            if DefinedInClass(info, self) then
+                                return true;
+                            end
+                        end
+                    else
+                        for _, child in ipairs(ClassesChildren[cls]) do
+                            if DefinedInClasses(info, child) then
+                                return true;
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        if status == 1 then
+            error((i18n "Attempt to access private members outside the permission. - %s"):format(key:sub(2)));
+        elseif status == 2 then
+            error((i18n "Attempt to access protected members outside the permission. - %s"):format(key:sub(2)));
         end
         return true;
     end

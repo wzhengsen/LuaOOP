@@ -34,6 +34,8 @@ local AllFunctions = Internal.ClassesAllFunctions;
 local ConstStack = Internal.ConstStack;
 local AccessStackLen = AccessStack and #AccessStack or nil;
 local ConstStackLen = ConstStack and #ConstStack or nil;
+local ClassesFunctionDefined = Internal.ClassesFunctionDefined;
+local getinfo = debug.getinfo;
 
 ---
 ---Wrapping the given function so that it handles the push and pop of the access stack correctly anyway,
@@ -48,6 +50,21 @@ local function FunctionWrapper(cls,f,clsFunctions,const)
     clsFunctions = clsFunctions or AllFunctions[cls];
     local newF = clsFunctions[f];
     if nil == newF then
+        -- Records information about the definition of a function,
+        -- which is used to determine whether a closure is defined
+        -- in a function of the corresponding class.
+        local fInfo = getinfo(f, "S");
+        if fInfo.what ~= "C" then
+            if ClassesFunctionDefined[cls] == nil then
+                ClassesFunctionDefined[cls] = {};
+            end
+            if ClassesFunctionDefined[cls][fInfo.short_src] == nil then
+                ClassesFunctionDefined[cls][fInfo.short_src] = {};
+            end
+            local defined = ClassesFunctionDefined[cls][fInfo.short_src];
+            defined[#defined + 1] = fInfo.linedefined;
+            defined[#defined + 1] = fInfo.lastlinedefined;
+        end
         newF = function(...)
             AccessStackLen = AccessStackLen + 1;
             AccessStack[AccessStackLen] = cls;

@@ -402,11 +402,12 @@ local function MakeInternalObjectMeta(cls,metas)
 
         -- Check base class.
         for _, base in ipairs(ClassesBases[cls]) do
-            ret = CascadeGet(base,key,{},true);
+            ret = CascadeGet(base, key, {}, true);
             if nil ~= ret then
                 return ret;
             end
         end
+        return nil;
     end;
     metas.__newindex = function (sender,key,value)
         local property = ClassesWritable[cls][key];

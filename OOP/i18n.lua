@@ -115,7 +115,7 @@ local LanguageMap = {
     ["The userdata to be retrofited must have a meta table."] = {
         zh = "被改造的用户数据必须具有元表。"
     },
-    ["event handler must be a function."] = {
+    ["Event handler must be a function."] = {
         zh = "响应事件的必须是函数。"
     },
     ["Unavailable base class type."] = {

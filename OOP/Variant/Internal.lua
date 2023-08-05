@@ -108,7 +108,8 @@ return {
     ClassesBanNew = Debug and setmetatable({},WeakTable) or nil,
     ClassesBanDelete = Debug and setmetatable({},WeakTable) or nil,
     ClassesAllFunctions = Debug and setmetatable({},WeakTable) or nil,
-    ClassesAllMetaFunctions = Debug and setmetatable({},WeakTable) or nil,
+    ClassesAllMetaFunctions = Debug and setmetatable({}, WeakTable) or nil,
+    ClassesFunctionDefined = Debug and setmetatable({}, WeakTable) or nil,
     AccessStack = Debug and {} or nil,
     ConstStack = Debug and {} or nil,
     ReservedWord = {

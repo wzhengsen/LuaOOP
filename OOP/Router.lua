@@ -175,14 +175,15 @@ if Debug then
     ---@param f function
     ---@param const boolean
     ---@param key string
+    ---@param byObj boolean
     ---@return function
-    local function MetaFunctionWrapper(wCls,f,const,key)
+    local function MetaFunctionWrapper(wCls, f, const, key, byObj)
         local metas = AllMetaFunctions[wCls];
         local newMF = metas[f];
         if nil == newMF then
             local newF = FunctionWrapper(wCls,f,nil,const);
             newMF = function(...)
-                CheckPermission(wCls,key);
+                CheckPermission(wCls, key, 4, false, byObj);
                 return newF(...);
             end;
             metas[newMF] = newMF;
@@ -214,7 +215,7 @@ if Debug then
             local gs = band(decor,p_gs);
             if gs ~= 0 then
                 local isGet = gs == p_get;
-                CheckPermission(cls,(isGet and "g" or "s") .. key);
+                CheckPermission(cls, (isGet and "g" or "s") .. key, 4);
                 local property = (gs == p_get and ClassesReadable or ClassesWritable)[cls][key];
                 if property then
                     return property[1];
@@ -372,9 +373,9 @@ if Debug then
         local oVal = value;
         local pms = ClassesPermissions[cls];
         if isFunction then
-            if meta and not band(decor,p_public) == 0 then
+            if meta and band(decor, p_public) == 0 then
                 -- Meta methods are wrapped with MetaFunctionWrapper functions only when they are not public.
-                value = MetaFunctionWrapper(cls,value,isConst,disKey);
+                value = MetaFunctionWrapper(cls, value, isConst, disKey, band(decor, p_static) == 1);
             else
                 value = FunctionWrapper(cls,value,nil,isConst);
             end

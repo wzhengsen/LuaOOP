@@ -87,7 +87,9 @@ end
 local function CreateClassNew(cls,clsAll,handlers,members)
     return function(...)
         if Debug then
-            assert(not ClassesBanNew[cls],i18n"The class/base classes constructor is not accessible.");
+            if ClassesBanNew[cls] then
+                error(i18n "The class/base classes constructor is not accessible.");
+            end
             local key = next(VirtualClassesMembers[cls]);
             if nil ~= key then
                 error((i18n"Cannot construct class with unoverridden pure virtual functions. - %s"):format(key:sub(2)));
@@ -138,7 +140,9 @@ function class.new(...)
         while nil ~= args[len + 1] do
             len = len + 1;
         end
-        assert(select("#",...) == len,i18n"You cannot inherit a nil value.");
+        if select("#", ...) ~= len then
+            error(i18n "You cannot inherit a nil value.");
+        end
     end
 
     local cls,metas,name = CheckClass(args);
@@ -174,11 +178,12 @@ end
 
 if Debug then
     local BreakFunctionWrapper = require("OOP.BaseFunctions").BreakFunctionWrapper;
-    local errorWords = (i18n "%s must wrap a function."):format(raw);
     class[raw] = function(first, second, third)
         if nil == third then
             if nil == second then
-                assert("function" == type(first), errorWords);
+                if "function" ~= type(first) then
+                    error((i18n "%s must wrap a function."):format(raw));
+                end
                 return BreakFunctionWrapper(first);
             else
                 return BreakFunctionWrapper(function() return first[second]; end)();

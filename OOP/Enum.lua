@@ -50,9 +50,11 @@ if Config.Debug then
         auto = DefaultEnumIndex - 1;
         local fT = type(first);
         local isString = fT == "string";
-        assert(isString or fT == "table",i18n"Only integers or strings or tables can be used to generate a enumeration.")
-        if not isString then
-            assert(select("#",...) == 0,i18n"Excess parameters.");
+        if not (isString or fT == "table") then
+            error(i18n "Only integers or strings or tables can be used to generate a enumeration.");
+        end
+        if not isString and select("#", ...) ~= 0 then
+            error(i18n "Excess parameters.");
         end
         local e = isString and {} or first;
         if isString then

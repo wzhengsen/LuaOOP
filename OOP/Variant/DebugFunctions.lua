@@ -219,7 +219,7 @@ local function GetAndCheck(cls,sender,key)
         pre = "g";
     end
 
-    if not CheckPermission(cls,pre .. key) then
+    if not CheckPermission(cls, pre .. key, 4, false, true) then
         return nil;
     end
 
@@ -263,11 +263,12 @@ local function GetAndCheck(cls,sender,key)
     end
     -- Check bases.
     for _, base in ipairs(ClassesBases[cls]) do
-        ret = CascadeGet(base,key,{},true);
+        ret = CascadeGet(base, key, {}, true);
         if nil ~= ret then
             return ret;
         end
     end
+    return nil;
 end
 
 local function SetAndCheck(cls,sender,key,value)
@@ -281,7 +282,7 @@ local function SetAndCheck(cls,sender,key,value)
     if property and not property[2] then
         pre = "s";
     end
-    if not CheckPermission(cls,pre .. key,true,true) then
+    if not CheckPermission(cls, pre .. key, 4, true, true) then
         return;
     end
     if pre == "s" then
@@ -409,7 +410,7 @@ local function ClassGet(cls,key)
     end
     -- Check the properties first.
     local property = ClassesReadable[cls][key];
-    if not CheckPermission(cls,(property and "g" or "n") .. key) then
+    if not CheckPermission(cls, (property and "g" or "n") .. key, 3) then
         return;
     end
 
@@ -450,8 +451,10 @@ local function ClassGet(cls,key)
     end
 end
 
-local function DestroySingleton(cls,val)
-    assert(nil == val,i18n"The nil value needs to be passed in to destory the object.");
+local function DestroySingleton(cls, val)
+    if nil ~= val then
+        error(i18n "The nil value needs to be passed in to destory the object.");
+    end
     R_DestroySingleton(cls,val);
 end
 
@@ -540,7 +543,7 @@ local function ClassSet(cls,key,value)
             Update2ChildrenWithKey(cls,VirtualClassesMembers,vKey,nil,true);
         else
             local property = ClassesWritable[cls][key];
-            if not CheckPermission(cls,(property and "s" or "n") .. key,true) then
+            if not CheckPermission(cls, (property and "s" or "n") .. key, 3, true) then
                 return;
             end
             if property then
@@ -605,9 +608,11 @@ local function MakeClassHandlersTable(cls,handlers,bases)
     return setmetatable(handlers,{
         __newindex = function(t,key,value)
             if not ("string" == type(key)) then
-                error(i18n"The name of handler function must be a string.")
+                error(i18n "The name of handler function must be a string.");
             end
-            assert("function" == type(value),i18n"event handler must be a function.");
+            if not ("function" == type(value)) then
+                error(i18n "Event handler must be a function.");
+            end
             -- Ensure that event response functions have access to member variables.
             value = FunctionWrapper(cls,value)
             rawset(p,key,value);
@@ -715,12 +720,12 @@ local function ClassInherite(cls,args,bases,handlers,members,meta,name)
     end
     for idx, base in ipairs(args) do
         local baseType = type(base);
-        assert(
-            baseType == "table"
-            or baseType == "string",
-            i18n"Unavailable base class type."
-        );
-        assert(not FinalClasses[base],i18n"You cannot inherit a final class.");
+        if baseType ~= "table" and baseType ~= "string" then
+            error(i18n "Unavailable base class type.");
+        end
+        if FinalClasses[base] then
+            error(i18n "You cannot inherit a final class.");
+        end
         for i,b in ipairs(args) do
             if idx ~= i then
                 if type(b) == "string" then
