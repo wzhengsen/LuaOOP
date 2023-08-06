@@ -33,9 +33,11 @@ local const = Config.Qualifiers.const;
 local final = Config.Qualifiers.final;
 local virtual = Config.Qualifiers.virtual;
 local override = Config.Qualifiers.override;
+local mutable = Config.Qualifiers.mutable;
 local get = Config.get;
 local set = Config.set;
 
+local tointeger = math.tointeger;
 local BitsMap = {
     [public] = 2 ^ 0,
     [private] = 2 ^ 1,
@@ -46,18 +48,26 @@ local BitsMap = {
     [get] = 2 ^ 6,
     [set] = 2 ^ 7,
     [virtual] = 2 ^ 8,
-    [override] = 2 ^ 9
+    [override] = 2 ^ 9,
+    [mutable] = 2 ^ 10
 };
 
+local max = nil;
+for _, v in pairs(BitsMap) do
+    if max == nil or max < v then
+        max = v;
+    end
+end
 -- Used to instruct const methods internally,
 -- external code doesn't need to care about this.
 -- Ensure that the value does not exist in the BitsMap.
-local __InternalConstMethod = 2 ^ 10;
+local __InternalConstMethod = max * 2;
 
 if LuaVersion > 5.2 then
     for k, v in pairs(BitsMap) do
-        BitsMap[k] = math.tointeger(v);
+        BitsMap[k] = tointeger(v);
     end
+    __InternalConstMethod = tointeger(__InternalConstMethod);
 end
 local Permission = {
     public = BitsMap[public],
@@ -70,6 +80,7 @@ local Permission = {
     set = BitsMap[set],
     virtual = BitsMap[virtual],
     override = BitsMap[override],
+    mutable = BitsMap[mutable]
 };
 
 return {
@@ -113,14 +124,15 @@ return {
     AccessStack = Debug and {} or nil,
     ConstStack = Debug and {} or nil,
     ReservedWord = {
-        [Config.Qualifiers.public] = true,
-        [Config.Qualifiers.protected] = true,
-        [Config.Qualifiers.private] = true,
-        [Config.Qualifiers.const] = true,
-        [Config.Qualifiers.static] = true,
-        [Config.Qualifiers.final] = true,
-        [Config.Qualifiers.virtual] = true,
-        [Config.Qualifiers.override] = true,
+        [public] = true,
+        [protected] = true,
+        [private] = true,
+        [const] = true,
+        [static] = true,
+        [final] = true,
+        [virtual] = true,
+        [override] = true,
+        [mutable] = true,
         [Config.new] = true,
         [Config.delete] = true,
         [Config.is] = true,

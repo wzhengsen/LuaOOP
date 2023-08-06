@@ -116,7 +116,8 @@ local Config = {
         final = "final",
 
         virtual = "virtual",
-        override = "override"
+        override = "override",
+        mutable = "mutable"
     },
 
     -- If __singleton is defined,

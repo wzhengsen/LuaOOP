@@ -94,6 +94,9 @@ local LanguageMap = {
     ["%s reserved word must be assigned to a function."] = {
         zh = "保留字%s必须被分配一个函数。"
     },
+    ["%s reserved word can not be assigned to a function."] = {
+        zh = "保留字%s不能被分配一个函数。"
+    },
     ["The name of handler function must be a string."] = {
         zh = "响应函数名必须是字符串。"
     },

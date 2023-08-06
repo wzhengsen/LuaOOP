@@ -182,6 +182,7 @@ assert(2 == FromStatic.Count);
 local ConstTest = class();
 ConstTest.const.data = "123";
 ConstTest.variable = "change me";
+ConstTest.mutable.mvariable = "change me";
 
 local ct = ConstTest.new();
 ok = pcall(function ()
@@ -213,6 +214,9 @@ function ConstTest.const:ThrowConstError2()
     self:Test();
 end
 
+function ConstTest.const:NoThrowConstError()
+    self.mvariable = "changed";
+end
 ok = pcall(function ()
     ct:ThrowConstError1();
 end);
@@ -221,6 +225,8 @@ if Debug then
 else
     assert(ok);
 end
+
+ct:NoThrowConstError();
 
 ok = pcall(function ()
     ct:ThrowConstError2();

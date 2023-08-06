@@ -155,6 +155,7 @@ if Debug then
     local band = Compat1.bits.band;
     local ConstBehavior = Config.ConstBehavior;
     local p_const = Permission.const;
+    local p_mutable = Permission.mutable;
     local p_public = Permission.public;
     local p_protected = Permission.protected;
     local p_private = Permission.private;
@@ -210,13 +211,15 @@ if Debug then
             band(pm,p_const) ~= 0 or
             (ConstStack[#ConstStack] and (rawequal(stackCls,self) or ClassBasesIsRecursive(stackCls,ClassesBases[self]))) then
                 -- Check const.
-                if ConstBehavior ~= 2 then
-                    if ConstBehavior == 0 then
-                        warn(("You cannot change the const value. - %s"):format(key:sub(2)));
-                    elseif ConstBehavior == 1 then
-                        error((i18n"You cannot change the const value. - %s"):format(key:sub(2)));
+                if band(pm, p_mutable) == 0 then
+                    if ConstBehavior ~= 2 then
+                        if ConstBehavior == 0 then
+                            warn(i18n "You cannot change the const value. - %s":format(key:sub(2)));
+                        elseif ConstBehavior == 1 then
+                            error(i18n "You cannot change the const value. - %s":format(key:sub(2)));
+                        end
+                        return false;
                     end
-                    return false;
                 end
             end
             -- Consider the following case.

@@ -57,6 +57,7 @@ local nDelete = "n" .. delete;
 
 local static = Config.Qualifiers.static;
 local const = Config.Qualifiers.const;
+local mutable = Config.Qualifiers.mutable;
 local final = Config.Qualifiers.final;
 local virtual = Config.Qualifiers.virtual;
 local override = Config.Qualifiers.override;
@@ -165,6 +166,7 @@ if Debug then
     local RouterReservedWord = Internal.RouterReservedWord;
 
     local p_const = Permission.const;
+    local p_mutable = Permission.mutable;
     local p_internalConstMethod = Internal.__InternalConstMethod;
 
     ---Wrapping metamethod.
@@ -338,9 +340,20 @@ if Debug then
             decor = bor(decor,p_const);
         end
 
-        local isConst = band(decor,p_const) ~= 0;
-        if isConst and (key == ctor or key == dtor) then
-            error((i18n"%s qualifier cannot qualify %s method."):format(const,key));
+        local isConst = band(decor, p_const) ~= 0;
+        local isMutable = band(decor, p_mutable) ~= 0;
+        if isConst then
+            if (key == ctor or key == dtor) then
+                error((i18n "%s qualifier cannot qualify %s method."):format(const, key));
+            elseif isMutable then
+                error((i18n "%s,%s cannot be used at the same time."):format(const, mutable));
+            end
+        end
+
+        if isMutable then
+            if isFunction then
+                error(i18n "%s reserved word can not be assigned to a function.":format(mutable));
+            end
         end
 
         if isVirtual then
