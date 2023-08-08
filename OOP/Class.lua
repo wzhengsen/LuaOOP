@@ -34,6 +34,9 @@ local Debug = Config.Debug;
 local ctor = Config.ctor;
 local raw = Config.raw;
 local del = Config.del;
+local to = Config.to;
+local is = Config.is;
+local object = Config.object;
 
 local i18n = require("OOP.i18n");
 local Internal = require("OOP.Variant.Internal");
@@ -59,7 +62,6 @@ local NamedClasses = Internal.NamedClasses;
 local AllClasses = Internal.AllClasses;
 local ObjectsAll = Internal.ObjectsAll;
 local __internal__ = Config.__internal__;
-local to = Config.to;
 
 
 local ClassCreateLayer = 0;
@@ -192,7 +194,7 @@ if Debug then
             BreakFunctionWrapper(function() first[second] = third; end)();
         end
     end;
-    class[to] = function (obj,cls)
+    class[to] = function(obj, cls)
         local t = type(cls);
         if t == "string" then
             cls = NamedClasses[cls];
@@ -202,13 +204,13 @@ if Debug then
             end
         end
         if nil == cls then
-            error(i18n"A non-existent class is used.");
+            error(i18n "A non-existent class is used.");
         end
         local metas = getmetatable(obj);
-        if not metas or rawget(metas,__internal__) then
-            d_setmetatable(obj,ClassesMetas[cls]);
+        if not metas or rawget(metas, __internal__) then
+            d_setmetatable(obj, ClassesMetas[cls]);
         else
-            RetrofitExternalObjectMeta(cls,metas,false);
+            RetrofitExternalObjectMeta(cls, metas, false);
             ObjectsCls[obj] = cls;
         end
         if not ObjectsAll[obj] then
@@ -228,7 +230,7 @@ else
             first[second] = third;
         end
     end;
-    class[to] = function (obj,cls)
+    class[to] = function(obj, cls)
         local t = type(cls);
         if t == "string" then
             cls = NamedClasses[cls];
@@ -241,10 +243,10 @@ else
             return obj;
         end
         local metas = getmetatable(obj);
-        if not metas or rawget(metas,__internal__) then
-            d_setmetatable(obj,ClassesMetas[cls]);
+        if not metas or rawget(metas, __internal__) then
+            d_setmetatable(obj, ClassesMetas[cls]);
         else
-            RetrofitExternalObjectMeta(cls,metas,false);
+            RetrofitExternalObjectMeta(cls, metas, false);
             ObjectsCls[obj] = cls;
         end
         if type(obj) == "userdata" and not ObjectsAll[obj] then
@@ -253,5 +255,13 @@ else
         return obj;
     end;
 end
+
+class[object] = function(obj)
+    return ObjectsAll[obj] ~= nil;
+end;
+
+class[is] = function(cls)
+    return AllClasses[cls] ~= nil;
+end;
 
 class[del] = Functions.CallDel;

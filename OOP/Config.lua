@@ -47,6 +47,7 @@ local Config = {
     raw = "raw",
     del = "del",
     to = "to",
+    object = "object",
 
     set = "set",
     get = "get",

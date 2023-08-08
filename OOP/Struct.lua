@@ -42,6 +42,8 @@ local Copy = BaseFunctions.Copy;
 local ctor = Config.ctor;
 local struct = Config.struct;
 local Debug = Config.Debug;
+local is = Config.is;
+local object = Config.object;
 local StructBehavior = Config.StructBehavior;
 
 local function MetaCascadeGet(bases,tab)
@@ -106,17 +108,17 @@ if Debug then
 end
 
 local function StructBuild(bases)
-    return function (proto)
+    return function(proto)
         if Debug and type(proto) ~= "table" then
-            error(i18n"The structure must be declared as a table.");
+            error(i18n "The structure must be declared as a table.");
         end
         if nil ~= getmetatable(proto) then
-            warn(i18n"Struct be used on a table with metatable.");
+            warn(i18n "Struct be used on a table with metatable.");
         end
         -- Member table containing only the fields of non-function and non-meta methods.
         -- And these fields are not changed after initialization.
-        local members = setmetatable({},MetaCascadeGet(bases,StructsMembers));
-        local delays = setmetatable({},MetaCascadeGet(bases,StructsDelays));
+        local members = setmetatable({}, MetaCascadeGet(bases, StructsMembers));
+        local delays = setmetatable({}, MetaCascadeGet(bases, StructsDelays));
         StructsMembers[proto] = members;
         StructsDelays[proto] = delays;
         StructsBases[proto] = bases;
@@ -124,15 +126,15 @@ local function StructBuild(bases)
 
 
         -- 1.Here all "members" are assigned only from the inherited structure.
-        for _,base in ipairs(bases) do
+        for _, base in ipairs(bases) do
             local baseMembers = StructsMembers[base];
-            for k,v in pairs(baseMembers) do
+            for k, v in pairs(baseMembers) do
                 members[k] = v;
             end
         end
 
         -- 2.Moves non-meta methods and non-function fields from the prototype to members.
-        for k,v in pairs(proto) do
+        for k, v in pairs(proto) do
             if not Meta[k] and type(v) ~= "function" then
                 members[k] = v;
                 proto[k] = nil;
@@ -143,20 +145,20 @@ local function StructBuild(bases)
         -- Note:
         -- Do not combine this step with step 1 because some fields may be delayed declarations
         -- and the members of the structure do not contain delayed declarations of the fields.
-        for _,base in ipairs(bases) do
-            for k,v in pairs(base) do
+        for _, base in ipairs(bases) do
+            for k, v in pairs(base) do
                 if nil == proto[k] then
                     proto[k] = v;
                 end
             end
         end
 
-        proto.__index = function (_,k)
-            return CascadeRawGet(proto,k);
+        proto.__index = function(_, k)
+            return CascadeRawGet(proto, k);
         end;
         proto.__newindex = ProtoNewIndexMeta;
-        return setmetatable(proto,{
-            __index = function (_,k)
+        return setmetatable(proto, {
+            __index = function(_, k)
                 local ret = members[k];
                 if ret ~= nil then
                     return ret;
@@ -165,22 +167,22 @@ local function StructBuild(bases)
                 if ret ~= nil then
                     return ret;
                 end
-                for _,base in ipairs(bases) do
+                for _, base in ipairs(bases) do
                     ret = base[k];
                     if ret ~= nil then
                         return ret;
                     end
                 end
             end,
-            __newindex = function (_,k,v)
+            __newindex = function(_, k, v)
                 if Meta[k] or type(v) == "function" then
-                    rawset(proto,k,v);
+                    rawset(proto, k, v);
                 else
                     delays[k] = v;
                 end
             end,
-            __call = function (_,...)
-                local sObj = setmetatable(Copy(members),proto);
+            __call = function(_, ...)
+                local sObj = setmetatable(Copy(members), proto);
                 local _ctor = proto[ctor];
                 if _ctor then
                     _ctor(sObj, ...);
@@ -191,18 +193,32 @@ local function StructBuild(bases)
     end;
 end
 
-_G[struct] = function(...)
-    local len = select("#",...);
-    if len == 1 and nil == AllStructs[(...)] then
-        return StructBuild({})(...);
-    end
-    local bases = {...};
-    if Debug then
-        for _,v in ipairs(bases) do
-            if not AllStructs[v] then
-                error(i18n"The base structure is not a struct type.");
+local struct__ = setmetatable({}, {
+    __call = function (_,...)
+        local len = select("#", ...);
+        if len == 1 and nil == AllStructs[(...)] then
+            return StructBuild({})(...);
+        end
+        local bases = { ... };
+        if Debug then
+            for _, v in ipairs(bases) do
+                if not AllStructs[v] then
+                    error(i18n "The base structure is not a struct type.");
+                end
             end
         end
+        return StructBuild(bases);
+    end;
+});
+
+struct__[object] = function(obj)
+    if type(obj) == "table" then
+        return AllStructs[getmetatable(obj)] ~= nil;
     end
-    return StructBuild(bases);
 end;
+
+struct__[is] = function(st)
+    return AllStructs[st] ~= nil;
+end;
+
+_G[struct] = struct__;
