@@ -258,7 +258,7 @@ local function ClassIs(cls,bases,...)
     if 0 == len then
         return cls;
     end
-    local baseCls = select(1,...);
+    local baseCls = (...);
     if baseCls == nil then
         return false;
     elseif baseCls == cls then
