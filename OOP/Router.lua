@@ -31,9 +31,6 @@ local Internal = require("OOP.Variant.Internal");
 local ClassesMembers = Internal.ClassesMembers;
 
 local BaseFunctions = require("OOP.BaseFunctions");
-local bits = BaseFunctions.bits;
-local band = bits.band;
-local bor = bits.bor;
 local Debug = Config.Debug;
 
 local MetaMapName = Config.MetaMapName;
@@ -207,14 +204,14 @@ if Debug then
     Pass = function(self,key)
         local bit = BitsMap[key];
         if bit then
-            decor = bor(decor,bit);
+            decor = decor | bit;
         else
-            local isVirtual = band(decor,p_virtual) ~= 0;
+            local isVirtual = decor & p_virtual ~= 0;
             if isVirtual then
                 virtualKey = key;
                 return SimulationVirtualFunction;
             end
-            local gs = band(decor,p_gs);
+            local gs = decor & p_gs;
             if gs ~= 0 then
                 local isGet = gs == p_get;
                 CheckPermission(cls, (isGet and "g" or "s") .. key, 4);
@@ -230,9 +227,9 @@ if Debug then
 
     Done = function(_,key,value)
         if nil == key then return;end
-        local isStatic = band(decor,p_static) ~= 0;
+        local isStatic = decor & p_static ~= 0;
         local meta = MetaMapName[key];
-        local gs = band(decor,p_gs);
+        local gs = decor & p_gs;
         local isGet = gs == p_get;
         local disKey = key;
         if gs == 0 then
@@ -257,10 +254,10 @@ if Debug then
             error((i18n"You cannot define final members again. - %s"):format(key));
         end
 
-        local isVirtual = band(decor,p_virtual) ~= 0;
+        local isVirtual = decor & p_virtual ~= 0;
         local vcp = VirtualClassesPermissons[cls];
         local vPermisson = vcp[disKey];
-        if band(decor,p_override) ~= 0 then
+        if decor & p_override ~= 0 then
             if isVirtual then
                 error((i18n"%s,%s cannot be used at the same time."):format(override,virtual));
             elseif nil == vPermisson then
@@ -270,29 +267,29 @@ if Debug then
             -- check if the remaining properties are get/set/0,
             -- and then check if they match the properties of the pure virtual function,
             -- otherwise, raise an error.
-            local strippedDector = bor(decor - p_override,p_final) - p_final;
+            local strippedDector = ((decor - p_override) | p_final) - p_final;
             if strippedDector == p_get or strippedDector == p_set or strippedDector == 0 then
-                if band(strippedDector,vPermisson) ~= strippedDector then
+                if strippedDector & vPermisson ~= strippedDector then
                     error((i18n"A different access qualifier is used when you override pure virtual functions. - %s"):format(key));
                 end
             else
                 error((i18n"The %s function was overridden with an illegal qualifier."):format(key));
             end
-            decor = bor(vPermisson,decor - p_override);
+            decor = vPermisson | (decor - p_override);
         end
 
-        if band(decor,p_gs) == p_gs then
+        if decor & p_gs == p_gs then
             -- Check set,get,they are p_gs
             error((i18n"%s,%s cannot be used at the same time."):format(get,set));
-        elseif band(decor,p_vf) == p_vf then
+        elseif decor & p_vf == p_vf then
             -- Check virtual,final,they are p_vf
             error((i18n"%s,%s cannot be used at the same time."):format(final,virtual));
         end
 
-        local ppp_flag = band(decor,p_3p);
+        local ppp_flag = decor & p_3p;
         if ppp_flag == 0 then
             -- Without the public qualifier, public is added by default.
-            decor = bor(decor,p_public);
+            decor = decor | p_public;
         elseif ppp_flag ~= p_public and ppp_flag ~= p_private and ppp_flag ~= p_protected then
             -- Check public,private,protected,they are p_3p
             error((i18n"The %s qualifier cannot be used in conjunction with other access qualifiers."):format(key));
@@ -319,7 +316,7 @@ if Debug then
         local isFunction = "function" == vt;
 
         if meta then
-            if band(decor,p_gs) ~= 0 then
+            if decor & p_gs ~= 0 then
                 error((i18n"You cannot qualify meta-methods with %s."):format(
                     get .. "," .. set
                 ));
@@ -337,11 +334,11 @@ if Debug then
         end
 
         if isGet and GetPropertyAutoConst then
-            decor = bor(decor,p_const);
+            decor = decor | p_const;
         end
 
-        local isConst = band(decor, p_const) ~= 0;
-        local isMutable = band(decor, p_mutable) ~= 0;
+        local isConst = decor & p_const ~= 0;
+        local isMutable = decor & p_mutable ~= 0;
         if isConst then
             if (key == ctor or key == dtor) then
                 error((i18n "%s qualifier cannot qualify %s method."):format(const, key));
@@ -359,7 +356,7 @@ if Debug then
         if isVirtual then
             local vcm = VirtualClassesMembers[cls];
             -- Always update the permission of the virtual function.
-            local vp = bor(decor,p_virtual) - p_virtual;
+            local vp = (decor | p_virtual) - p_virtual;
             vcp[disKey] = vp;
             Update2ChildrenWithKey(cls,VirtualClassesPermissons,disKey,vp,true);
             if nil == vPermisson or nil ~= vcm[disKey] then
@@ -376,7 +373,7 @@ if Debug then
             -- Check pure virtual functions.
             if not isFunction then
                 error((i18n"%s must be overridden as a function."):format(key));
-            elseif bor(decor,p_final) - p_final ~= vPermisson then
+            elseif (decor | p_final) - p_final ~= vPermisson then
                 error((i18n"A different access qualifier is used when you override pure virtual functions. - %s"):format(key));
             end
             vcm[disKey] = nil;
@@ -386,19 +383,19 @@ if Debug then
         local oVal = value;
         local pms = ClassesPermissions[cls];
         if isFunction then
-            if meta and band(decor, p_public) == 0 then
+            if meta and (decor & p_public) == 0 then
                 -- Meta methods are wrapped with MetaFunctionWrapper functions only when they are not public.
-                value = MetaFunctionWrapper(cls, value, isConst, disKey, band(decor, p_static) == 1);
+                value = MetaFunctionWrapper(cls, value, isConst, disKey, decor & p_static ~= 0);
             else
                 value = FunctionWrapper(cls,value,nil,isConst);
             end
             if isConst then
                 -- Indicates that it is an internal const method.
-                decor = bor(decor,p_internalConstMethod);
+                decor = decor | p_internalConstMethod;
             end
         end
 
-        if band(decor,p_final) ~= 0 then
+        if decor & p_final ~= 0 then
             FinalClassesMembers[cls][disKey] = true;
             Update2ChildrenWithKey(cls,FinalClassesMembers,disKey,true);
         end
@@ -453,12 +450,12 @@ if Debug then
 
                 if key == ctor then
                     -- Reassign permissions to "new", which are the same as ctor with the static qualifier.
-                    pms[nNew] = bor(decor,p_static);
-                    local ban = band(decor,p_private) ~= 0 or oVal == c_delete;
+                    pms[nNew] = decor | p_static;
+                    local ban = (decor & p_private) ~= 0 or oVal == c_delete;
                     Update2Children(cls,ClassesBanNew,ban);
                 elseif key == dtor then
                     pms[nDelete] = decor;
-                    local ban = band(decor,p_private) ~= 0 or oVal == c_delete;
+                    local ban = (decor & p_private) ~= 0 or oVal == c_delete;
                     Update2Children(cls,ClassesBanDelete,ban);
                 end
             end
@@ -484,14 +481,14 @@ else
     Pass = function(self,key)
         local bit = BitsMap[key];
         if bit then
-            decor = bor(decor,bit);
+            decor = decor | bit;
         else
-            local isVirtual = band(decor,p_virtual) ~= 0;
+            local isVirtual = decor & p_virtual ~= 0;
             if isVirtual then
                 virtualKey = key;
                 return SimulationVirtualFunction;
             end
-            local get_set = band(decor,p_gs);
+            local get_set = decor & p_gs;
             if get_set ~= 0 then
                 local property = (get_set == p_get and ClassesReadable or ClassesWritable)[cls][key];
                 return property and property[1] or nil;
@@ -501,11 +498,11 @@ else
     end;
 
     Done = function(_,key,value)
-        if nil == key or band(decor,p_virtual) ~= 0 then
+        if nil == key or (decor & p_virtual) ~= 0 then
             -- Skip pure virtual functions.
             return;
         end
-        local isStatic = band(decor,p_static) ~= 0;
+        local isStatic = decor & p_static ~= 0;
         local meta = MetaMapName[key];
         if meta then
             if isStatic then
@@ -522,7 +519,7 @@ else
         end
 
         local vt = type(value);
-        local gs = band(decor,p_gs);
+        local gs = decor & p_gs;
 
         if gs ~= 0 or isStatic then
             local cms = ClassesMembers[cls];

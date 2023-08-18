@@ -23,7 +23,6 @@ local setmetatable = setmetatable;
 local Config = require("OOP.Config");
 local Debug = Config.Debug;
 local WeakTable = {__mode = "k"};
-local LuaVersion = Config.LuaVersion;
 
 local public = Config.Qualifiers.public;
 local private = Config.Qualifiers.private;
@@ -37,19 +36,18 @@ local mutable = Config.Qualifiers.mutable;
 local get = Config.get;
 local set = Config.set;
 
-local tointeger = math.tointeger;
 local BitsMap = {
-    [public] = 2 ^ 0,
-    [private] = 2 ^ 1,
-    [protected] = 2 ^ 2,
-    [static] = 2 ^ 3,
-    [const] = 2 ^ 4,
-    [final] = 2 ^ 5,
-    [get] = 2 ^ 6,
-    [set] = 2 ^ 7,
-    [virtual] = 2 ^ 8,
-    [override] = 2 ^ 9,
-    [mutable] = 2 ^ 10
+    [public] = 1 << 0,
+    [private] = 1 << 1,
+    [protected] = 1 << 2,
+    [static] = 1 << 3,
+    [const] = 1 << 4,
+    [final] = 1 << 5,
+    [get] = 1 << 6,
+    [set] = 1 << 7,
+    [virtual] = 1 << 8,
+    [override] = 1 << 9,
+    [mutable] = 1 << 10
 };
 
 local max = nil;
@@ -61,14 +59,8 @@ end
 -- Used to instruct const methods internally,
 -- external code doesn't need to care about this.
 -- Ensure that the value does not exist in the BitsMap.
-local __InternalConstMethod = max * 2;
+local __InternalConstMethod = max << 2;
 
-if LuaVersion > 5.2 then
-    for k, v in pairs(BitsMap) do
-        BitsMap[k] = tointeger(v);
-    end
-    __InternalConstMethod = tointeger(__InternalConstMethod);
-end
 local Permission = {
     public = BitsMap[public],
     private = BitsMap[private],

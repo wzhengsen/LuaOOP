@@ -192,6 +192,9 @@ local LanguageMap = {
     },
     ["An error occurred when creating the object -"] = {
         zh = "当创建对象时发生错误-"
+    },
+    ["Lua versions that are no longer supported, below lua 5.4 should use the 'Old_1.1.0+' branch."] = {
+        zh = "不再支持的lua版本，低于lua 5.4的版本应使用\"Old_1.1.0+\"分支。"
     }
 };
 

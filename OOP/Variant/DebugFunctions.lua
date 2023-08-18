@@ -27,14 +27,12 @@ local rawequal = rawequal;
 local type = type;
 local pairs = pairs;
 local ipairs = ipairs;
-local warn = warn or print;
+local warn = warn;
 
 local Config = require("OOP.Config");
 local i18n = require("OOP.i18n");
 
 local BaseFunctions = require("OOP.BaseFunctions");
-local bits = BaseFunctions.bits;
-local band = bits.band;
 local FunctionWrapper = BaseFunctions.FunctionWrapper;
 local Update2Children = BaseFunctions.Update2Children;
 local Update2ChildrenWithKey = BaseFunctions.Update2ChildrenWithKey;
@@ -509,7 +507,7 @@ local function ClassSet(cls,key,value)
         -- Once register "__singleton" for a class,set permission of "new","delete" method to protected.
         local pms = ClassesPermissions[cls];
         local pm = pms[nNew];
-        if band(pm,p_private) == 0 then
+        if pm & p_private == 0 then
             pms[nNew] = p_static + p_protected;
         end
         pms[nDelete] = p_protected;
@@ -665,7 +663,7 @@ local function PushBase(cls,bases,base,handlers,members,meta)
         ClassesBanNew[cls] = true;
     elseif pms then
         local pm = pms[nCtor];
-        if pm and band(pm,p_private) ~= 0 then
+        if pm and (pm & p_private) ~= 0 then
             ClassesBanNew[cls] = true;
         end
     end
@@ -674,7 +672,7 @@ local function PushBase(cls,bases,base,handlers,members,meta)
         ClassesBanDelete[cls] = true;
     elseif pms then
         local pm = pms[nDtor];
-        if pm and band(pm,p_private) ~= 0 then
+        if pm and (pm & p_private) ~= 0 then
             ClassesBanDelete[cls] = true;
         end
     end
@@ -781,9 +779,7 @@ local function CascadeDelete(obj,cls,called)
         local aCls = AccessStack[#AccessStack];
         local _friends = ClassesFriends[cls];
         if (not _friends or (not _friends[aCls] and not _friends[NamedClasses[cls]])) and
-        (band(pm,p_public) == 0) and
-        (aCls ~= cls) and
-        (band(pm,p_private) ~= 0)then
+        ((pm & p_public) == 0) and (aCls ~= cls) and ((pm & p_private) ~= 0)then
             error((i18n"Attempt to access private members outside the permission. - %s"):format(dtor));
         end
     end

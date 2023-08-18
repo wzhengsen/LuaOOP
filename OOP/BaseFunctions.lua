@@ -21,19 +21,16 @@
 
 local Config = require("OOP.Config");
 local i18n = require("OOP.i18n");
-local LuaVersion = Config.LuaVersion;
-local Compat1 = LuaVersion < 5.3 and require("OOP.Version.LowerThan53") or require("OOP.Version.HigherThan52");
-local Compat2 = LuaVersion < 5.4 and require("OOP.Version.LowerThan54") or require("OOP.Version.HigherThan53");
 local Internal = require("OOP.Variant.Internal");
 local ClassesChildren = Internal.ClassesChildren;
 local ClassesBases = Internal.ClassesBases;
 local ClassesFriends = Internal.ClassesFriends;
+local AllFunctions = Internal.ClassesAllFunctions;
 local ClassesFunctionDefined = Internal.ClassesFunctionDefined;
 local NamedClasses = Internal.NamedClasses;
 local Permission = Internal.Permission;
 local Debug = Config.Debug;
 local IsInherite = Config.ExternalClass.IsInherite;
-
 
 local ipairs = ipairs;
 local pairs = pairs;
@@ -147,12 +144,15 @@ local function DefinedInClasses(info, cls)
 end
 
 local CheckPermission = nil;
+local FunctionWrapper = nil;
+local BreakFunctionWrapper = nil;
 
 if Debug then
     local ClassesPermissions = Internal.ClassesPermissions;
     local AccessStack = Internal.AccessStack;
     local ConstStack = Internal.ConstStack;
-    local band = Compat1.bits.band;
+    local AccessStackLen = AccessStack and #AccessStack or nil;
+    local ConstStackLen = ConstStack and #ConstStack or nil;
     local ConstBehavior = Config.ConstBehavior;
     local p_const = Permission.const;
     local p_mutable = Permission.mutable;
@@ -161,6 +161,69 @@ if Debug then
     local p_private = Permission.private;
     local p_internalConstMethod = Internal.__InternalConstMethod;
 
+    local RAII = setmetatable({}, {
+        __close = function()
+            AccessStack[AccessStackLen] = nil;
+            AccessStackLen = AccessStackLen - 1;
+            ConstStack[ConstStackLen] = nil;
+            ConstStackLen = ConstStackLen - 1;
+        end
+    });
+
+    ---
+    ---Wrapping the given function so that it handles the push and pop of the access stack correctly anyway,
+    ---to avoid the access stack being corrupted by an error being thrown in one of the callbacks.
+    ---@param cls table
+    ---@param f function
+    ---@param clsFunctions? table
+    ---@param const? boolean
+    ---@return function
+    ---
+    function FunctionWrapper(cls, f, clsFunctions, const)
+        clsFunctions = clsFunctions or AllFunctions[cls];
+        local newF = clsFunctions[f];
+        if nil == newF then
+            -- Records information about the definition of a function,
+            -- which is used to determine whether a closure is defined
+            -- in a function of the corresponding class.
+            local fInfo = getinfo(f, "S");
+            if fInfo.what ~= "C" then
+                if ClassesFunctionDefined[cls] == nil then
+                    ClassesFunctionDefined[cls] = {};
+                end
+                if ClassesFunctionDefined[cls][fInfo.short_src] == nil then
+                    ClassesFunctionDefined[cls][fInfo.short_src] = {};
+                end
+                local defined = ClassesFunctionDefined[cls][fInfo.short_src];
+                defined[#defined + 1] = fInfo.linedefined;
+                defined[#defined + 1] = fInfo.lastlinedefined;
+            end
+            newF = function(...)
+                AccessStackLen = AccessStackLen + 1;
+                AccessStack[AccessStackLen] = cls;
+                ConstStackLen = ConstStackLen + 1;
+                ConstStack[ConstStackLen] = const or false;
+
+                local _ <close> = RAII;
+                if ConstStackLen > 1 and ConstStack[ConstStackLen - 1] and not const then
+                    local lastCls = AccessStack[ConstStackLen - 1];
+                    if lastCls ~= 0 and cls ~= 0 and lastCls[is](cls) then
+                        error(i18n "Cannot call a non-const method on a const method.");
+                    end
+                end
+                return f(...);
+            end;
+            clsFunctions[newF] = newF;
+            clsFunctions[f] = newF;
+        end
+        return newF;
+    end
+
+    local BreakFunctions = setmetatable({}, Internal.WeakTable);
+    function BreakFunctionWrapper(f)
+        -- 0 means that any access permissions can be broken.
+        return FunctionWrapper(0, f, BreakFunctions);
+    end
     ---Cascade to get permission values up to the top of the base class.
     ---
     ---@param self table
@@ -203,15 +266,15 @@ if Debug then
         end
         local cls,pm = CascadeGetPermission(self,key);
 
-        local constMethod = pm and band(pm,p_internalConstMethod) ~= 0 or false;
+        local constMethod = pm and (pm & p_internalConstMethod) ~= 0 or false;
         if set and not constMethod then
             -- Const methods have unique semantics, rather than representing constants.
             -- Therefore, const methods are allowed to be reassigned.
             if pm and
-            band(pm,p_const) ~= 0 or
+            (pm & p_const) ~= 0 or
             (ConstStack[#ConstStack] and (rawequal(stackCls,self) or ClassBasesIsRecursive(stackCls,ClassesBases[self]))) then
                 -- Check const.
-                if band(pm, p_mutable) == 0 then
+                if pm & p_mutable == 0 then
                     if ConstBehavior ~= 2 then
                         if ConstBehavior == 0 then
                             warn(i18n "You cannot change the const value. - %s":format(key:sub(2)));
@@ -239,7 +302,7 @@ if Debug then
             return true;
         end
 
-        if band(pm,p_public) ~= 0 then
+        if pm & p_public ~= 0 then
             -- Allow public.
             return true;
         end
@@ -269,9 +332,9 @@ if Debug then
         --Check if it is a friendly class.
         if not _friends or (not _friends[stackCls] and not _friends[NamedClasses[stackCls]]) then
             -- Check public,private,protected.
-            if band(pm, p_private) ~= 0 then
+            if pm & p_private ~= 0 then
                 status = 1;
-            elseif band(pm, p_protected) ~= 0 then
+            elseif pm & p_protected ~= 0 then
                 if stackCls then
                     bases = ClassesBases[stackCls];
                     if bases and ClassBasesIsRecursive(cls, bases) then
@@ -321,9 +384,8 @@ if Debug then
 end
 
 return {
-    bits = Compat1.bits,
-    FunctionWrapper = Compat2.FunctionWrapper,
-    BreakFunctionWrapper = Compat2.BreakFunctionWrapper,
+    FunctionWrapper = FunctionWrapper,
+    BreakFunctionWrapper = BreakFunctionWrapper,
     Update2Children = Update2Children,
     Update2ChildrenWithKey = Update2ChildrenWithKey,
     Update2ChildrenClassMeta = Update2ChildrenClassMeta,

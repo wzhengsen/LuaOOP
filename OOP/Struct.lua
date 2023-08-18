@@ -21,7 +21,7 @@
 
 local setmetatable = setmetatable;
 local getmetatable = getmetatable;
-local warn = warn or print;
+local warn = warn;
 local pairs = pairs;
 local ipairs = ipairs;
 local type = type;

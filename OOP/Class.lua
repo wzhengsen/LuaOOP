@@ -19,6 +19,12 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 
+local Config = require("OOP.Config");
+local i18n = require("OOP.i18n");
+if Config.LuaVersion < 5.4 then
+    error(i18n "Lua versions that are no longer supported, below lua 5.4 should use the Old_1.1.0+ branch.");
+end
+
 local setmetatable = setmetatable;
 local getmetatable = getmetatable;
 local type = type;
@@ -29,7 +35,6 @@ local select = select;
 local d_setmetatable = debug.setmetatable;
 local rawget = rawget;
 
-local Config = require("OOP.Config");
 local Debug = Config.Debug;
 local ctor = Config.ctor;
 local raw = Config.raw;
@@ -38,7 +43,6 @@ local to = Config.to;
 local is = Config.is;
 local object = Config.object;
 
-local i18n = require("OOP.i18n");
 local Internal = require("OOP.Variant.Internal");
 
 local Functions = Debug and require("OOP.Variant.DebugFunctions") or require("OOP.Variant.ReleaseFunctions");

@@ -19,12 +19,8 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 
-local LuaVersion = tonumber(_VERSION:sub(5)) or 5.1;
-if LuaVersion >= 5.4 then
-    warn("@on");
-end
 local Config = {
-    LuaVersion = LuaVersion,
+    LuaVersion = tonumber(_VERSION:sub(5)) or 5.1,
     Version = "1.1.0",
 
     --****************Rename fields start****************
@@ -94,15 +90,15 @@ local Config = {
         __len = "__len",
         __tostring = "__tostring",
 
-        __idiv = LuaVersion > 5.2 and "__idiv" or nil,
-        __band = LuaVersion > 5.2 and "__band" or nil,
-        __bor = LuaVersion > 5.2 and "__bor" or nil,
-        __bxor = LuaVersion > 5.2 and "__bxor" or nil,
-        __shl = LuaVersion > 5.2 and "__shl" or nil,
-        __shr = LuaVersion > 5.2 and "__shr" or nil,
-        __bnot = LuaVersion > 5.2 and "__bnot" or nil,
+        __idiv = "__idiv",
+        __band = "__band",
+        __bor = "__bor",
+        __bxor = "__bxor",
+        __shl = "__shl",
+        __shr = "__shr",
+        __bnot = "__bnot",
 
-        __close = LuaVersion > 5.3 and "__close" or nil
+        __close = "__close"
     },
 
     -- Qualifiers names.
