@@ -388,7 +388,7 @@ if Debug then
         if isFunction then
             if meta and band(decor, p_public) == 0 then
                 -- Meta methods are wrapped with MetaFunctionWrapper functions only when they are not public.
-                value = MetaFunctionWrapper(cls, value, isConst, disKey, band(decor, p_static) == 1);
+                value = MetaFunctionWrapper(cls, value, isConst, disKey, band(decor, p_static) ~= 0);
             else
                 value = FunctionWrapper(cls,value,nil,isConst);
             end
