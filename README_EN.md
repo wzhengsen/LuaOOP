@@ -1519,4 +1519,4 @@ The [Config.lua](OOP/Config.lua) file also contains some configuration regarding
 
 ## Compatibility
 
-Try to ensure Lua5.1-Lua5.4 compatibility, but LuaJIT is not tested.
+Try to ensure Lua 5.4+ compatibility, other lua versions should use the Old_1.1.0+ branch.
