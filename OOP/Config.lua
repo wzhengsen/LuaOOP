@@ -171,7 +171,7 @@ local Config = {
         ---Function to determine if a external class inherits from another external class.
         ---A class can be judged as inheriting itself.
         ---@type fun(cls:table,base:table):boolean
-        IsInherite = nil,
+        IsInherite = nil
     },
 
     -- When the number of holes in the event response objects reaches a certain number,
