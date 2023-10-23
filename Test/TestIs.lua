@@ -23,3 +23,13 @@ assert(d.is() ~= A)
 assert(B.is(A));
 assert(not C.is(B));
 assert(C.is() == C);
+
+local NonClass = {};
+assert(class.is(A));
+assert(not class.is(NonClass));
+assert(not class.is(a));
+
+local NonObject = {};
+assert(class.object(a) and class.object(b));
+assert(not class.object(A));
+assert(not class.object(NonObject));

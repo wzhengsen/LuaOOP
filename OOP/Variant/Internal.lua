@@ -95,7 +95,7 @@ return {
     ClassesNew = setmetatable({},WeakTable),
     ClassesDelete = setmetatable({},WeakTable),
     ClassesSingleton = setmetatable({},WeakTable),
-    ObjectsAll = setmetatable({},WeakTable),
+    AllObjects = setmetatable({},WeakTable),
     ObjectsCls = setmetatable({},WeakTable),
     ClassesStaticProperties = setmetatable({},WeakTable),
     ClassesStatic = setmetatable({},WeakTable),

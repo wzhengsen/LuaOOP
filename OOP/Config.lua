@@ -29,21 +29,10 @@ local Config = {
 
     class = "class",
     struct = "struct",
-
-    ["class.default"] = "default",
-    ["class.delete"] = "delete",
-
     enum = "enum",
 
     event = "event",
-
     handlers = "handlers",
-
-    null = "null",
-    raw = "raw",
-    del = "del",
-    to = "to",
-    object = "object",
 
     set = "set",
     get = "get",
@@ -68,6 +57,21 @@ local Config = {
 
     -- "is" method name.
     is = "is",
+
+    ["class.default"] = "default",
+    ["class.delete"] = "delete",
+
+    ["class.null"] = "null",
+    ["class.raw"] = "raw",
+    ["class.del"] = "del",
+
+    ["class.to"] = "to",
+    ["class.object"] = "object",
+    ["class.is"] = "is",
+
+    ["struct.to"] = "to",
+    ["struct.object"] = "object",
+    ["struct.is"] = "is",
 
     -- Meta function names.
     -- You must implement the meta-function to make it work which is named Meta's value.
@@ -191,7 +195,7 @@ local Config = {
 -- Reverse mapping to meta method names.
 local MetaMapName = {};
 Config.MetaMapName = MetaMapName;
-for meta,name in pairs(Config.Meta) do
+for meta, name in pairs(Config.Meta) do
     MetaMapName[name] = meta;
 end
 

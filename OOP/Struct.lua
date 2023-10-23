@@ -42,8 +42,9 @@ local Copy = BaseFunctions.Copy;
 local ctor = Config.ctor;
 local struct = Config.struct;
 local Debug = Config.Debug;
-local is = Config.is;
-local object = Config.object;
+local to = Config["struct.to"];
+local is = Config["struct.is"];
+local object = Config["struct.object"];
 local StructBehavior = Config.StructBehavior;
 
 local function MetaCascadeGet(bases,tab)
@@ -219,6 +220,10 @@ end;
 
 struct__[is] = function(st)
     return AllStructs[st] ~= nil;
+end;
+
+struct__[to] = function(obj, st)
+    return setmetatable(obj, st);
 end;
 
 _G[struct] = struct__;

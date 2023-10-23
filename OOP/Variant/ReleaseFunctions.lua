@@ -89,7 +89,7 @@ local ClassesNew = Functions.ClassesNew;
 local ClassesDelete = Functions.ClassesDelete;
 local ClassesSingleton = Functions.ClassesSingleton;
 local ClassesStatic = Functions.ClassesStatic;
-local ObjectsAll = Functions.ObjectsAll;
+local AllObjects = Functions.AllObjects;
 local ObjectsCls = Functions.ObjectsCls;
 local DeathMark = Functions.DeathMark;
 
@@ -289,10 +289,10 @@ local function CreateClassObject(cls,...)
         all = obj;
     elseif nil ~= obj then
         -- Try to get a pre-existing 'all' table (nested constructs may exist).
-        all = ObjectsAll[obj];
+        all = AllObjects[obj];
         if nil == all then
             all = {};
-            ObjectsAll[obj] = all;
+            AllObjects[obj] = all;
         end
     end
     return obj,all;
@@ -380,7 +380,7 @@ local function MakeInternalObjectMeta(cls,metas)
             return HandlersControl;
         end
         local ret = nil;
-        local all = ObjectsAll[sender];
+        local all = AllObjects[sender];
         if all then
             ret = all[key];
             if nil ~= ret then
@@ -415,7 +415,7 @@ local function MakeInternalObjectMeta(cls,metas)
             property[1](sender,value);
             return;
         end
-        local all = ObjectsAll[sender];
+        local all = AllObjects[sender];
         if all then
             all[key] = value;
             return;
@@ -538,7 +538,7 @@ local function RetrofitExternalObjectMeta(cls,metas,forceRetrofit)
             end
 
             -- Check self all.
-            local all = ObjectsAll[sender];
+            local all = AllObjects[sender];
             local ret = nil;
             if all then
                 ret = all[key];
@@ -586,10 +586,10 @@ local function RetrofitExternalObjectMeta(cls,metas,forceRetrofit)
                 property[1](sender,value);
                 return;
             end
-            local all = ObjectsAll[sender];
+            local all = AllObjects[sender];
             if all == nil and forceRetrofit then
                 all = {};
-                ObjectsAll[sender] = all;
+                AllObjects[sender] = all;
             end
             all[key] = value;
         else
@@ -648,7 +648,7 @@ end
 local function CallDel(self)
     CascadeDelete(self,self[is](),{});
     DeathMark[self] = true;
-    ObjectsAll[self] = nil;
+    AllObjects[self] = nil;
 end
 
 local CreateClassDelete = ClearMembersInRelease and function(cls)
@@ -669,7 +669,7 @@ local CreateClassDelete = ClearMembersInRelease and function(cls)
             end
         end
         DeathMark[self] = true;
-        ObjectsAll[self] = nil;
+            AllObjects[self] = nil;
     end
 end or
 function (cls)
@@ -682,7 +682,7 @@ function (cls)
             ("userdata" == type(self) and d_setmetatable or setmetatable)(self,nil);
         end
         DeathMark[self] = true;
-        ObjectsAll[self] = nil;
+            AllObjects[self] = nil;
     end
 end
 

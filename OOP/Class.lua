@@ -37,11 +37,11 @@ local rawget = rawget;
 
 local Debug = Config.Debug;
 local ctor = Config.ctor;
-local raw = Config.raw;
-local del = Config.del;
-local to = Config.to;
-local is = Config.is;
-local object = Config.object;
+local raw = Config["class.raw"];
+local del = Config["class.del"];
+local to = Config["class.to"];
+local is = Config["class.is"];
+local object = Config["class.object"];
 
 local Internal = require("OOP.Variant.Internal");
 
@@ -64,7 +64,7 @@ local VirtualClassesMembers = Functions.VirtualClassesMembers;
 local ObjectsCls = Internal.ObjectsCls;
 local NamedClasses = Internal.NamedClasses;
 local AllClasses = Internal.AllClasses;
-local ObjectsAll = Internal.ObjectsAll;
+local AllObjects = Internal.AllObjects;
 local __internal__ = Config.__internal__;
 
 
@@ -217,8 +217,8 @@ if Debug then
             RetrofitExternalObjectMeta(cls, metas, false);
             ObjectsCls[obj] = cls;
         end
-        if not ObjectsAll[obj] then
-            ObjectsAll[obj] = {};
+        if not AllObjects[obj] then
+            AllObjects[obj] = {};
         end
         return obj;
     end;
@@ -253,15 +253,15 @@ else
             RetrofitExternalObjectMeta(cls, metas, false);
             ObjectsCls[obj] = cls;
         end
-        if type(obj) == "userdata" and not ObjectsAll[obj] then
-            ObjectsAll[obj] = {};
+        if type(obj) == "userdata" and not AllObjects[obj] then
+            AllObjects[obj] = {};
         end
         return obj;
     end;
 end
 
 class[object] = function(obj)
-    return ObjectsAll[obj] ~= nil;
+    return AllObjects[obj] ~= nil;
 end;
 
 class[is] = function(cls)

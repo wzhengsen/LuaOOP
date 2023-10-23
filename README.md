@@ -762,6 +762,20 @@ print(d.is() == A)-- false
 print(B.is(A));-- true
 print(C.is(B));-- false
 print(C.is() == C)-- true
+
+-- 判断某个lua值是否是LuaOOP类类型。
+local NonClass = {};
+print(class.is(A));-- true
+print(class.is(NonClass));-- false
+print(class.is(a));-- false
+
+-- 判断某个lua值是否是LuaOOP类的对象。
+local NonObject = {};
+print(class.object(a) and class.object(b));-- true
+print(class.object(A));-- false
+print(class.object(NonObject));
+
+-- 同时，有struct.object和struct.is函数。
 ```
 >**注意：无论是使用对象或者类调用is时，都不必使用":"操作符，应当直接使用"."操作符。**
 

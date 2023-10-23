@@ -98,7 +98,7 @@ local ClassesBanNew = Functions.ClassesBanNew;
 local ClassesBanDelete = Functions.ClassesBanDelete;
 local ClassesNew = Functions.ClassesNew;
 local ClassesDelete = Functions.ClassesDelete;
-local ObjectsAll = Functions.ObjectsAll;
+local AllObjects = Functions.AllObjects;
 local ObjectsCls = Functions.ObjectsCls;
 local ClassesStatic = Functions.ClassesStatic;
 local ClassesChildrenByName = Functions.ClassesChildrenByName;
@@ -224,10 +224,10 @@ local function GetAndCheck(cls,sender,key)
     -- Check self __all__ first.
     -- Some objects may be created externally and have no 'all' table,
     -- so create one manually at this point.
-    local all = ObjectsAll[sender];
+    local all = AllObjects[sender];
     if nil == all then
         all = {};
-        ObjectsAll[sender] = all;
+        AllObjects[sender] = all;
     end
     local ret = all[key];
     if nil ~= ret then
@@ -301,10 +301,10 @@ local function SetAndCheck(cls,sender,key,value)
     end
     -- Some objects may be created externally and have no 'all' table,
     -- so create one manually at this point.
-    local all = ObjectsAll[sender];
+    local all = AllObjects[sender];
     if nil == all then
         all = {};
-        ObjectsAll[sender] = all;
+        AllObjects[sender] = all;
     end
     all[key] = value;
 end
@@ -744,10 +744,10 @@ end
 local function CreateClassObject(...)
     local obj,all = R_CreateClassObject(...);
     if (nil ~= obj) and rawequal(obj,all) then
-        all = ObjectsAll[obj];
+        all = AllObjects[obj];
         if nil == all then
             all = {};
-            ObjectsAll[obj] = all;
+            AllObjects[obj] = all;
         end
     end
     return obj,all;
@@ -803,7 +803,7 @@ end
 local function CallDel(self)
     CascadeDelete(self,self[is](),{});
     DeathMark[self] = true;
-    ObjectsAll[self] = nil;
+    AllObjects[self] = nil;
 end
 
 local function CreateClassDelete(cls)
@@ -819,7 +819,7 @@ local function CreateClassDelete(cls)
             ("userdata" == type(self) and d_setmetatable or setmetatable)(self,nil);
         end
         DeathMark[self] = true;
-        ObjectsAll[self] = nil;
+        AllObjects[self] = nil;
     end;
 end
 

@@ -50,7 +50,7 @@ LuaOOP is an object-oriented pattern that borrows some of the class design from 
     * [Disable](#disable)
     * [Reset](#reset)
     * [Remove](#remove)
-* [Enumeration](#enumeration);
+* [Enumeration](#enumeration)
 * [Pure Virtual Functions](#pure-virtual-functions)
     * [Override](#Override)
     * [Signature](#signature)
