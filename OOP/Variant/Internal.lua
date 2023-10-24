@@ -95,9 +95,9 @@ return {
     ClassesNew = setmetatable({},WeakTable),
     ClassesDelete = setmetatable({},WeakTable),
     ClassesSingleton = setmetatable({},WeakTable),
-    AllObjects = setmetatable({},WeakTable),
+    -- ObjectsAll,not 'All' Objects.
+    ObjectsAll = setmetatable({},WeakTable),
     ObjectsCls = setmetatable({},WeakTable),
-    ClassesStaticProperties = setmetatable({},WeakTable),
     ClassesStatic = setmetatable({},WeakTable),
     ClassesPermissions = Debug and setmetatable({},WeakTable) or nil,
     FinalClasses = Debug and setmetatable({},WeakTable) or nil,

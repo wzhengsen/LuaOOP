@@ -33,6 +33,7 @@ local error = error;
 local next = next;
 local select = select;
 local d_setmetatable = debug.setmetatable;
+local d_getmetatable = debug.getmetatable;
 local rawget = rawget;
 
 local Debug = Config.Debug;
@@ -64,7 +65,7 @@ local VirtualClassesMembers = Functions.VirtualClassesMembers;
 local ObjectsCls = Internal.ObjectsCls;
 local NamedClasses = Internal.NamedClasses;
 local AllClasses = Internal.AllClasses;
-local AllObjects = Internal.AllObjects;
+local ObjectsAll = Internal.ObjectsAll;
 local __internal__ = Config.__internal__;
 
 
@@ -217,8 +218,8 @@ if Debug then
             RetrofitExternalObjectMeta(cls, metas, false);
             ObjectsCls[obj] = cls;
         end
-        if not AllObjects[obj] then
-            AllObjects[obj] = {};
+        if not ObjectsAll[obj] then
+            ObjectsAll[obj] = {};
         end
         return obj;
     end;
@@ -253,15 +254,25 @@ else
             RetrofitExternalObjectMeta(cls, metas, false);
             ObjectsCls[obj] = cls;
         end
-        if type(obj) == "userdata" and not AllObjects[obj] then
-            AllObjects[obj] = {};
+        if type(obj) == "userdata" and not ObjectsAll[obj] then
+            ObjectsAll[obj] = {};
         end
         return obj;
     end;
 end
 
+local __internal__ = Config.__internal__;
+local __cls__ = Config.__cls__;
+
 class[object] = function(obj)
-    return AllObjects[obj] ~= nil;
+    local t = type(obj);
+    if t == "table" or t == "userdata" then
+        local m = d_getmetatable(obj);
+        if m and (rawget(m,__internal__) or rawget(m,__cls__)) then
+            return true;
+        end
+    end
+    return false;
 end;
 
 class[is] = function(cls)
