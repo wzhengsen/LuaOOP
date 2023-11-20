@@ -67,11 +67,11 @@ local Config = {
 
     ["class.to"] = "to",
     ["class.object"] = "object",
-    ["class.is"] = "is",
+    ["class.class"] = "class",
 
     ["struct.to"] = "to",
     ["struct.object"] = "object",
-    ["struct.is"] = "is",
+    ["struct.struct"] = "struct",
 
     -- Meta function names.
     -- You must implement the meta-function to make it work which is named Meta's value.

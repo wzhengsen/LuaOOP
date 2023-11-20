@@ -43,7 +43,7 @@ local ctor = Config.ctor;
 local struct = Config.struct;
 local Debug = Config.Debug;
 local to = Config["struct.to"];
-local is = Config["struct.is"];
+local structFuncName = Config["struct.struct"];
 local object = Config["struct.object"];
 local StructBehavior = Config.StructBehavior;
 
@@ -218,7 +218,7 @@ struct__[object] = function(obj)
     end
 end;
 
-struct__[is] = function(st)
+struct__[structFuncName] = function(st)
     return AllStructs[st] ~= nil;
 end;
 

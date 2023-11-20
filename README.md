@@ -765,15 +765,15 @@ print(C.is() == C)-- true
 
 -- 判断某个lua值是否是LuaOOP类类型。
 local NonClass = {};
-print(class.is(A));-- true
-print(class.is(NonClass));-- false
-print(class.is(a));-- false
+print(class.class(A));-- true
+print(class.class(NonClass));-- false
+print(class.class(a));-- false
 
 -- 判断某个lua值是否是LuaOOP类的对象。
 local NonObject = {};
 print(class.object(a) and class.object(b));-- true
 print(class.object(A));-- false
-print(class.object(NonObject));
+print(class.object(NonObject));-- false
 
 -- 同时，有struct.object和struct.is函数。
 ```

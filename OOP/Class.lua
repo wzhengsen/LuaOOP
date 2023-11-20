@@ -41,7 +41,7 @@ local ctor = Config.ctor;
 local raw = Config["class.raw"];
 local del = Config["class.del"];
 local to = Config["class.to"];
-local is = Config["class.is"];
+local classFuncName = Config["class.class"];
 local object = Config["class.object"];
 
 local Internal = require("OOP.Variant.Internal");
@@ -275,7 +275,7 @@ class[object] = function(obj)
     return false;
 end;
 
-class[is] = function(cls)
+class[classFuncName] = function(cls)
     return AllClasses[cls] ~= nil;
 end;
 

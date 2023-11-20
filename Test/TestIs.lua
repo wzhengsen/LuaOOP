@@ -25,9 +25,9 @@ assert(not C.is(B));
 assert(C.is() == C);
 
 local NonClass = {};
-assert(class.is(A));
-assert(not class.is(NonClass));
-assert(not class.is(a));
+assert(class.class(A));
+assert(not class.class(NonClass));
+assert(not class.class(a));
 
 local NonObject = {};
 assert(class.object(a) and class.object(b));

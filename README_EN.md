@@ -762,6 +762,18 @@ print(d.is() == A)-- false
 print(B.is(A));-- true
 print(C.is(B));-- false
 print(C.is() == C)-- true
+
+-- Determines whether a lua value is a LuaOOP class type.
+local NonClass = {};
+print(class.class(A));-- true
+print(class.class(NonClass));-- false
+print(class.class(a));-- false
+
+-- Determines whether a lua value is an object of the LuaOOP class.
+local NonObject = {};
+print(class.object(a) and class.object(b));-- true
+print(class.object(A));-- false
+print(class.object(NonObject));-- false
 ```
 >**Note: When calling is either with an object or a class, you do not need to use the ":" operator, you should use the "." operator directly.**
 
