@@ -25,7 +25,7 @@ LuaOOP是借鉴了C/C++/C#的类/结构体/枚举设计，并使用Lua实现的�
     * [静态](#静态)
     * [常量](#常量)
     * [友元](#友元)
-    * [final](#final)
+    * [最终](#最终)
         * [不可继承](#不可继承)
         * [不可重写](#不可重写)
     * [组合](#组合)
@@ -519,7 +519,7 @@ base:ShowSecret(secret);-- 123     data = 123
 c2:ShowSecretC2(secret);-- 123     data = 123
 ```
 
-### final
+### 最终
 
 #### 不可继承
 ```lua
@@ -550,7 +550,7 @@ end
 
 ### 组合
 
-公有/保护/私有/静态/常量/final等可以被组合使用：
+公有/保护/私有/静态/常量/最终 等可以被组合使用：
 ```lua
 local T = class();
 -- 一个名为Type的不可重写的公有静态常量。
@@ -775,7 +775,7 @@ print(class.object(a) and class.object(b));-- true
 print(class.object(A));-- false
 print(class.object(NonObject));-- false
 
--- 同时，有struct.object和struct.is函数。
+-- 同时，有struct.object和struct.struct函数。
 ```
 >**注意：无论是使用对象或者类调用is时，都不必使用":"操作符，应当直接使用"."操作符。**
 
