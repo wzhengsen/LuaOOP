@@ -1522,6 +1522,7 @@ test:dispose();
 |   PropertyBehavior  |       1       |写入/读取一个只读/只写属性时：<br/>0->将引发一个警告；<br/>1->将引发一个错误；<br/>2->允许该操作；<br/>其他值->忽略该操作。|
 |    ConstBehavior    |       1       |修改常量修饰的值时：<br/>类似于PropertyBehavior字段。|
 |    EnumBehavior     |       1       |修改枚举时：<br/>类似于PropertyBehavior字段。|
+|   NullEnumBehavior  |       1       |获取一个不存在的枚举值时：<br/>0->将引发一个警告；<br/>1->将引发一个错误；<br/>其他值->返回nil值。|
 |   StructBehavior    |       2       |为结构体对象新增字段时：<br/>类似于PropertyBehavior字段。|
 |   DefaultEnumIndex  |       1       |枚举值默认的起始值（默认保持为Lua风格，从1开始）。|
 | GetPropertyAutoConst|     false     |get属性是否默认使用常量修饰（即使不使用const修饰符）。|

@@ -1521,6 +1521,7 @@ The [Config.lua](OOP/Config.lua) file also contains some configuration regarding
 |   PropertyBehavior  |       1       |When writing/reading a read/write only property:<br/>0->a warning will be raised;<br/>1->an error will be raised;<br/>2->the operation is allowed;<br/>other values->the operation is ignored.|
 |    ConstBehavior    |       1       |When modifying the value of a constant qualifier:<br/>Similar to the 'PropertyBehavior' field.|
 |    EnumBehavior     |       1       |When modifying the enumeration:<br/>Similar to the 'PropertyBehavior' field.|
+|   NullEnumBehavior  |       1       |When getting an enum value that does not exist:<br/>0->a warning will be raised;<br/>1->an error will be raised;<br/>other values->return nil value.|
 |   StructBehavior    |       2       |When adding fields to a struct object:<br/>Similar to the 'PropertyBehavior' field.|
 |   DefaultEnumIndex  |       1       |The default starting value of the enumeration value (kept Lua style by default,starting from 1).|
 | GetPropertyAutoConst|     false     |Whether the 'get' property is qualified with const by default (even if the const qualifier is not used).|

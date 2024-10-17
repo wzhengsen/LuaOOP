@@ -23,6 +23,7 @@ local Config = require("OOP.Config");
 
 local require = require;
 local rawset = rawset;
+local rawget = rawget;
 local type = type;
 local select = select;
 local warn = warn;
@@ -30,12 +31,21 @@ local mType = math.type;
 
 local i18n = require("OOP.i18n");
 local EnumBehavior = Config.EnumBehavior;
+local NullEnumBehavior = Config.NullEnumBehavior;
 local DefaultEnumIndex = Config.DefaultEnumIndex;
 local AllEnumerations = require("OOP.Variant.Internal").AllEnumerations;
 local enum = nil;
 local auto = DefaultEnumIndex - 1;
 
 if Config.Debug then
+    local enumNewIndexMeta = function ()
+        if EnumBehavior == 0 then
+            warn(i18n"You can't edit a enumeration.");
+        elseif EnumBehavior == 1 then
+            error(i18n"You can't edit a enumeration.");
+        end
+    end;
+
     function enum(first,...)
         if nil == first then
             auto = auto + 1;
@@ -69,15 +79,24 @@ if Config.Debug then
 
         local _enum = {};
         AllEnumerations[_enum] = true;
-        return setmetatable(_enum,{
-            __index = e,
-            __newindex = function ()
-                if EnumBehavior == 0 then
-                    warn("You can't edit a enumeration.");
-                elseif EnumBehavior == 1 then
-                    error(i18n"You can't edit a enumeration.");
+
+        local enumIndexMeta = (NullEnumBehavior == 0 or NullEnumBehavior == 1)
+        and function (_, key)
+            local value = rawget(e, key);
+            if value == nil then
+                if NullEnumBehavior == 0 then
+                    warn((i18n"Gets an enum value that does not exist. - %s"):format(key));
+                elseif NullEnumBehavior == 1 then
+                    error((i18n"Gets an enum value that does not exist. - %s"):format(key));
                 end
-            end,
+            end
+            return value;
+        end
+        or e;
+
+        return setmetatable(_enum,{
+            __index = enumIndexMeta,
+            __newindex = enumNewIndexMeta,
             __pairs = function()return pairs(e);end
         });
     end

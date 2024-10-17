@@ -31,6 +31,15 @@ else
     assert(ok);
 end
 
+local ok = pcall(function ()
+    print("Number3.Ten == 10 is", Number3.Ten == 10);
+end);
+if Debug then
+    assert(not ok);
+else
+    assert(ok);
+end
+
 
 local Test = class();
 Test.Number1 = Number1;

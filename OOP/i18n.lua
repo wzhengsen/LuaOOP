@@ -28,6 +28,9 @@ local LanguageMap = {
     ["You can't edit a enumeration."] = {
         zh = "你不能编辑枚举。"
     },
+    ["Gets an enum value that does not exist. - %s"] = {
+        zh = "获取了一个不存在的枚举值。 - %s"
+    },
     ["The %s qualifier cannot be used in conjunction with other access qualifiers."] = {
         zh = "修饰符%s不能与其它访问修饰符一起使用。"
     },

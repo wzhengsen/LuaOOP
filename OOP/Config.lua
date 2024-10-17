@@ -154,6 +154,19 @@ local Config = {
     -- Same as PropertyBehavior.
     EnumBehavior = 1,
 
+    -- What is behavior when getting an enum value that does not exist?
+    -- For example：
+    -- local Numbers = enum { one = 1, two = 2},
+    -- print(Numbers.three)
+    -- It works with Debug mode only.
+    -- All incorrect operations will be allowed in non-debug mode.
+    -------------------------------------
+    -- 0 -> warning(for lua5.4 and after)
+    -- 1 -> error
+    -- other -> return nil
+    -------------------------------------
+    NullEnumBehavior = 1,
+
     -- Same as PropertyBehavior.
     StructBehavior = 2,
 
