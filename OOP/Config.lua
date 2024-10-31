@@ -21,7 +21,7 @@
 
 local Config = {
     LuaVersion = tonumber(_VERSION:sub(5)) or 5.1,
-    Version = "1.1.0",
+    Version = "1.2.0",
 
     --****************Rename fields start****************
     -- If you need to rename some of the LuaOOP names to suit specific needs,

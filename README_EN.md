@@ -1132,14 +1132,15 @@ function Listener.handlers:Email(name,content)
     if name == self.name then
         -- Receive the specified email.
         print(content);
-        -- Returns true to prevent the event dispatching.
-        return true;
+        -- Returns false to prevent the event dispatching.
+        return false;
     end
 end
 
 -- There is no limit to the length of the parameters of the received event, such as receiving an event named Any with arbitrary length parameters.
 function Listener.handlers:Any(...)
     print(...);
+    return true;
 end
 
 
@@ -1170,6 +1171,7 @@ end
 
 function Listener.handlers:Any()
     print(self.name.." response 'Any' event.");
+    return true;
 end
 
 local a = Listener.new("a");
@@ -1199,6 +1201,7 @@ require("OOP.Class");
 local Listener = class();
 function Listener.handlers:Any()
     print("Responsing 'Any' event->",self);
+    return true;
 end
 
 local a = Listener.new();
@@ -1206,6 +1209,7 @@ local b = Listener.new();
 
 a.handlers.Any = function(self)
     print("'a' resets the response to the 'Any' event->",self);
+    return true;
 end;
 
 event.Any();
@@ -1219,6 +1223,7 @@ require("OOP.Class");
 local Listener = class();
 function Listener.handlers:Any()
     print("Responsing 'Any' event.");
+    return true;
 end
 
 local a = Listener.new();
@@ -1241,6 +1246,7 @@ require("OOP.Class");
 local Listener = class();
 function Listener.handlers:Any()
     print("Responsing 'Any' event.");
+    return true;
 end
 
 local a = Listener.new();

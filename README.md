@@ -1134,14 +1134,15 @@ function Listener.handlers:Email(name,content)
     if name == self.name then
         -- 收到指定的邮件。
         print(content);
-        -- 返回true以阻止事件再传递。
-        return true;
+        -- 返回false以阻止事件再传递。
+        return false;
     end
 end
 
 -- 监听事件的参数长度没有限制，比如监听有任意长度参数的名为Any的事件。
 function Listener.handlers:Any(...)
     print(...);
+    return true;
 end
 
 
@@ -1172,6 +1173,7 @@ end
 
 function Listener.handlers:Any()
     print(self.name.."响应Any事件。");
+    return true;
 end
 
 local a = Listener.new("a");
@@ -1201,6 +1203,7 @@ require("OOP.Class");
 local Listener = class();
 function Listener.handlers:Any()
     print("响应Any事件->",self);
+    return true;
 end
 
 local a = Listener.new();
@@ -1208,6 +1211,7 @@ local b = Listener.new();
 
 a.handlers.Any = function(self)
     print("a重置了Any事件的响应->",self);
+    return true;
 end;
 
 event.Any();
@@ -1221,6 +1225,7 @@ require("OOP.Class");
 local Listener = class();
 function Listener.handlers:Any()
     print("响应Any事件。");
+    return true;
 end
 
 local a = Listener.new();
@@ -1243,6 +1248,7 @@ require("OOP.Class");
 local Listener = class();
 function Listener.handlers:Any()
     print("响应Any事件。");
+    return true;
 end
 
 local a = Listener.new();

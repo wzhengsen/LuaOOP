@@ -9,8 +9,9 @@ end
 function Listener.handlers:Email(name,content)
     if name == self.name then
         assert(content == self.want);
-        return true;
+        return false;
     end
+    return true;
 end
 
 local sortB = 1;
@@ -23,10 +24,12 @@ function Listener.handlers:Sort()
     elseif "a" == self.name then
         assert(sort == sortA);
     end
+    return true;
 end
 
 function Listener.handlers:NoEvent()
     assert(false);
+    return true;
 end
 
 local a = Listener.new("a","a");

@@ -116,8 +116,8 @@ local event = setmetatable({},{
                         EventCallLvl = EventCallLvl - 1;
                         error(ret);
                     end
-                    if ret then
-                        -- If handler returns true,
+                    if not ret then
+                        -- If handler returns false,
                         -- the dispatch of the event is terminated.
                         break;
                     end
